@@ -35,7 +35,7 @@ void ShadowLookupParameters::initialize_lookups() {
 
 void allocate_shadow_parameters(const ParameterCollection& m, unsigned allocated, vector<ShadowParameters>& target) {
   auto& params = m.parameters_list();
-  vector<ParameterStorage*> to_allocate(params.begin() + allocated, params.end());
+  vector<shared_ptr<ParameterStorage>> to_allocate(params.begin() + allocated, params.end());
   vector<ShadowParameters> v;
   target.reserve(params.size());
   for (auto& p : to_allocate)
@@ -44,7 +44,7 @@ void allocate_shadow_parameters(const ParameterCollection& m, unsigned allocated
 
 void allocate_shadow_lookup_parameters(const ParameterCollection& m, unsigned allocated, vector<ShadowLookupParameters>& target) {
   auto& params = m.lookup_parameters_list();
-  vector<LookupParameterStorage*> to_allocate(params.begin() + allocated, params.end());
+  vector<shared_ptr<LookupParameterStorage>> to_allocate(params.begin() + allocated, params.end());
   target.reserve(params.size());
   for (auto& p : to_allocate)
     target.emplace_back(*p);

@@ -185,7 +185,7 @@ void LookupParameterStorage::clear() {
 
 Parameter::Parameter() : p(nullptr) {}
 
-Parameter::Parameter(ParameterStorage* p) : p(p) {}
+Parameter::Parameter(std::shared_ptr<ParameterStorage> p) : p(p) {}
 
 ParameterStorage& Parameter::get_storage() const {
   DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null parameter");
@@ -224,7 +224,7 @@ float Parameter::current_weight_decay() const {
 
 LookupParameter::LookupParameter() : p(nullptr) { }
 
-LookupParameter::LookupParameter(LookupParameterStorage* p) : p(p) {}
+LookupParameter::LookupParameter(std::shared_ptr<LookupParameterStorage> p) : p(p) {}
 
 LookupParameterStorage& LookupParameter::get_storage() const {
   DYNET_ASSERT(p != nullptr, "Attempt to get pointer for null LookupParameter");
@@ -261,7 +261,6 @@ ParameterCollectionStorage::ParameterCollectionStorage()
 }
 
 ParameterCollectionStorage::~ParameterCollectionStorage() {
-  for (auto p : all_params) delete p;
   if (gradient_norm_scratch)
     device_manager->get_global_device("CPU")->mem->free(gradient_norm_scratch);
 }
@@ -338,7 +337,7 @@ Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit 
     int idx = name_cntr[p_name]++;
     if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
 
-    ParameterStorage* p = new ParameterStorage(d, init, oss.str(), device);
+    std::shared_ptr<ParameterStorage> p = ParameterStorageCreator::create(d, init, oss.str(), device);
     add_parameters_to_storage(p);
     return Parameter(p);
   } else {
@@ -346,7 +345,7 @@ Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit 
   }
 }
 
-void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
+void ParameterCollection::add_parameters_to_storage(std::shared_ptr<ParameterStorage>p) {
   if(parent != nullptr)
     parent->add_parameters_to_storage(p);
   else
@@ -357,8 +356,8 @@ void ParameterCollection::add_parameters_to_storage(ParameterStorage *p) {
   }
 }
 
-std::vector<ParameterStorageBase*> ParameterCollection::get_parameter_storages_base() const {
-  std::vector<ParameterStorageBase*> all_params;
+std::vector<std::shared_ptr<ParameterStorageBase>> ParameterCollection::get_parameter_storages_base() const {
+  std::vector<std::shared_ptr<ParameterStorageBase>> all_params;
   ParameterCollection *t = const_cast<ParameterCollection*>(this);
   while (t->parent != nullptr) { t = t->parent; }
   auto all_ps = t->get_storage().all_params;
@@ -381,7 +380,7 @@ std::vector<ParameterStorageBase*> ParameterCollection::get_parameter_storages_b
   return all_params;
 }
 
-ParameterStorage* ParameterCollection::get_parameter_storage(const std::string & pname) {
+std::shared_ptr<ParameterStorage> ParameterCollection::get_parameter_storage(const std::string & pname) {
   if (pname.find(name) == 0) {
     ParameterCollection *t = this;
     while (t->parent != nullptr) { t = t->parent; }
@@ -395,8 +394,8 @@ ParameterStorage* ParameterCollection::get_parameter_storage(const std::string &
   throw std::runtime_error(errMsg);
 }
 
-std::vector<ParameterStorage*> ParameterCollection::get_parameter_storages() const {
-  std::vector<ParameterStorage*> params;
+std::vector<std::shared_ptr<ParameterStorage>> ParameterCollection::get_parameter_storages() const {
+  std::vector<std::shared_ptr<ParameterStorage>> params;
   ParameterCollection *t = const_cast<ParameterCollection*>(this);
   while (t->parent != nullptr) { t = t->parent; }
   for (auto & param : t->get_storage().params) {
@@ -421,7 +420,7 @@ LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim
     int idx = name_cntr[p_name]++;
     if (idx > 0 || p_name.size() == 0) oss << "_" << idx;
 
-    LookupParameterStorage* p = new LookupParameterStorage(n, d, init, oss.str(), device);
+    std::shared_ptr<LookupParameterStorage> p = LookupParameterStorageCreator::create(n, d, init, oss.str(), device);
     add_lookup_parameters_to_storage(p);
     return LookupParameter(p);
   } else {
@@ -429,7 +428,7 @@ LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim
   }
 }
 
-void ParameterCollection::add_lookup_parameters_to_storage(LookupParameterStorage *p) {
+void ParameterCollection::add_lookup_parameters_to_storage(std::shared_ptr<LookupParameterStorage>p) {
   if(parent != nullptr)
     parent->add_lookup_parameters_to_storage(p);
   else
@@ -440,7 +439,7 @@ void ParameterCollection::add_lookup_parameters_to_storage(LookupParameterStorag
   }
 }
 
-LookupParameterStorage* ParameterCollection::get_lookup_parameter_storage(const std::string & lookup_pname)
+std::shared_ptr<LookupParameterStorage> ParameterCollection::get_lookup_parameter_storage(const std::string & lookup_pname)
 {
   if (lookup_pname.find(name) == 0) {
     ParameterCollection *t = this;
@@ -455,9 +454,9 @@ LookupParameterStorage* ParameterCollection::get_lookup_parameter_storage(const 
   throw std::runtime_error(errMsg);
 }
 
-std::vector<LookupParameterStorage*>
+std::vector<std::shared_ptr<LookupParameterStorage>>
 ParameterCollection::get_lookup_parameter_storages() const {
-  std::vector<LookupParameterStorage*> lookup_params;
+  std::vector<std::shared_ptr<LookupParameterStorage>> lookup_params;
   ParameterCollection *t = const_cast<ParameterCollection*>(this);
   while (t->parent != nullptr) { t = t->parent; }
   for (auto & lookup_param: t->get_storage().lookup_params) {
@@ -475,14 +474,14 @@ void ParameterCollection::reset_gradient() {
 
 size_t ParameterCollection::parameter_count() const {
   size_t r = 0;
-  for (const ParameterStorageBase* param : get_storage().all_params)
+  for (const std::shared_ptr<ParameterStorageBase> param : get_storage().all_params)
     r += param->size();
   return r;
 }
 
 size_t ParameterCollection::updated_parameter_count() const {
   size_t r = 0;
-  for (const ParameterStorageBase* param : get_storage().all_params)
+  for (const std::shared_ptr<ParameterStorageBase> param : get_storage().all_params)
     if(param->is_updated())
       r += param->size();
   return r;
