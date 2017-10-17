@@ -9,7 +9,7 @@ if (DEFINED ENV{DYNET_TEST_DEVICES})  # use env variable as preprocessor macro
   add_definitions(-DDYNET_TEST_DEVICES=$ENV{DYNET_TEST_DEVICES})
 endif()
 
-foreach(TESTNAME dim dynet exec io mem nodes params tensor trainers rnn softmax)
+foreach(TESTNAME dim dynet exec exec-dynamic io mem nodes params tensor trainers rnn softmax)
   add_executable(test-${TESTNAME} test-${TESTNAME}.cc)
   if (NOT MSVC)
     target_link_libraries(test-${TESTNAME} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})

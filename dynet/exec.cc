@@ -92,6 +92,15 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
     string current_node_name;  // Optionally used for debugging (reused).
     vector<const Tensor*> xs(16);  // Container for arguments to nodes (reused).
 
+    unsigned size = 0;
+    void* begin;
+    for (unsigned j = num_nodes_evaluated; j <= i; ++j) {
+      const Node* node = cg.nodes[j];
+      auto rounded_n = pool_fxs->round_up_align(node->dim.size() * sizeof(float));
+      size += rounded_n;
+    }
+    begin = pool_fxs->allocate(size);
+
     for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
       const Node* node = cg.nodes[num_nodes_evaluated];
       if (autobatch_debug_flag) {
@@ -116,11 +125,11 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
           "SimpleExecutionEngine::incremental_forward");
       node_fx.device = node->device;
       node_fx.mem_pool = DeviceMempool::FXS;
-      // Get the memory to store f(xs)
-      auto& node_fx_pools = node_fx.device->pools;
-      node_fx.v = static_cast<float*>(
-          node_fx_pools[(int)DeviceMempool::FXS]->allocate(
-              node->dim.size() * sizeof(float)));
+      // Get the memory
+      node_fx.v = static_cast<float*>(begin);
+      auto rounded_n = pool_fxs->round_up_align(node->dim.size() * sizeof(float));
+      begin += rounded_n; 
+
       if (node_fx.v == nullptr)
         DYNET_RUNTIME_ERR("Ran out of memory when executing node " <<
                           num_nodes_evaluated);
@@ -128,7 +137,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       // Is the node requesting extra memory?
       size_t aux_size = node->aux_storage_size();
       if (aux_size) {
-        aux_mem = node_fx_pools[(int)DeviceMempool::FXS]->allocate(aux_size);
+        aux_mem = pool_fxs->allocate(aux_size);
         if (aux_mem == nullptr)
           DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node "
                             << num_nodes_evaluated);
@@ -161,30 +170,37 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
 
   const unsigned num_nodes = from_where + 1;
   ndEdfs.resize(num_nodes);
-  const vector<Device*> &devices = device_manager->get_devices();
-  for(Device* device : devices)
-    device->pools[(int)DeviceMempool::DEDFS]->free();
+  pool_dEdfs->free();
 
   // This loop allocates memory on the appropriate devices for the nodes whose
   // derivatives will be computed.
+  // This assumes all of these use the same device!
+  unsigned size = 0;
+  void* begin;
+  for (unsigned i = 0; i < num_nodes; ++i) {
+    const Node* node = cg.nodes[i];
+    auto rounded_n = pool_dEdfs->round_up_align(node->dim.size() * sizeof(float));
+    size += rounded_n;
+  }
+  begin = pool_dEdfs->allocate(size);
+  pool_dEdfs->zero_allocated_memory();
+
   for (unsigned i = 0; i < num_nodes; ++i) {
     const auto dim = nfxs[i].d;
     auto& node_dEdfx = ndEdfs[i];
     node_dEdfx.d = dim;
     node_dEdfx.device = nfxs[i].device;
     node_dEdfx.mem_pool = DeviceMempool::DEDFS;
-    node_dEdfx.v = static_cast<float*>(
-        node_dEdfx.device->pools[(int)DeviceMempool::DEDFS]->allocate(
-            dim.size() * sizeof(float)));
+    node_dEdfx.v = static_cast<float*>(begin);
+    auto rounded_n = pool_dEdfs->round_up_align(dim.size() * sizeof(float));
+    begin += rounded_n;
+
     if (node_dEdfx.v == nullptr) {
       DYNET_RUNTIME_ERR(
           "out of memory while attempting to allocate space for "
           "derivatives of node " << i);
     }
   }
-  // Zero all derivative memory (which is contiguous on each device)
-  for (Device* device : devices)
-    device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();
 
   // initialize dE/dE = 1
   ndEdfs.back().v = cg.nodes.back()->device->kSCALAR_ONE;

@@ -61,6 +61,17 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
       }
     }
 
+    // Memory
+    else if (arg == "--dynet-dynamic-mem" || arg == "--dynet_dynamic_mem") {
+      if ((argi + 1) >= argc) {
+        throw std::invalid_argument("[dynet] --dynet-dynemic-mem expects an argument (bool)");
+      } else {
+        string a2 = argv[argi + 1];
+        istringstream c(a2); c >> params.dynamic;
+        remove_args(argc, argv, argi, 2);
+      }
+    }
+
     // Weight decay
     else if (arg == "--dynet-weight-decay" || arg == "--dynet_weight_decay") {
       if ((argi + 1) >= argc) {
@@ -100,7 +111,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
 
 #if HAVE_CUDA
     else if (arg == "--dynet-gpus" || arg == "--dynet_gpus") {
-      if ((argi + 1) > argc) {
+      if ((argi + 1) >= argc) {
         throw std::invalid_argument("[dynet] --dynet-gpus expects an argument (number of GPUs to use)");
       } else {
         if (params.ngpus_requested)
@@ -210,9 +221,9 @@ void initialize(DynetParams& params) {
 
   Device *d;
   if (gpudevices.size()) {
-    d = new Device_CPU(device_manager->num_devices(), std::string("128"), params.shared_parameters);
+    d = new Device_CPU(device_manager->num_devices(), std::string("128"), params.shared_parameters, false);
   } else {
-    d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
+    d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters, params.dynamic);
   }
   device_manager->add(d);
   default_device = device_manager->get(default_index);
