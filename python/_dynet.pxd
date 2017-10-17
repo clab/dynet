@@ -1,3 +1,4 @@
+from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp cimport bool
@@ -75,7 +76,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CParameters "dynet::Parameter":
         CParameters()
-        CParameters(CParameterStorage* p)
+        CParameters(shared_ptr[CParameterStorage] p)
         CParameterStorage& get_storage()
         void zero()
         void set_updated(bool b)
@@ -88,7 +89,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
-        CLookupParameters(CLookupParameterStorage* p)
+        CLookupParameters(shared_ptr[CLookupParameterStorage] p)
         CLookupParameterStorage& get_storage()
         CDim dim
         void initialize(unsigned index, const vector[float]& val)
@@ -108,8 +109,8 @@ cdef extern from "dynet/model.h" namespace "dynet":
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name) except +
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name, CDevice *device) except +
-        vector[CParameterStorage*] parameters_list()
-        vector[CLookupParameterStorage*] lookup_parameters_list()
+        vector[shared_ptr[CParameterStorage]] parameters_list()
+        vector[shared_ptr[CLookupParameterStorage]] lookup_parameters_list()
         CModel add_subcollection(string name) except +
         string get_fullname()
         int parameter_count() except +

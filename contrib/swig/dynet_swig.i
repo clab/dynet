@@ -121,8 +121,8 @@ namespace std {
   %template(LongVector)                   vector<long>;
   %template(StringVector)                 vector<std::string>;
   %template(ExpressionVector)             vector<dynet::Expression>;
-  %template(ParameterStorageVector)       vector<dynet::ParameterStorage*>;
-  %template(LookupParameterStorageVector) vector<dynet::LookupParameterStorage*>;
+  %template(ParameterStorageVector)       vector<shared_ptr<dynet::ParameterStorage>>;
+  %template(LookupParameterStorageVector) vector<shared_ptr<dynet::LookupParameterStorage>>;
   %template(ExpressionVectorVector)       vector<vector<dynet::Expression>>;
   %template(ParameterVector)              vector<dynet::Parameter>;
   %template(ParameterVectorVector)        vector<vector<dynet::Parameter>>;
@@ -361,11 +361,11 @@ struct LookupParameterStorage : public ParameterStorageBase {
    // SWIG can't get the types right for `parameters_list`, so here are replacement methods
    // for which it can. (You might worry that these would cause infinite recursion, but
    // apparently they don't.
-   std::vector<ParameterStorage*> parameters_list() const {
+   std::vector<std::shared_ptr<ParameterStorage>> parameters_list() const {
      return $self->parameters_list();
    }
 
-   std::vector<LookupParameterStorage*> lookup_parameters_list() const {
+   std::vector<std::shared_ptr<LookupParameterStorage>> lookup_parameters_list() const {
      return $self->lookup_parameters_list();
    }
 };

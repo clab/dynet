@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
+from libcpp.memory cimport shared_ptr
 import numpy as np
 
 # python3 pickle already uses the c implementaion 
@@ -979,15 +980,16 @@ cdef class ParameterCollection: # {{{
         separator) or :code:`_` (which is used as an index separator).
     """
     cdef CModel thisptr  # Not a pointer...
+    cdef ParameterCollection parent
     def __cinit__(self, ):
         pass
 
-    def __init__(self):
-        pass
+    def __init__(self, parent=None):
+        self.parent = parent
 
     @staticmethod
-    cdef wrap(CModel m):
-        self = ParameterCollection()
+    cdef wrap(CModel m, ParameterCollection parent=None):
+        self = ParameterCollection(parent)
         self.thisptr = m
         return self
 
@@ -1074,7 +1076,7 @@ cdef class ParameterCollection: # {{{
         Returns:
             (list): All dy.Parameters in the collection
         """
-        cdef vector[CParameterStorage*] pl = self.thisptr.parameters_list()
+        cdef vector[shared_ptr[CParameterStorage]] pl = self.thisptr.parameters_list()
         parameters_list = []
         for p in pl:
             parameters_list.append(Parameters.wrap_ptr(CParameters(p)))
@@ -1086,7 +1088,7 @@ cdef class ParameterCollection: # {{{
         Returns:
             (list): All dy.LookupParameters in the collection
         """
-        cdef vector[CLookupParameterStorage*] pl = self.thisptr.lookup_parameters_list()
+        cdef vector[shared_ptr[CLookupParameterStorage]] pl = self.thisptr.lookup_parameters_list()
         lookup_parameters_list = []
         for p in pl:
             lookup_parameters_list.append(LookupParameters.wrap_ptr(CLookupParameters(p)))
@@ -1229,8 +1231,7 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.ParameterCollection) a parameter collection.
         """
-        if name is None: return ParameterCollection.wrap(self.thisptr.add_subcollection("".encode()))
-        else: return ParameterCollection.wrap(self.thisptr.add_subcollection(name.encode()))
+        return ParameterCollection.wrap(self.thisptr.add_subcollection((name or "").encode()), self)
 
     cpdef name(self):
         """
