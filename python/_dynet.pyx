@@ -3157,7 +3157,7 @@ cpdef Expression sum_elems(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_sum_elems(x.c()))
 
-cpdef Expression sum_dim(Expression x, list d, bool b, unsigned n=0):
+cpdef Expression sum_dim(Expression x, list d, bool b=False, unsigned n=0):
     """Mean along an arbitrary dimension
     
     Computes the sum :math:`\sum_ix_i`  along an arbitrary dimension or dimensions.
