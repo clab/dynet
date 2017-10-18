@@ -35,6 +35,7 @@ ADD_EXAMPLE(tagger tag-bilstm)
 ADD_EXAMPLE(variational-autoencoder rnnlm-aevb)
 ADD_EXAMPLE(word-embedding tok-embed)
 ADD_EXAMPLE(xor xor)
+ADD_EXAMPLE(devices/xor-multidevice xor-multidevice)
 
 if(ENABLE_BOOST)
   if(NOT MSVC)
