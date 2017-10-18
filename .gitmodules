@@ -1,3 +1,0 @@
-[submodule "external/easyloggingpp"]
-	path = external/easyloggingpp
-	url = https://github.com/easylogging/easyloggingpp.git
