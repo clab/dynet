@@ -300,8 +300,10 @@ template void TensorTools::accumulate_dev<Device_CPU>(const Device_CPU & dev, Te
 extern template void TensorTools::accumulate_dev<Device_GPU>(const Device_GPU & dev, Tensor& v, const Tensor& v_src);
 void TensorTools::accumulate(Tensor& v, const Tensor& v_src) {
   if (v.device->type == DeviceType::CPU) { return accumulate_dev(*(const Device_CPU*)v.device, v, v_src); }
-  else if (v.device->type == DeviceType::GPU) { cudaSetDevice(((Device_GPU*)v.device)->cuda_device_id); return accumulate_dev(*(const Device_GPU*)v.device, v, v_src); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (v.device->type == DeviceType::GPU) {
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)v.device)->cuda_device_id));
+    return accumulate_dev(*(const Device_GPU*)v.device, v, v_src);
+  } else { throw std::runtime_error("Bad device type"); }
 }
 #else
 void TensorTools::accumulate(Tensor& v, const Tensor& v_src) {
