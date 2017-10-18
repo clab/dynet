@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE( expand_test ) {
     SimpleSGDTrainer trainer(mod);
     dynet::ComputationGraph cg;
     Expression x = parameter(cg, param);
-    Expression z = sum_rows(sum_cols(x));
+    Expression z = sum_elems(x);
     cg.forward(z);
     cg.backward(z);
     trainer.update();
