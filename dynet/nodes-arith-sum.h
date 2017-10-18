@@ -30,18 +30,14 @@ struct SumElements : public Node {
   virtual bool supports_multibatch() const override { return true; }
 };
 
-// sum along a single dimension
+//y = \sum_i x_i
 struct SumDimension : public Node {
-  template <typename T> explicit SumDimension(const T& a, unsigned d) : Node(a), dimension(d) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-  unsigned dimension;
-};
-
-// y = \sum_i x_i
-struct SumBatches : public Node {
-  template <typename T> explicit SumBatches(const T& a) : Node(a) {}
+  template <typename T> explicit SumDimension(const T& a, const std::vector<unsigned> & d, bool b=false) : Node(a), dims(d), include_batch_dim(b) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
+private:
+  std::vector<unsigned> dims;
+  bool include_batch_dim;
 };
 
 // M = x_0, v = x_1
