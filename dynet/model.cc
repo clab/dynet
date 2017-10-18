@@ -562,7 +562,7 @@ void ParameterStorage::accumulate_grad(const Tensor& d) {
   nonzero_grad = true;
   if (values.device->type == DeviceType::CPU) { accumulate_grad_dev(*(Device_CPU*)values.device, d); }
   else if (values.device->type == DeviceType::GPU) {
-    cudaSetDevice(((Device_GPU*)values.device)->cuda_device_id);
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)values.device)->cuda_device_id));
     accumulate_grad_dev(*(Device_GPU*)values.device, d);
   } else { throw std::runtime_error("Bad device type"); }
 }
@@ -637,8 +637,10 @@ extern template void LookupParameterStorage::initialize_dev<Device_GPU>(Device_G
 template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & dev, unsigned index, const vector<float>& val);
 void LookupParameterStorage::initialize(unsigned index, const vector<float>& val) {
   if (values[index].device->type == DeviceType::CPU) { initialize_dev(*(Device_CPU*)values[index].device, index, val); }
-  else if (values[index].device->type == DeviceType::GPU) { initialize_dev(*(Device_GPU*)values[index].device, index, val); }
-  else { throw std::runtime_error("Bad device type"); }
+  else if (values[index].device->type == DeviceType::GPU) {
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)values[index].device)->cuda_device_id));
+    initialize_dev(*(Device_GPU*)values[index].device, index, val);
+  } else { throw std::runtime_error("Bad device type"); }
 }
 #else
 template void LookupParameterStorage::initialize_dev<Device_CPU>(Device_CPU & dev, unsigned index, const vector<float>& val);
@@ -824,11 +826,14 @@ float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
     }
     float *v = (float *)dev_k->mem->malloc(sizeof(float));
     all_params[pi]->g_squared_l2norm(v);
-    if (dev_k->type == DeviceType::CPU)
+    if (dev_k->type == DeviceType::CPU) {
       gradient_norm_scratch[pi] = *v;
+    }
 #if HAVE_CUDA
-    else if (dev_k->type == DeviceType::GPU)
+    else if (dev_k->type == DeviceType::GPU) {
+      CUDA_CHECK(cudaSetDevice(((Device_GPU*)dev_k)->cuda_device_id));
       cudaMemcpy(gradient_norm_scratch + pi, v, sizeof(float), cudaMemcpyDeviceToHost);
+    }
 #endif
     else { throw std::runtime_error("Bad device type"); }
     dev_k->mem->free(v);

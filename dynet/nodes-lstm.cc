@@ -214,8 +214,8 @@ namespace dynet {
       b_noisy.tvec().device(*dev.edevice) += b->tvec();
 
     } else {
-      MatrixMultiply(dev, *Wx, x_t, fx, kSCALAR_ONE);
-      MatrixMultiply(dev, *Wh, h_tm1, fx, kSCALAR_ONE);
+      MatrixMultiply(dev, *Wx, x_t, fx, dev.kSCALAR_ONE);
+      MatrixMultiply(dev, *Wh, h_tm1, fx, dev.kSCALAR_ONE);
     }
 
     // non-linearities
