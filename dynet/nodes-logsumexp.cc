@@ -111,8 +111,11 @@ string LogSumExpDimension::as_string(const vector<string>& arg_names) const {
 Dim LogSumExpDimension::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "LogSumExpDimension takes only one argument" << xs);
   DYNET_ARG_CHECK(xs[0].nd <= 2, "LogSumExpDimension, expects 2 or fewer dimensions" << xs);
+  DYNET_ARG_CHECK(xs[0].nd > dimension, "LogSumExpDimension, expects its dimension argument (" << 
+                    dimension << ") to be smaller than the number of elements in the input " << xs);
   Dim d = xs[0];
-  d.delete_dim(dimension);
+  if(dimension < d.nd)
+    d.delete_dim(dimension);
   return d;
 }
 
@@ -123,7 +126,7 @@ void LogSumExpDimension::forward_dev_impl(const MyDevice & dev, const vector<con
   Tensor ms(fx.d, nullptr, fx.device, fx.mem_pool), zs(fx.d, nullptr, fx.device, fx.mem_pool);
   AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
   ms.v = static_cast<float*>(scratch_allocator->allocate(ms.d.size() * sizeof(float)));
-  TensorTools::logsumexp_dev(dev, *xs[0], fx, ms, dimension);
+  TensorTools::logsumexp_dev(dev, *xs[0], ms, fx, dimension);
   scratch_allocator->free();
 }
 

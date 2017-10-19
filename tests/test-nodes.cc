@@ -340,10 +340,10 @@ BOOST_AUTO_TEST_CASE( logsumexp_dim_gradient ) {
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param_square1);
   vector<Expression> exps;
-  for (unsigned d = 2; d > 0; d--)
-    exps.push_back(logsumexp_dim(x, {d - 1}));
+  for (int d = 1; d >= 0; d--)
+    exps.push_back(logsumexp_dim(x, d));
   Expression z = sum_elems(sum(exps));
-  BOOST_CHECK(check_grad(mod, z, 0));
+  BOOST_CHECK(check_grad(mod, z, 1));
 }
 
 // Expression operator+(const Expression& x, real y);
