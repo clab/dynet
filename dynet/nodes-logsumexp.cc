@@ -138,8 +138,8 @@ void LogSumExpDimension::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   unsigned other_dim = dimension ^ 1;
-  Eigen::array<int, 3> bcast({1, 1, 1}); bcast[dimension] = xs[0]->d[dimension];
-  Eigen::array<int, 3> morph({1, 1, (int)fx.d.bd}); morph[other_dim] = fx.d[0];
+  Eigen::array<int, 3> bcast = {1, 1, 1}; bcast[dimension] = xs[0]->d[dimension];
+  Eigen::array<int, 3> morph = {1, 1, (int)fx.d.bd}; morph[other_dim] = fx.d[0];
   dEdxi.tb<2>().device(*dev.edevice) += (xs[0]->tb<2>() - fx.tb<1>().reshape(morph).broadcast(bcast)).exp() * dEdf.tb<1>().reshape(morph).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(LogSumExpDimension)
