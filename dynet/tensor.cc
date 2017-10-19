@@ -399,8 +399,8 @@ void TensorTools::logsumexp_dev(const MyDevice & dev, const Tensor& x, Tensor & 
     m.tb<1>().device(*dev.edevice) = x.tb<2>().maximum(red_axis);
     // TODO: Currently, the first version is slower on CPU, hence the switch
 #ifdef __CUDACC__
-    Eigen::array<int, 3> bcast({1, 1, 1}); bcast[axis] = (int)x.d[axis];
-    Eigen::array<int, 3> morph({1, 1, (int)m.d.bd}); morph[other_axis] = (int)m.d[0];
+    Eigen::array<int, 3> bcast = {1, 1, 1}; bcast[axis] = (int)x.d[axis];
+    Eigen::array<int, 3> morph = {1, 1, (int)m.d.bd}; morph[other_axis] = (int)m.d[0];
     // This needs to be split into two lines to prevent memory allocation
     z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().reshape(morph).broadcast(bcast)).exp().sum(red_axis);
     z.tb<1>().device(*dev.edevice) = z.tb<1>().log() + m.tb<1>();
