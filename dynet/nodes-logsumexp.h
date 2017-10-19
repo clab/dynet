@@ -14,6 +14,14 @@ struct LogSumExp : public Node {
   virtual bool supports_multibatch() const override { return true; }
 };
 
+struct LogSumExpDimension : public Node {
+  template <typename T> explicit LogSumExpDimension(const T& a, unsigned d = 0) : Node(a), dimension(d) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+private:
+  unsigned dimension;
+};
+
 } // namespace dynet
 
 #endif

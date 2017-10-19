@@ -12,19 +12,6 @@ namespace dynet {
 
 #ifndef __CUDACC__
 
-// template <class T>
-// EIGEN_STRONG_INLINE real logsumexp(const T& x, const vector<unsigned>& denom) {
-//   real m = x(denom[0],0);
-//   for (auto i : denom) {
-//     real r = x(i,0);
-//     if (r > m) m = r;
-//   }
-//   real z = 0;
-//   for (auto i : denom)
-//     z += expf(x(i,0) - m);
-//   return m + logf(z);
-// }
-
 string LogSumExp::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "log(exp " << arg_names[0];
@@ -108,5 +95,53 @@ void LogSumExp::backward_dev_impl(const MyDevice & dev,
   }
 }
 DYNET_NODE_INST_DEV_IMPL(LogSumExp)
+
+// ************* LogSumExpDimension *************
+
+#define MAX_LOG_SUM_EXP 65536
+
+#ifndef __CUDACC__
+
+string LogSumExpDimension::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "logsumexp_dim(" << arg_names[0] << ", " << dimension << ")";
+  return s.str();
+}
+
+Dim LogSumExpDimension::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "LogSumExpDimension takes only one argument" << xs);
+  DYNET_ARG_CHECK(xs[0].nd <= 2, "LogSumExpDimension, expects 2 or fewer dimensions" << xs);
+  DYNET_ARG_CHECK(xs[0].nd > dimension, "LogSumExpDimension, expects its dimension argument (" << 
+                    dimension << ") to be smaller than the number of elements in the input " << xs);
+  Dim d = xs[0];
+  if(dimension < d.nd)
+    d.delete_dim(dimension);
+  return d;
+}
+
+#endif
+
+template<class MyDevice>
+void LogSumExpDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  Tensor ms(fx.d, nullptr, fx.device, fx.mem_pool), zs(fx.d, nullptr, fx.device, fx.mem_pool);
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+  ms.v = static_cast<float*>(scratch_allocator->allocate(ms.d.size() * sizeof(float)));
+  TensorTools::logsumexp_dev(dev, *xs[0], ms, fx, dimension);
+  scratch_allocator->free();
+}
+
+template<class MyDevice>
+void LogSumExpDimension::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  unsigned other_dim = dimension ^ 1;
+  Eigen::array<int, 3> bcast = {1, 1, 1}; bcast[dimension] = xs[0]->d[dimension];
+  Eigen::array<int, 3> morph = {1, 1, (int)fx.d.bd}; morph[other_dim] = fx.d[0];
+  dEdxi.tb<2>().device(*dev.edevice) += (xs[0]->tb<2>() - fx.tb<1>().reshape(morph).broadcast(bcast)).exp() * dEdf.tb<1>().reshape(morph).broadcast(bcast);
+}
+DYNET_NODE_INST_DEV_IMPL(LogSumExpDimension)
 
 }

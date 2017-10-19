@@ -687,7 +687,7 @@ struct TensorTools {
   * \param m A tensor of scratch memory to hold the maximum values of each column
   * \param z The output tensor
   */
-  static void logsumexp(const Tensor& x, Tensor &m, Tensor &z);
+  static void logsumexp(const Tensor& x, Tensor &m, Tensor &z, unsigned d = 0);
 
   /**
    * \brief Calculate the index of the maximum value
@@ -725,7 +725,7 @@ struct TensorTools {
   template<class MyDevice>
   static IndexTensor categorical_sample_log_prob_dev(const MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
   template <class MyDevice>
-  static void logsumexp_dev(const MyDevice & dev, const Tensor& x, Tensor &m, Tensor &z);
+  static void logsumexp_dev(const MyDevice & dev, const Tensor& x, Tensor &m, Tensor &z, unsigned d = 0);
 
 };
 
