@@ -1157,6 +1157,19 @@ Expression log_softmax(const Expression& x, const std::vector<unsigned>& restric
 
 /**
  * \ingroup lossoperations
+ * \brief Log, sum, exp by dimension
+ * \details The "logsumexp" function calculated over a particular dimension
+ *   \f$ln(\sum_i e^{xs_i})\f$, used in adding probabilities in the log domain.
+ *
+ * \param x Expression with respect to which to calculate the logsumexp.
+ * \param d The dimension along which to do the logsumexp.
+ *
+ * \return The result.
+ */
+Expression logsumexp_dim(const Expression& x, unsigned d);
+
+/**
+ * \ingroup lossoperations
  * \brief Log, sum, exp
  * \details The elementwise "logsumexp" function that calculates
  *   \f$ln(\sum_i e^{xs_i})\f$, used in adding probabilities in the log domain.
