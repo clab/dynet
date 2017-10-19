@@ -170,14 +170,23 @@ DYNET_NODE_INST_DEV_IMPL(SumElements)
 
 string SumDimension::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "sum_dim(matrix=" << arg_names[0] << ',' << dimension << '}';
+  s << "sum_dim(expression=" << arg_names[0] << ',';
+  for(size_t i = 0; i < dims.size(); ++i)
+    s << (i == 0?'{':',') << dims[i];
+  s << "})";
   return s.str();
 }
 
 Dim SumDimension::dim_forward(const vector<Dim>& xs) const {
   DYNET_ASSERT(xs.size() == 1, "Failed input count check in SumDimension");
+  DYNET_ARG_CHECK(xs[0].nd <= 3, "SumDimension implemented up to tensors of order 3 (with minibatch) for now")
+  for (unsigned i = 0; i < dims.size(); ++i)
+    DYNET_ARG_CHECK(dims[i] <= xs[0].nd, "dimension " << dims[i]<< " is out of bounds of tensor of order " << xs[0].nd << " in SumDimension" )
+  DYNET_ARG_CHECK(dims.size()<=2, "Number of dimensions to reduce (excluding batch dimension) implemented up to 2 in SumDimension (received "<< dims.size() <<")")
+  if(dims.size()==0)
+    DYNET_ARG_CHECK(include_batch_dim, "At least one dimension has to be reduced (including batch dimension) in SumDimension")
   Dim ret(xs[0]);
-  ret.delete_dim(dimension);
+  ret.delete_dims(dims, include_batch_dim);
   return ret;
 }
 
@@ -186,8 +195,23 @@ Dim SumDimension::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void SumDimension::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed input count check in SumDimension");
-  Eigen::array<int, 1> reduction_axis = {(int)dimension};
-  fx.t<1>().device(*dev.edevice) = xs[0]->t<2>().sum(reduction_axis);
+
+  if(dims.size()==0 && include_batch_dim){
+    Eigen::array<int, 1> reduction_axis = {1};
+    fx.tvec().device(*dev.edevice) = xs[0]->tbvec().sum(reduction_axis);
+  } else if(dims.size()==1 && !include_batch_dim){
+    Eigen::array<int, 1> reduction_axis = {(int)dims[0]};
+    fx.tb<2>().device(*dev.edevice) = xs[0]->tb<3>().sum(reduction_axis);
+  } else if(dims.size()==1 && include_batch_dim){
+    Eigen::array<int, 2> reduction_axis = {(int)dims[0], 3};
+    fx.t<2>().device(*dev.edevice) = xs[0]->tb<3>().sum(reduction_axis);
+  } else if(dims.size()==2 && !include_batch_dim){
+    Eigen::array<int, 2> reduction_axis = {(int)dims[0], (int)dims[1]};
+    fx.tb<1>().device(*dev.edevice) = xs[0]->tb<3>().sum(reduction_axis);
+  } else if(dims.size()==2 && include_batch_dim){
+    Eigen::array<int, 3> reduction_axis = {(int)dims[0], (int)dims[1], 3};
+    fx.t<1>().device(*dev.edevice) = xs[0]->tb<3>().sum(reduction_axis);
+  }
 }
 
 template<class MyDevice>
@@ -197,69 +221,30 @@ void SumDimension::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  // TODO: limit to 3-dimensional tensor is arbitrary
-  Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dimension] = dEdxi.d[dimension];
-  Eigen::array<int, 4> morph = {(int)dEdxi.d[0],(int)dEdxi.d[1],(int)dEdxi.d[2],(int)dEdxi.d.bd}; morph[dimension] = 1;
-  dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>().reshape(morph).broadcast(bcast);
+  DYNET_ARG_CHECK(i == 0, "Failed dimension check in SumDimension::backward");
+
+  if(dims.size()==0 && include_batch_dim){
+    Eigen::array<int, 2> bcast = {1, (int)xs[0]->d.bd};
+    dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec().broadcast(bcast);
+  } else if(dims.size()==1 && !include_batch_dim){
+    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
+    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1;
+    dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<2>().reshape(morph).broadcast(bcast);
+  } else if(dims.size()==1 && include_batch_dim){
+    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
+    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1;
+    dEdxi.tb<3>().device(*dev.edevice) += dEdf.t<2>().reshape(morph).broadcast(bcast);
+  } else if(dims.size()==2 && !include_batch_dim){
+    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
+    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+    dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<1>().reshape(morph).broadcast(bcast);
+  } else if(dims.size()==2 && include_batch_dim){
+    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
+    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+    dEdxi.tb<3>().device(*dev.edevice) += dEdf.t<1>().reshape(morph).broadcast(bcast);
+  }
 }
 DYNET_NODE_INST_DEV_IMPL(SumDimension)
-
-// ************* SumBatches *************
-
-#ifndef __CUDACC__
-
-string SumBatches::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "sum_batches( " << arg_names[0] << " )";
-  return s.str();
-}
-
-Dim SumBatches::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in SumBatches")
-  return xs[0].single_batch();
-}
-
-#endif
-
-template<class MyDevice>
-void SumBatches::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SumBatches::forward");
-  unsigned num_args = xs[0]->d.bd;
-#ifdef __CUDACC__
-  Eigen::array<int, 1> red_axis; red_axis[0] = 2;
-  fx.t<2>().device(*dev.edevice) = xs[0]->tb<2>().sum(red_axis);
-#else
-  // TODO: Is this CPU version really good? Overhead can probably be reduced.
-  auto res = *fx;
-  const unsigned remainder = num_args % 4;
-  switch (remainder) {
-    case 0: res.setZero(); break;
-    case 1: res = xs[0]->batch_matrix(0); break;
-    case 2: res = xs[0]->batch_matrix(0) + xs[0]->batch_matrix(1); break;
-    case 3: res = xs[0]->batch_matrix(0) + xs[0]->batch_matrix(1) + xs[0]->batch_matrix(2); break;
-  }
-  for (unsigned i = remainder; i < num_args; i += 4)
-    res += xs[0]->batch_matrix(i) + xs[0]->batch_matrix(i+1) + xs[0]->batch_matrix(i+2) + xs[0]->batch_matrix(i+3);
-#endif
-}
-
-template<class MyDevice>
-void SumBatches::backward_dev_impl(const MyDevice & dev,
-                             const vector<const Tensor*>& xs,
-                             const Tensor& fx,
-                             const Tensor& dEdf,
-                             unsigned i,
-                             Tensor& dEdxi) const {
-  DYNET_ARG_CHECK(i == 0, "Failed dimension check in SumBatches::backward");
-#ifdef __CUDACC__
-  Eigen::array<int, 3> bcast({1, 1, (int)fx.d.bd});
-  dEdxi.tb<2>().device(*dev.edevice) += dEdf.tb<2>().broadcast(bcast);
-#else
-  for (unsigned i = 0; i < dEdxi.d.bd; ++i)
-    dEdxi.batch_matrix(i) += *dEdf;
-#endif
-}
-DYNET_NODE_INST_DEV_IMPL(SumBatches)
 
 // ************* AddVectorToAllColumns *************
 
