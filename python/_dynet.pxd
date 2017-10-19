@@ -1,3 +1,4 @@
+from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp cimport bool
@@ -75,7 +76,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CParameters "dynet::Parameter":
         CParameters()
-        CParameters(CParameterStorage* p)
+        CParameters(shared_ptr[CParameterStorage] p)
         CParameterStorage& get_storage()
         void zero()
         void set_updated(bool b)
@@ -88,7 +89,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
 
     cdef cppclass CLookupParameters "dynet::LookupParameter":
         CLookupParameters()
-        CLookupParameters(CLookupParameterStorage* p)
+        CLookupParameters(shared_ptr[CLookupParameterStorage] p)
         CLookupParameterStorage& get_storage()
         CDim dim
         void initialize(unsigned index, const vector[float]& val)
@@ -108,8 +109,8 @@ cdef extern from "dynet/model.h" namespace "dynet":
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name) except +
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer, string name, CDevice *device) except +
-        vector[CParameterStorage*] parameters_list()
-        vector[CLookupParameterStorage*] lookup_parameters_list()
+        vector[shared_ptr[CParameterStorage]] parameters_list()
+        vector[shared_ptr[CLookupParameterStorage]] lookup_parameters_list()
         CModel add_subcollection(string name) except +
         string get_fullname()
         int parameter_count() except +
@@ -350,22 +351,24 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_filter1d_narrow "dynet::filter1d_narrow" (CExpression& x, CExpression& f) except + #
     CExpression c_kmax_pooling "dynet::kmax_pooling" (CExpression& x, unsigned k, unsigned d) except + #
     CExpression c_fold_rows "dynet::fold_rows" (CExpression& x, unsigned nrows) except + #
-    CExpression c_sum_cols "dynet::sum_cols" (CExpression& x) except +               #
     CExpression c_kmh_ngram "dynet::kmh_ngram" (CExpression& x, unsigned n) except + #
     CExpression c_conv2d "dynet::conv2d" (CExpression& x, CExpression& f, vector[unsigned] stride, bool is_valid) except + #
     CExpression c_conv2d "dynet::conv2d" (CExpression& x, CExpression& f, CExpression& b, vector[unsigned] stride, bool is_valid) except + #
     CExpression c_maxpooling2d "dynet::maxpooling2d" (CExpression& x, vector[unsigned] ksize, vector[unsigned] stride, bool is_valid) except + #
 
-    CExpression c_sum_batches "dynet::sum_batches" (CExpression& x) except +
+    CExpression c_sum_dim "dynet::sum_dim" (CExpression& x, vector[unsigned] dims, bool b) except +
     CExpression c_sum_elems "dynet::sum_elems" (CExpression& x) except +
-    CExpression c_moment_batches "dynet::moment_batches" (CExpression& x, unsigned r) except +
+    CExpression c_sum_batches "dynet::sum_batches" (CExpression& x) except +
+    CExpression c_sum_rows "dynet::sum_rows" (CExpression& x) except +               #
+    CExpression c_sum_cols "dynet::sum_cols" (CExpression& x) except +               #
     CExpression c_moment_elems "dynet::moment_elems" (CExpression& x, unsigned r) except +
     CExpression c_moment_dim "dynet::moment_dim" (CExpression& x, vector[unsigned] dims, unsigned r, bool b, unsigned n) except +
+    CExpression c_moment_batches "dynet::moment_batches" (CExpression& x, unsigned r) except +
     CExpression c_mean_elems "dynet::mean_elems" (CExpression& x) except +
-    CExpression c_mean_batches "dynet::mean_batches" (CExpression& x) except +
     CExpression c_mean_dim "dynet::mean_dim" (CExpression& x, vector[unsigned] dims, bool b, unsigned n) except +
-    CExpression c_std_dim "dynet::std_dim" (CExpression& x, vector[unsigned] dims, bool b, unsigned n) except +
+    CExpression c_mean_batches "dynet::mean_batches" (CExpression& x) except +
     CExpression c_std_elems "dynet::std_elems" (CExpression& x) except +
+    CExpression c_std_dim "dynet::std_dim" (CExpression& x, vector[unsigned] dims, bool b, unsigned n) except +
     CExpression c_std_batches "dynet::std_batches" (CExpression& x) except +
 
     #CExpression c_pick "dynet::pick" (CExpression& x, unsigned v) except +   #

@@ -1,6 +1,7 @@
 import dynet as dy
 import numpy as np
 import unittest
+import gc
 
 
 def npvalue_callable(x):
@@ -225,6 +226,20 @@ class TestParameters(unittest.TestCase):
                 x.forward()
                 x.backward()
                 trainer.update()
+
+    def test_delete_model(self):
+        p = dy.parameter(dy.ParameterCollection().add_parameters((1,), init=dy.ConstInitializer(1)))
+        p.value()
+        gc.collect()
+        p.value()
+
+
+    def test_delete_parent_model(self):
+        model = dy.ParameterCollection().add_subcollection()
+        p = dy.parameter(model.add_parameters((1,), init=dy.ConstInitializer(1)))
+        p.value()
+        gc.collect()
+        p.value()
 
 
 class TestBatchManipulation(unittest.TestCase):
