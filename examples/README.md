@@ -48,3 +48,28 @@ These are somewhat less common and not necessarily well supported, but still may
 * [Softmax Builders](softmax-builders/): Examples of how to use other types of softmax functions, including class factored softmax (C++).
 * [Segmental RNNs](segmental-rnn/): A segmental RNN model (C++).
 
+
+[mnist/]: https://github.com/clab/dynet/tree/master/examples/mnist
+[xor/]: https://github.com/clab/dynet/tree/master/examples/xor
+[rnnlm/]: https://github.com/clab/dynet/tree/master/examples/rnnlm
+[sequence-to-sequence/]: https://github.com/clab/dynet/tree/master/examples/sequence-to-sequence
+[tagger/]: https://github.com/clab/dynet/tree/master/examples/tagger
+[textcat/]: https://github.com/clab/dynet/tree/master/examples/textcat
+[word-embedding/]: https://github.com/clab/dynet/tree/master/examples/word-embedding
+
+[batching/]: https://github.com/clab/dynet/tree/master/examples/batching
+[autobatch/]: https://github.com/clab/dynet/tree/master/examples/autobatch
+[devices/]: https://github.com/clab/dynet/tree/master/examples/devices
+[multiprocessing/]: https://github.com/clab/dynet/tree/master/examples/multiprocessing
+[tensorboard/]: https://github.com/clab/dynet/tree/master/examples/tensorboard
+[read-write/]: https://github.com/clab/dynet/tree/master/examples/read-write
+[jupyter-tutorials/]: https://github.com/clab/dynet/tree/master/examples/jupyter-tutorials
+
+[document-classification/]: https://github.com/clab/dynet/tree/master/examples/document-classification
+[fflm/]: https://github.com/clab/dynet/tree/master/examples/fflm
+[poisson-regression/]: https://github.com/clab/dynet/tree/master/examples/poisson-regression
+[sentence-embedding/]: https://github.com/clab/dynet/tree/master/examples/sentence-embedding
+[variational-autoencoder/]: https://github.com/clab/dynet/tree/master/examples/variational-autoencoder
+[noise-contrastive-estimation/]: https://github.com/clab/dynet/tree/master/examples/noise-contrastive-estimation
+[softmax-builders/]: https://github.com/clab/dynet/tree/master/examples/softmax-builders
+[segmental-rnn/]: https://github.com/clab/dynet/tree/master/examples/segmental-rnn
