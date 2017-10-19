@@ -3865,6 +3865,21 @@ cpdef Expression logsumexp(list xs):
     #print(cvec.size(), file=sys.stderr)
     return Expression.from_cexpr(x.cg_version, c_logsumexp(cvec))
 
+cpdef Expression logsumexp_dim(Expression x, unsigned d=0):
+    """Logsumexp along an arbitrary dimension
+    
+    The "logsumexp" function that calculates :math:`\ln(\sum_i e^{xs_i})`, used in adding probabilities in the log domain.
+    This is performed along a certain dimension.
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (unsigned): Dimensions along which to reduce
+    
+    Returns:
+        dynet.Expression: An expression with one less dimension representing the result
+    """
+    return Expression.from_cexpr(x.cg_version, c_logsumexp_dim(x.c(), d))
+
 cpdef Expression average(list xs):
     """Average
     
