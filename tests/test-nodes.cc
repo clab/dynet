@@ -1870,6 +1870,16 @@ BOOST_AUTO_TEST_CASE( moment_batches_gradient ) {
   }
 }
 
+// Expression sum_dim(x, r);
+BOOST_AUTO_TEST_CASE( sum_dim_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param_cube1);
+  Expression z = x;
+  for (unsigned d = 3; d > 0; d--)
+    z = sum_dim(z, vector<unsigned>({d - 1}), false);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression std_batches(x);
 BOOST_AUTO_TEST_CASE( std_batches_gradient ) {
   dynet::ComputationGraph cg;

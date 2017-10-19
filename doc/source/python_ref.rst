@@ -211,33 +211,46 @@ Arithmetic operations
 
 .. autofunction:: dynet.bmax
 
-.. autofunction:: dynet.transpose
-
-.. autofunction:: dynet.sum_cols
+Reduction/moment operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autofunction:: dynet.sum_elems
 
-.. autofunction:: dynet.mean_elems
-
 .. autofunction:: dynet.moment_elems
+
+.. autofunction:: dynet.mean_elems
 
 .. autofunction:: dynet.std_elems
 
-.. autofunction:: dynet.mean_dim
+.. autofunction:: dynet.sum_dim
 
 .. autofunction:: dynet.moment_dim
 
+.. autofunction:: dynet.mean_dim
+
 .. autofunction:: dynet.std_dim
+
+.. autofunction:: dynet.max_dim
+
+.. autofunction:: dynet.min_dim
+
+.. autofunction:: dynet.sum_batches
+
+.. autofunction:: dynet.moment_batches
+
+.. autofunction:: dynet.mean_batches
+
+.. autofunction:: dynet.std_batches
 
 .. autofunction:: dynet.fold_rows
 
 .. autofunction:: dynet.esum
 
+.. autofunction:: dynet.emax
+
 .. autofunction:: dynet.logsumexp
 
 .. autofunction:: dynet.average
-
-.. autofunction:: dynet.emax
 
 Loss/Probability operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -281,14 +294,6 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.pick_batch_elems
 
-.. autofunction:: dynet.sum_batches
-
-.. autofunction:: dynet.mean_batches
-
-.. autofunction:: dynet.moment_batches
-
-.. autofunction:: dynet.std_batches
-
 .. autofunction:: dynet.reshape
 
 .. autofunction:: dynet.select_rows
@@ -300,10 +305,6 @@ Flow/Shaping operations
 .. autofunction:: dynet.concatenate
 
 .. autofunction:: dynet.concatenate_to_batch
-
-.. autofunction:: dynet.max_dim
-
-.. autofunction:: dynet.min_dim
 
 .. autofunction:: dynet.nobackprop
 
@@ -328,6 +329,8 @@ Linear algebra operations
 .. autofunction:: dynet.affine_transform
 
 .. autofunction:: dynet.dot_product
+
+.. autofunction:: dynet.transpose
 
 .. autofunction:: dynet.inverse
 

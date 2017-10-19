@@ -15,7 +15,9 @@
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real gscale, const std::vector<Tensor*> & values); \
   void MyTrainer::update_rule(real gscale, const std::vector<Tensor*> & values) { \
     if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,gscale,values); } \
-    else if(values[0]->device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)values[0]->device,gscale,values); } \
+    else if(values[0]->device->type == DeviceType::GPU) { \
+      cudaSetDevice(((Device_GPU*)values[0]->device)->cuda_device_id); \
+      update_rule_dev(*(Device_GPU*)values[0]->device,gscale,values); } \
     else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #else
