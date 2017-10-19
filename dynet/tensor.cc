@@ -112,16 +112,32 @@ void TensorTools::set_element(const Tensor& v, int index, float value) {
 
 void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rindex) {
   if (l.device->type == DeviceType::CPU) {
-    r.v[rindex] = l.v[lindex];
-  } else {
-    if (l.device != r.device) {
-      throw std::invalid_argument("TensorTools::CopyElement doesn't support inter-device copy yet");
+    if (r.device->type == DeviceType::CPU) {
+      r.v[rindex] = l.v[lindex];
 #if HAVE_CUDA
-    } else if (l.device->type == DeviceType::GPU) {
-      cudaMemcpyAsync(&r.v[rindex], &l.v[lindex], sizeof(real), cudaMemcpyDeviceToDevice);
+    } else if (r.device->type == DeviceType::GPU) {
+      CUDA_CHECK(cudaSetDevice(((Device_GPU*)r.device)->cuda_device_id));
+      cudaMemcpyAsync(&r.v[rindex], &l.v[lindex], sizeof(real),
+                      cudaMemcpyHostToDevice);
 #endif
     } else { throw std::runtime_error("Bad device type"); }
-  }
+#if HAVE_CUDA
+  } else if (l.device->type == DeviceType::GPU) {
+    if (r.device->type == DeviceType::CPU) {
+      CUDA_CHECK(cudaSetDevice(((Device_GPU*)l.device)->cuda_device_id));
+      cudaMemcpyAsync(&r.v[rindex], &l.v[lindex], sizeof(real),
+                      cudaMemcpyDeviceToHost);
+    } else if (r.device->type == DeviceType::GPU) {
+      if (l.device == r.device) {
+        cudaMemcpyAsync(&r.v[rindex], &l.v[lindex], sizeof(real), cudaMemcpyDeviceToDevice);
+      } else {
+        cudaMemcpyPeerAsync(&r.v[rindex], ((Device_GPU*)r.device)->cuda_device_id,
+                            &l.v[lindex], ((Device_GPU*)l.device)->cuda_device_id,
+                            sizeof(real), dynet::default_stream);
+      }
+    } else { throw std::runtime_error("Bad device type"); }
+#endif
+  } else { throw std::runtime_error("Bad device type"); }
 }
 
 void TensorTools::set_elements(const Tensor& v, const vector<float>& vec) {
