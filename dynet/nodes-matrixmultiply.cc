@@ -53,7 +53,7 @@ void MatrixMultiply::forward_dev_impl(const MyDevice & dev, const vector<const T
   // fx = 0*fx + xs[0] * xs[1]
   dynet::MatrixMultiply(dev, *xs[0], *xs[1], fx, dev.kSCALAR_ZERO);
 #else
-  DYNET_ARG_CHECK(fx.d.bd == max(xs[0]->d.bd, xs[1]->d.bd),"Failed dimension check in MatrixMultiply::forward");
+  DYNET_ARG_CHECK(fx.d.bd == max(xs[0]->d.bd, xs[1]->d.bd), "Failed dimension check in MatrixMultiply::forward");
   if(xs[0]->d.bd == 1) {
     // If the left side has one batch, multiply by columns
     // [x, z, b] = [x, y] * [y, z, b]
