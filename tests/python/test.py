@@ -263,6 +263,15 @@ class TestParameters(unittest.TestCase):
         p = self.m.add_lookup_parameters(np.zeros((3, 5)))
         p = self.m.add_lookup_parameters((3, 5), init=dy.ConstInitializer(2.0))
 
+        array = np.arange(50).reshape(10, 5)
+        p = self.m.add_lookup_parameters(array)
+
+        slice_array = array[8]
+        slice_param = p.batch([8]).npvalue()
+
+        for i in range(5):
+            self.assertEqual(slice_array[i], slice_param[i])
+
 
 class TestBatchManipulation(unittest.TestCase):
 

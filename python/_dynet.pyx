@@ -1131,7 +1131,7 @@ cdef class ParameterCollection: # {{{
         """
         vocab_size = array.shape[0]
         emb_dim = array.shape[1:]
-        init = NumpyInitializer(array.T)
+        init = NumpyInitializer(np.swapaxes(array, 0, array.ndim - 1))
         cdef CDevice* dev
         cdef CLookupParameters p
         cdef string _name = <string> name.encode("utf8")
@@ -1273,6 +1273,8 @@ cdef class ParameterCollection: # {{{
                 else:
                     raise ValueError('Didn\'t recognize initializer')
             elif isinstance(init, PyInitializer):
+                if isinstance(init, NumpyInitializer):
+                    raise ValueError('Do not use NumpyInitializer with add_lookup_parameters, use lookup_parameters_from_numpy instead')
                 pyinit = init
             else:
                 raise ValueError('Didn\'t recognize initializer')
