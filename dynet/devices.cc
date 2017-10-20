@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <string>
-#include <unsupported/Eigen/CXX11/Tensor>
 
 #include "dynet/cuda.h"
 #include "dynet/dynet.h"
@@ -98,7 +97,9 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
 
   // Initialize the Eigen device
-  estream = new Eigen::CudaStreamDevice(device_id);
+  CUDA_CHECK(cudaStreamCreate(&stream));
+  estream = new EigenCudaStreamDevice(device_id);
+  estream->set_stream(&stream);
   edevice = new Eigen::GpuDevice(estream);
 
   // this is the big memory allocation.
@@ -134,12 +135,41 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
 
 Device_CPU::~Device_CPU() {}
 
-Device* get_global_device(const std::string & name) {
-  auto it = dynet::devices_map.find(name);
-  if (it == dynet::devices_map.end()) {
+
+DeviceManager::DeviceManager() {}
+
+DeviceManager::~DeviceManager() {
+  clear();
+}
+
+void DeviceManager::clear() {
+  // TODO: Devices cannot be deleted at the moment because the destructor
+  // is protected
+  // for(Device* device : devices) delete device;
+  devices.clear();
+}
+
+void DeviceManager::add(Device* d) {
+    devices.push_back(d);
+    devices_map[d->name] = d;
+}
+
+Device* DeviceManager::get_global_device(const std::string & name) {
+  if (name == "")
+    return dynet::default_device;
+  auto it = devices_map.find(name);
+  if (it == devices_map.end()) {
     throw std::runtime_error("Invalid device name: " + name);
   }
   return it->second;
+}
+
+DeviceManager* get_device_manager() {
+  // In C++11, initialization of function local static objects is
+  // thread safe.
+  // See https://isocpp.org/wiki/faq/ctors#static-init-order-on-first-use
+  static auto device_manager = new DeviceManager;
+  return device_manager;
 }
 
 } // namespace dynet

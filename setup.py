@@ -1,6 +1,8 @@
 import distutils.sysconfig
 import logging as log
 import platform
+import tarfile
+import zipfile
 import sys
 from distutils.command.build import build as _build
 from distutils.command.build_py import build_py as _build_py
@@ -16,6 +18,14 @@ from Cython.Distutils import build_ext as _build_ext
 from setuptools import setup
 from setuptools.extension import Extension
 from shutil import rmtree, copytree
+
+# urlretrieve has a different location in Python 2 and Python 3
+import urllib
+if hasattr(urllib, "urlretrieve"):
+    urlretrieve = urllib.urlretrieve
+else:
+    import urllib.request
+    urlretrieve = urllib.request.urlretrieve
 
 
 def run_process(cmds):
@@ -79,7 +89,12 @@ except NameError:
     this_file = sys.argv[0]
 ORIG_DIR = os.getcwd()
 SCRIPT_DIR = os.path.dirname(os.path.abspath(this_file))
-BUILD_DIR = os.path.join(SCRIPT_DIR, "build")
+if ORIG_DIR.rstrip('/').endswith('python'):
+    BUILD_DIR = ORIG_DIR.rstrip('/').rstrip('python')
+    PYTHON_DIR = ORIG_DIR
+else:
+    BUILD_DIR = ORIG_DIR
+    PYTHON_DIR = ORIG_DIR + '/python'
 ENV = get_env(BUILD_DIR)
 
 # Find the paths
@@ -87,7 +102,7 @@ BUILT_EXTENSIONS = False
 CMAKE_PATH = ENV.get("CMAKE", find_executable("cmake"))
 MAKE_PATH = ENV.get("MAKE", find_executable("make"))
 MAKE_FLAGS = ENV.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
-HG_PATH = find_executable("hg")
+# HG_PATH = find_executable("hg")
 CC_PATH = ENV.get("CC", find_executable("gcc"))
 CXX_PATH = ENV.get("CXX", find_executable("g++"))
 INSTALL_PREFIX = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
@@ -102,6 +117,9 @@ if (EIGEN3_INCLUDE_DIR is not None and
     not os.path.isdir(EIGEN3_INCLUDE_DIR) and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
+
+EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/699b6595fc47.zip") 
+# EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/3.3.4.tar.bz2")
     
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()
@@ -136,7 +154,7 @@ if ENV.get("MSVC") == "1":
     append_cmake_lib_list(LIBRARIES, ENV.get("CUDA_RT_FILES"))
     append_cmake_list(LIBRARY_DIRS, ENV.get("CUDA_RT_DIRS"))
 else:
-    COMPILER_ARGS[:] = ["-std=c++11"]
+    COMPILER_ARGS[:] = ["-std=c++11", "-Wno-unused-function"]
     RUNTIME_LIB_DIRS.extend([DYNET_LIB_DIR, LIBS_INSTALL_DIR])
     # in some OSX systems, the following extra flags are needed:
     if platform.system() == "Darwin":
@@ -151,7 +169,7 @@ INCLUDE_DIRS[:] = filter(None, [PROJECT_SOURCE_DIR, EIGEN3_INCLUDE_DIR])
 
 TARGET = [Extension(
     "_dynet",  # name of extension
-    ["_dynet.pyx"],  # filename of our Pyrex/Cython source
+    [PYTHON_DIR + "/_dynet.pyx"],  # filename of our Pyrex/Cython source
     language="c++",  # this causes Pyrex/Cython to create C++ source
     include_dirs=INCLUDE_DIRS,
     libraries=LIBRARIES,
@@ -174,7 +192,8 @@ class build(_build):
 
     def initialize_options(self):
         py_version = "%s.%s" % (sys.version_info[0], sys.version_info[1])
-        build_name = "py%s-%s" % (py_version, platform.architecture()[0])
+        unicode_suffix = "u" if sys.version_info[0] == 2 and sys.maxunicode > 65536 else ""
+        build_name = "py%s%s-%s" % (py_version, unicode_suffix, platform.architecture()[0])
         self.build_dir = os.path.join(SCRIPT_DIR, "build", build_name)
         _build.initialize_options(self)
 
@@ -187,8 +206,9 @@ class build(_build):
         log.info("CMAKE_PATH=%r" % CMAKE_PATH)
         log.info("MAKE_PATH=%r" % MAKE_PATH)
         log.info("MAKE_FLAGS=%r" % " ".join(MAKE_FLAGS))
-        log.info("HG_PATH=%r" % HG_PATH)
+        # log.info("HG_PATH=%r" % HG_PATH)
         log.info("EIGEN3_INCLUDE_DIR=%r" % EIGEN3_INCLUDE_DIR)
+        log.info("EIGEN3_DOWNLOAD_URL=%r" % EIGEN3_DOWNLOAD_URL)
         log.info("CC_PATH=%r" % CC_PATH)
         log.info("CXX_PATH=%r" % CXX_PATH)
         log.info("SCRIPT_DIR=%r" % SCRIPT_DIR)
@@ -219,13 +239,23 @@ class build(_build):
             os.chdir(BUILD_DIR)
             if os.path.isdir(EIGEN3_INCLUDE_DIR):
                 log.info("Found eigen in " + EIGEN3_INCLUDE_DIR)
-            elif HG_PATH is None:
-                raise DistutilsSetupError("`hg` not found.")
             else:
-                hg_cmd = [HG_PATH, "clone", "https://bitbucket.org/eigen/eigen"]
-                log.info("Cloning Eigen...")
-                if run_process(hg_cmd) != 0:
-                    raise DistutilsSetupError(" ".join(hg_cmd))
+                try:
+                    # Can use BZ2 or zip, right now using zip
+                    # log.info("Fetching Eigen...")
+                    # urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.tar.bz2")
+                    # log.info("Unpacking Eigen...")
+                    # tfile = tarfile.open("eigen.tar.bz2", 'r')
+                    # tfile.extractall('eigen')
+                    log.info("Fetching Eigen...")
+                    urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
+                    log.info("Unpacking Eigen...")
+                    zfile = zipfile.ZipFile("eigen.zip", 'r')
+                    zfile.extractall('eigen')
+                    #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
+                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
+                except:
+                    raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_URL)
 
             os.environ["CXX"] = CXX_PATH
             os.environ["CC"] = CC_PATH
@@ -291,7 +321,6 @@ class build_ext(_build_ext):
                 target_dir = os.path.join(SCRIPT_DIR, "build", d)
                 rmtree(target_dir, ignore_errors=True)
                 copytree(os.path.join("build", d), target_dir)
-        os.chdir(ORIG_DIR)
 
 
 try:

@@ -5,6 +5,7 @@
 ---
 
 [![Build Status](https://travis-ci.org/clab/dynet.svg?branch=master)](https://travis-ci.org/clab/dynet)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/clab/dynet?svg=true)](https://ci.appveyor.com/project/danielh/dynet-c3iuq)
 [![Doc build Status](https://readthedocs.org/projects/dynet/badge/?version=latest)](http://dynet.readthedocs.io/en/latest/)
 [![PyPI version](https://badge.fury.io/py/dyNET.svg)](https://badge.fury.io/py/dyNET)
 
@@ -63,7 +64,7 @@ released versions, you may get assertion failures or compile errors.**
 If you don't have Eigen already, you can get it easily using the
 following command:
 
-    hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
+    hg clone https://bitbucket.org/eigen/eigen/ -r 699b659
 
 The `-r NUM` specified a revision number that is known to work.  Adventurous
 users can remove it and use the very latest version, at the risk of the code
@@ -85,6 +86,8 @@ You can install dynet for C++ with the following commands
     mkdir build
     cd build
     # Run CMake
+    # -DENABLE_BOOST=ON in combination with -DENABLE_CPP_EXAMPLES=ON also
+    # compiles the multiprocessing c++ examples
     cmake .. -DEIGEN3_INCLUDE_DIR=/path/to/eigen -DENABLE_CPP_EXAMPLES=ON
     # Compile using 2 processes
     make -j 2

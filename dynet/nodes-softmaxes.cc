@@ -42,13 +42,31 @@ size_t Softmax::aux_storage_size() const {
 template<class MyDevice>
 void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in Softmax::forward");
+#ifdef __CUDACC__ // GPU impl
   Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
-  TensorTools::logsumexp_dev(dev, *xs[0], m, z);
-  // TODO? Is this broadcast efficient on CPU?
+  Eigen::array<int, 1> red_dim = {0};
+  m.tb<1>().device(*dev.edevice) = xs[0]->tb<2>().maximum(red_dim);
   Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
   Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
-  fx.tb<2>().device(*dev.edevice) = (xs[0]->tb<2>() - z.tvec().reshape(morph).broadcast(bcasts)).exp();
+  fx.tb<2>().device(*dev.edevice) = (xs[0]->tb<2>() - m.tvec().reshape(morph).broadcast(bcasts)).exp();
+  z.tb<1>().device(*dev.edevice) = fx.tb<2>().sum(red_dim);
+  fx.tb<2>().device(*dev.edevice) = fx.tb<2>() / z.tvec().reshape(morph).broadcast(bcasts);
+#else // CPU impl
+  Tensor z(Dim({1}), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Tensor m(Dim({1}), (float*)aux_mem + 1, fx.device, DeviceMempool::FXS);
+  unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
+  Tensor col_x(Dim({xs[0]->d[0]}), (float*)xs[0]->v, fx.device, DeviceMempool::FXS);
+  Tensor col_fx(Dim({xs[0]->d[0]}), (float*)fx.v, fx.device, DeviceMempool::FXS);
+  for(size_t col = 0; col < num_cols; ++col) {
+    m.t<0>() = col_x.tvec().maximum();
+    col_fx.tvec() = (col_x.tvec() - m.v[0]).exp();
+    z.t<0>() = col_fx.tvec().sum();
+    col_fx.tvec() = col_fx.tvec() / z.v[0];
+    col_x.v += size;
+    col_fx.v += size;
+  }
+#endif
 }
 
 template<class MyDevice>
@@ -59,12 +77,24 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   Tensor z(Dim({fx.d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  // TODO? Is this broadcast efficient on CPU?
   Eigen::array<int, 1> red_axis = {0};
   z.tb<1>().device(*dev.edevice) = (fx.tb<2>() * dEdf.tb<2>()).sum(red_axis);
+#ifdef __CUDACC__ // GPU impl
   Eigen::array<int, 3> bcast = {(int)xs[0]->d.rows(), 1, 1};
   Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
   dEdxi.tb<2>().device(*dev.edevice) += (dEdf.tb<2>() - z.tvec().reshape(morph).broadcast(bcast)) * fx.tb<2>();
+#else // CPU impl
+  unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
+  Tensor col_fx(Dim({xs[0]->d[0]}), (float*)fx.v, fx.device, DeviceMempool::FXS);
+  Tensor col_dEdf(Dim({xs[0]->d[0]}), (float*)dEdf.v, fx.device, DeviceMempool::FXS);
+  Tensor col_dEdxi(Dim({xs[0]->d[0]}), (float*)dEdxi.v, fx.device, DeviceMempool::FXS);
+  for(size_t col = 0; col < num_cols; ++col) {
+    col_dEdxi.tvec() += (col_dEdf.tvec() - z.v[col]) * col_fx.tvec();
+    col_fx.v += size;
+    col_dEdf.v += size;
+    col_dEdxi.v += size;
+  }
+#endif
 }
 DYNET_NODE_INST_DEV_IMPL(Softmax)
 
@@ -105,10 +135,20 @@ void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
     fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - as_scalar(z);
 #endif
   } else {
-    // TODO? Is this broadcast efficient on CPU?
+#ifdef __CUDACC__ // GPU impl
     Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
     Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
     fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>() - z.tvec().reshape(morph).broadcast(bcasts);
+#else // CPU impl
+    unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
+    Tensor col_fx(Dim({xs[0]->d[0]}), (float*)fx.v, fx.device, DeviceMempool::FXS);
+    Tensor col_x(Dim({xs[0]->d[0]}), (float*)xs[0]->v, fx.device, DeviceMempool::FXS);
+    for(size_t col = 0; col < num_cols; ++col) {
+      col_fx.tvec() = col_x.tvec() - z.v[col];
+      col_x.v += size;
+      col_fx.v += size;
+    }
+#endif
   }
 }
 
@@ -120,12 +160,24 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  // TODO? Is this broadcast efficient on CPU?
   Eigen::array<int, 1> red_axis; red_axis[0] = 0;
   z.tb<1>().device(*dev.edevice) = dEdf.tb<2>().sum(red_axis);
+#ifdef __CUDACC__ // GPU impl
   Eigen::array<int, 3> bcast = {(int)fx.d.rows(), 1, 1};
   Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
   dEdxi.tb<2>().device(*dev.edevice) += fx.tb<2>().exp() * -z.tvec().reshape(morph).broadcast(bcast) + dEdf.tb<2>();
+#else // CPU impl
+  unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
+  Tensor col_fx(Dim({xs[0]->d[0]}), (float*)fx.v, fx.device, DeviceMempool::FXS);
+  Tensor col_dEdf(Dim({xs[0]->d[0]}), (float*)dEdf.v, fx.device, DeviceMempool::FXS);
+  Tensor col_dEdxi(Dim({xs[0]->d[0]}), (float*)dEdxi.v, fx.device, DeviceMempool::FXS);
+  for(size_t col = 0; col < num_cols; ++col) {
+    col_dEdxi.tvec() += (col_fx.tvec().exp() * -z.v[col]) + col_dEdf.tvec();
+    col_fx.v += size;
+    col_dEdf.v += size;
+    col_dEdxi.v += size;
+  }
+#endif
 }
 DYNET_NODE_INST_DEV_IMPL(LogSoftmax)
 

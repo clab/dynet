@@ -160,8 +160,7 @@ Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_ait;
     if (has_prev_state) {
 //      i_ait = vars[BI] + vars[X2I] * in + vars[H2I]*i_h_tm1 + cmult(vars[C2I], i_c_tm1);
-      i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1}) +
-              cmult(vars[C2I], i_c_tm1);
+      i_ait = affine_transform({vars[BI], vars[X2I], in, vars[H2I], i_h_tm1});// + cmult(vars[C2I], i_c_tm1); TODO
     } else {
 //      i_ait = vars[BI] + vars[X2I] * in;
       i_ait = affine_transform({vars[BI], vars[X2I], in});
@@ -190,8 +189,7 @@ Expression FastLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_aot;
     if (has_prev_state) {
 //      i_aot = vars[BO] + vars[X2O] * in + vars[H2O] * i_h_tm1 + cmult(vars[C2O], ct[i]);
-      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1}) +
-              cmult(vars[C2O], ct[i]);
+      i_aot = affine_transform({vars[BO], vars[X2O], in, vars[H2O], i_h_tm1});// + cmult(vars[C2O], ct[i]); TODO
     }
     else {
 //      i_aot = vars[BO] + vars[X2O] * in;

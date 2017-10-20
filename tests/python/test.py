@@ -1,6 +1,7 @@
 import dynet as dy
 import numpy as np
 import unittest
+import gc
 
 
 def npvalue_callable(x):
@@ -96,6 +97,18 @@ class TestParameters(unittest.TestCase):
         self.trainer = dy.SimpleSGDTrainer(self.m, learning_rate=0.1)
         self.trainer.set_clip_threshold(-1)
 
+    def test_list(self):
+        [p1, p2] = self.m.parameters_list()
+        [lp1, lp2] = self.m.lookup_parameters_list()
+
+    def test_shape(self):
+        shape = (10, 5, 2)
+        lp = self.m.add_lookup_parameters(shape)
+        lp_shape = lp.shape()
+        self.assertEqual(shape[0], lp_shape[0])
+        self.assertEqual(shape[1], lp_shape[1])
+        self.assertEqual(shape[2], lp_shape[2])
+
     def test_as_array(self):
         # Values
         self.p1.as_array()
@@ -124,11 +137,11 @@ class TestParameters(unittest.TestCase):
         res.backward()
         # Should print the value of x
         self.assertTrue(np.allclose(p.grad_as_array(), x.npvalue()), msg="Gradient is wrong")
-    
+
     def test_set_value(self):
         # add parameter
         p = self.m.add_parameters((2, 3), init=dy.ConstInitializer(1))
-        value_to_set = np.arange(6).reshape(2,3)
+        value_to_set = np.arange(6).reshape(2, 3)
         # set the value
         p.set_value(value_to_set)
         self.assertTrue(np.allclose(p.as_array(), value_to_set))
@@ -203,17 +216,52 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(np.allclose(self.lp2.as_array()[1], ones[
                         0] * 0.9), msg=np.array_str(self.lp2.as_array()))
 
-    def test_initializers(self):
+    def test_param_change_after_update(self):
+        for trainer_type in dy.SimpleSGDTrainer, dy.AdamTrainer:
+            trainer = trainer_type(self.m)
+            for _ in range(100):
+                p = self.m.add_parameters((1,))
+                dy.renew_cg()
+                x = dy.parameter(p)
+                x.forward()
+                x.backward()
+                trainer.update()
 
-        p = self.m.add_parameters((3,5), init=0)
-        p = self.m.add_parameters((3,5), init='uniform', scale=2.0)
-        p = self.m.add_parameters((3,5), init='normal', mean=-1.0, std=2.5)
-        p = self.m.add_parameters((5,5), init='identity')
+    def test_delete_model(self):
+        p = dy.parameter(dy.ParameterCollection().add_parameters(
+            (1,), init=dy.ConstInitializer(1)))
+        p.value()
+        gc.collect()
+        p.value()
+
+    def test_delete_parent_model(self):
+        model = dy.ParameterCollection().add_subcollection()
+        p = dy.parameter(model.add_parameters((1,), init=dy.ConstInitializer(1)))
+        p.value()
+        gc.collect()
+        p.value()
+
+    def test_parameters_initializers(self):
+
+        p = self.m.add_parameters((3, 5), init=0)
+        p = self.m.add_parameters((3, 5), init='uniform', scale=2.0)
+        p = self.m.add_parameters((3, 5), init='normal', mean=-1.0, std=2.5)
+        p = self.m.add_parameters((5, 5), init='identity')
         #p = self.m.add_parameters((5,5), init='saxe')
-        p = self.m.add_parameters((3,5), init='glorot')
-        p = self.m.add_parameters((3,5), init='he')
-        p = self.m.add_parameters(np.zeros((3,5)))
-        p = self.m.add_parameters((3,5), init=dy.ConstInitializer(2.0))
+        p = self.m.add_parameters((3, 5), init='glorot')
+        p = self.m.add_parameters((3, 5), init='he')
+        p = self.m.add_parameters(np.zeros((3, 5)))
+        p = self.m.add_parameters((3, 5), init=dy.ConstInitializer(2.0))
+
+    def test_lookup_parameters_initializers(self):
+
+        p = self.m.add_lookup_parameters((3, 5), init=0)
+        p = self.m.add_lookup_parameters((3, 5), init='uniform', scale=2.0)
+        p = self.m.add_lookup_parameters((3, 5), init='normal', mean=-1.0, std=2.5)
+        p = self.m.add_lookup_parameters((3, 5), init='glorot')
+        p = self.m.add_lookup_parameters((3, 5), init='he')
+        p = self.m.add_lookup_parameters(np.zeros((3, 5)))
+        p = self.m.add_lookup_parameters((3, 5), init=dy.ConstInitializer(2.0))
 
 
 class TestBatchManipulation(unittest.TestCase):
@@ -488,6 +536,7 @@ class TestClassFactoredSoftmax(unittest.TestCase):
             nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 7, update=False)
             nll.value()
             nll_const.value()
+
 
 if __name__ == '__main__':
     unittest.main()

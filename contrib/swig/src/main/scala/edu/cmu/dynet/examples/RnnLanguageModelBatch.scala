@@ -130,8 +130,8 @@ object RnnLanguageModelBatch {
 
   val userDir = System.getProperty("user.dir")
 
-  val TRAIN_FILE = Paths.get(userDir, "../examples/cpp/example-data/train-hsm.txt").toString
-  val DEV_FILE = Paths.get(userDir, "../examples/cpp/example-data/dev-hsm.txt").toString
+  val TRAIN_FILE = Paths.get(userDir, "../../examples/cpp/example-data/train-hsm.txt").toString
+  val DEV_FILE = Paths.get(userDir, "../../examples/cpp/example-data/dev-hsm.txt").toString
 
   def main(args: Array[String]) {
 

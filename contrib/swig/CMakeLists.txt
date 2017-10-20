@@ -49,6 +49,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/AdamTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/ComputationGraph.java"
     "${CMAKE_SWIG_OUTDIR}/CoupledLSTMBuilder.java"
+    "${CMAKE_SWIG_OUTDIR}/CompactVanillaLSTMBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/CyclicalSGDTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/Device.java"
     "${CMAKE_SWIG_OUTDIR}/DeviceMempool.java"

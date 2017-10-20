@@ -29,6 +29,7 @@ struct ParamsTest {
             for (auto x : {"ParamsTest", "--dynet-mem", "512"}) {
                 av.push_back(strdup(x));
             }
+            ADD_EXTRA_ARGUMENTS(av)
             char **argv = &av[0];
             int argc = av.size();
             dynet::initialize(argc, argv);
@@ -120,7 +121,7 @@ BOOST_AUTO_TEST_CASE ( test_parameter_class ) {
     return p.get_storage().name;
   };
   auto save_parameters_lambda3 = [] (const std::string & fname,
-                                     dynet::ParameterStorage *p) ->std::string {
+                                     std::shared_ptr<dynet::ParameterStorage>p) ->std::string {
     std::cout << p->name << " saved in file " << fname << std::endl;
     return p->name;
   };

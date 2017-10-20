@@ -15,8 +15,8 @@ namespace dynet {
 bool check_grad(ParameterCollection& m, Expression& expr, int verbosity) {
   ComputationGraph& g = *expr.pg;
   // Clear the parameters first
-  const vector<ParameterStorage*>& params = m.parameters_list();
-  const vector<LookupParameterStorage*>& lookup_params = m.lookup_parameters_list();
+  const vector<shared_ptr<ParameterStorage>>& params = m.parameters_list();
+  const vector<shared_ptr<LookupParameterStorage>>& lookup_params = m.lookup_parameters_list();
   for (auto pp : params)
     pp->clear();
   for (auto pp : lookup_params)

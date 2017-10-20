@@ -1,0 +1,69 @@
+os: Visual Studio 2015
+
+platform: x64
+
+environment:
+  global:
+    MSVC_DEFAULT_OPTIONS: ON
+    BOOST_ROOT: C:\Libraries\boost_1_59_0
+    BOOST_LIBRARYDIR: C:\Libraries\boost_1_59_0\lib64-msvc-14.0
+    MSVC: 1
+    MINICONDA: "C:\\Miniconda3-x64"
+    TWINE_USERNAME: danielh
+    TWINE_PASSWORD:
+      secure: cpMn69tLzuhwO7EPhhiVwA==
+  matrix:
+    - PYTHON_VERSION: 3.5
+    - PYTHON_VERSION: 3.6
+
+configuration: Release
+
+init:
+  - cmd: cmake --version
+  - cmd: msbuild /version
+  - "ECHO %PYTHON_VERSION% %MINICONDA%"
+
+install:
+  - cmd: git submodule update --init --recursive
+  - ps: wget https://bitbucket.org/eigen/eigen/get/1f0f8337c029.zip -OutFile eigen.zip
+  - cmd: 7z x eigen.zip -o"C:\projects" -y > nul
+  - cmd: rename C:\projects\eigen-eigen-1f0f8337c029 eigen
+  - set PATH=%MINICONDA%;%MINICONDA%\Scripts;C:\Program Files (x86)\Pandoc;%PATH%
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  - conda create -q -n test-env python=%PYTHON_VERSION% cython numpy pypandoc
+  - activate test-env
+  - cinst pandoc
+  - ps: if ($env:APPVEYOR_REPO_TAG -eq $True) { (gc setup.py) -replace '. (version=.)0.0.0', '${1}' + "$env:APPVEYOR_REPO_TAG_NAME" | Out-File -encoding 'UTF8' setup.py }
+
+before_build:
+  - cmd: md build
+  - cmd: cd build
+  - cmd: cmake -DEIGEN3_INCLUDE_DIR=C:/projects/eigen -G "Visual Studio 14 2015 Win64" -DCMAKE_BUILD_TYPE=%configuration% -DENABLE_BOOST=ON -DBOOST_ROOT:PATHNAME="%BOOST_ROOT%" -DBoost_LIBRARY_DIRS:FILEPATH="%BOOST_LIBRARYDIR%" -DBoost_NO_BOOST_CMAKE=TRUE -DBoost_NO_SYSTEM_PATHS=TRUE -DPYTHON=python.exe .. 
+  - cmd: set VS90COMNTOOLS=%VS140COMNTOOLS%
+  - cmd: cd ..
+
+build:
+  project: build\dynet.sln
+  verbosity: normal
+
+after_build:
+  - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\python
+  - python ../../setup.py EIGEN3_INCLUDE_DIR=C:/projects/eigen build --build-dir=.. --skip-build bdist_wheel install
+
+test_script:
+  - python -m unittest discover %APPVEYOR_BUILD_FOLDER%\tests\python -v
+
+deploy_script:
+  - cmd: cd %APPVEYOR_BUILD_FOLDER%
+  - python setup.py sdist
+  - echo [distutils]                                  > %USERPROFILE%\\.pypirc
+  - echo index-servers =                             >> %USERPROFILE%\\.pypirc
+  - echo     pypi                                    >> %USERPROFILE%\\.pypirc
+  - echo [pypi]                                      >> %USERPROFILE%\\.pypirc
+  - echo repository=https://pypi.python.org/pypi     >> %USERPROFILE%\\.pypirc
+  - echo username=%PYPI_USERNAME%                    >> %USERPROFILE%\\.pypirc
+  - echo password=%PYPI_PASSWORD%                    >> %USERPROFILE%\\.pypirc
+  - python -m pip install twine
+  - if "%APPVEYOR_REPO_TAG%"=="true" ( python -m twine upload --skip-existing dist/* build/python/dist/* )

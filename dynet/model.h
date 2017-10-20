@@ -7,6 +7,7 @@
 #ifndef DYNET_PARAMS_H_
 #define DYNET_PARAMS_H_
 
+#include <memory>
 #include <vector>
 #include <set>
 #include <unordered_set>
@@ -27,6 +28,7 @@ namespace dynet {
 // * LookupParameters represents a table of vectors that are used to embed a
 //   set of discrete objects. These are sparsely updated.
 
+class DeviceManager;
 class ParameterCollection;
 struct ParameterInit;
 
@@ -145,13 +147,24 @@ struct ParameterStorage : public ParameterStorageBase {
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
   Device *device;
 
-private:
+protected:
   ParameterStorage() : updated(true), owner(nullptr) {}
   explicit ParameterStorage(const Dim& d, float scale,
                             const std::string & name, Device *device); // initialize with a scale
   explicit ParameterStorage(const Dim& d, const ParameterInit & init,
                             const std::string & name, Device *device); // initialize with custom initializer
 }; // struct ParameterStorage
+
+struct ParameterStorageCreator : public ParameterStorage {
+  template <typename... Args>
+  explicit ParameterStorageCreator(Args &&...args)
+    : ParameterStorage(std::forward<Args>(args)...) {}
+
+  template <typename... Args>
+  static std::shared_ptr<ParameterStorage> create(Args &&...args) {
+    return std::make_shared<ParameterStorageCreator>(std::forward<Args>(args)...);
+  }
+};
 
 // represents a matrix/vector embedding of a discrete set
 /**
@@ -248,11 +261,22 @@ struct LookupParameterStorage : public ParameterStorageBase {
   bool nonzero_grad; /**< Whether the gradient is zero */
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
   Device *device;
-private:
+protected:
   LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}
   LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
                          const std::string & name, Device *device);
-}; // // struct LookupParameterStorage
+}; // struct LookupParameterStorage
+
+struct LookupParameterStorageCreator : public LookupParameterStorage {
+  template <typename... Args>
+  explicit LookupParameterStorageCreator(Args &&...args)
+    : LookupParameterStorage(std::forward<Args>(args)...) {}
+
+  template <typename... Args>
+  static std::shared_ptr<LookupParameterStorage> create(Args &&...args) {
+    return std::make_shared<LookupParameterStorageCreator>(std::forward<Args>(args)...);
+  }
+};
 
 /**
  * \ingroup params
@@ -269,9 +293,9 @@ struct Parameter {
    * @brief Constructor
    * @details This is called by the model, you shouldn't need to use it
    *
-   * @param p Pointer to the parameter storage
+   * @param p Shared pointer to the parameter storage
    */
-  Parameter(ParameterStorage* p);
+  Parameter(std::shared_ptr<ParameterStorage> p);
   /**
    * @brief Get underlying ParameterStorage object
    * @return ParameterStorage holding the parameter values
@@ -288,7 +312,7 @@ struct Parameter {
    */
   void zero();
 
-  ParameterStorage* p; /**< Pointer to the storage for this Parameter */
+  std::shared_ptr<ParameterStorage> p; /**< Pointer to the storage for this Parameter */
 
   /**
    * \brief Shape of the parameter
@@ -364,7 +388,7 @@ struct Parameter {
  */
 struct LookupParameter {
   LookupParameter();
-  LookupParameter(LookupParameterStorage* p);
+  LookupParameter(std::shared_ptr<LookupParameterStorage> p);
   /**
    * @brief Get underlying LookupParameterStorage object
    * @return LookupParameterStorage holding the parameter values
@@ -383,7 +407,7 @@ struct LookupParameter {
    */
   void zero();
 
-  LookupParameterStorage* p; /**< Pointer to the storage for this Parameter */
+  std::shared_ptr<LookupParameterStorage> p; /**< Pointer to the storage for this Parameter */
 
   /**
    * @brief Get the full name of the ParameterStorage object
@@ -448,12 +472,15 @@ struct ParameterCollectionStorage {
   float gradient_l2_norm_dev(MyDevice & dev) const;
   float gradient_l2_norm() const;
 
-  std::vector<ParameterStorageBase*> all_params;
-  std::vector<ParameterStorage*> params;
-  std::vector<LookupParameterStorage*> lookup_params;
+  std::vector<std::shared_ptr<ParameterStorageBase>> all_params;
+  std::vector<std::shared_ptr<ParameterStorage>> params;
+  std::vector<std::shared_ptr<LookupParameterStorage>> lookup_params;
 
   mutable float* gradient_norm_scratch;
   L2WeightDecay weight_decay;
+
+ private:
+  DeviceManager* const device_manager;
 };
 
 // this is a collection of parameters
@@ -539,19 +566,19 @@ public:
    *
    * \return list of points to ParameterStorageBase objects
    */
-  std::vector<ParameterStorageBase*> get_parameter_storages_base() const;
+  std::vector<std::shared_ptr<ParameterStorageBase>> get_parameter_storages_base() const;
   /**
    * \brief Get parameter in current model
    * \details It is not recommended to use this
    * \return the pointer to the Parameter object
    */
-  ParameterStorage* get_parameter_storage(const std::string & pname);
+  std::shared_ptr<ParameterStorage> get_parameter_storage(const std::string & pname);
   /**
    * \brief Get parameters in current model
    *
    * \return list of points to ParameterStorage objects
    */
-  std::vector<ParameterStorage*> get_parameter_storages() const;
+  std::vector<std::shared_ptr<ParameterStorage>> get_parameter_storages() const;
   /**
    * \brief Add lookup parameter to model
    * \details Same as add_parameters. Initializes with Glorot
@@ -583,13 +610,13 @@ public:
    * \details It is not recommended to use this
    * \return the pointer to the LookupParameter object
    */
-  LookupParameterStorage* get_lookup_parameter_storage(const std::string & lookup_pname);
+  std::shared_ptr<LookupParameterStorage> get_lookup_parameter_storage(const std::string & lookup_pname);
   /**
    * \brief Get lookup parameters in current model
    *
    * \return list of points to LookupParameterStorage objects
    */
-  std::vector<LookupParameterStorage*> get_lookup_parameter_storages() const;
+  std::vector<std::shared_ptr<LookupParameterStorage>> get_lookup_parameter_storages() const;
   //
   /**
    * \brief project weights so their L2 norm = radius
@@ -605,19 +632,19 @@ public:
    */
   void set_weight_decay_lambda(float lambda);
 
-  //const std::vector<ParameterStorageBase*>& all_parameters_list() const { return all_params; }
+  //const std::vector<std::shared_ptr<ParameterStorageBase>>& all_parameters_list() const { return all_params; }
   /**
-   * \brief Returns list of pointers to ParameterSorages
+   * \brief Returns list of shared pointers to ParameterSorages
    * \details You shouldn't need to use this
-   * \return List of pointers to ParameterSorages
+   * \return List of shared pointers to ParameterSorages
    */
-  const std::vector<ParameterStorage*>& parameters_list() const { return get_storage().params; }
+  const std::vector<std::shared_ptr<ParameterStorage>>& parameters_list() const { return get_storage().params; }
   /**
    * \brief Returns list of pointers to LookupParameterSorages
    * \details You shouldn't need to use this
    * \return List of pointers to LookupParameterSorages
    */
-  const std::vector<LookupParameterStorage*>& lookup_parameters_list() const { return get_storage().lookup_params; }
+  const std::vector<std::shared_ptr<LookupParameterStorage>>& lookup_parameters_list() const { return get_storage().lookup_params; }
 
   //
   //
@@ -696,8 +723,8 @@ public:
   const ParameterCollectionStorage& get_storage() const;
 
 protected:
-  void add_parameters_to_storage(ParameterStorage* p);
-  void add_lookup_parameters_to_storage(LookupParameterStorage* p);
+  void add_parameters_to_storage(std::shared_ptr<ParameterStorage> p);
+  void add_lookup_parameters_to_storage(std::shared_ptr<LookupParameterStorage> p);
 
 private:
   ParameterCollection(const std::string & name, ParameterCollection* parent);

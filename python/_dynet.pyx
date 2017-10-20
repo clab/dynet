@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
+from libcpp.memory cimport shared_ptr
 import numpy as np
 
 # python3 pickle already uses the c implementaion 
@@ -96,10 +97,10 @@ cdef class DynetParams: # {{{
             shared_parameters([type]): [description] (default: None)
         """
         cpu_use = False
-        if '--dynet-gpu' in sys.argv: # the python gpu switch, use GPU:0 by default
+        if '--dynet-gpu' in sys.argv:
             sys.argv.remove('--dynet-gpu')
-            sys.argv.append('--dynet-devices')
-            sys.argv.append('GPU:0')
+            sys.argv.append('--dynet-gpus')
+            sys.argv.append('1')
         elif not ('--dynet-gpus' in sys.argv or
                   '--dynet-devices' in sys.argv or
                   '--dynet-viz' in sys.argv):
@@ -479,6 +480,8 @@ cdef class GlorotInitializer(PyInitializer):
     * :math:`\\text{sigmoid}` : 4.0
     * Any smooth function :math:`f` : :math:`\\frac{1}{f'(0)}`
     
+    *Note:* This is also known as **Xavier initialization**
+
     Keyword Arguments:
         is_lookup (bool): Whether the parameter is alookup parameter (default: False)
         gain (number): Gain (Depends on the activation function) (default: 1.0)
@@ -774,7 +777,11 @@ cdef class LookupParameters: # {{{
         Returns:
             tuple: Shape of the parameter
         """
-        return c_dim_as_shape(self.thisptr.get_storage().all_dim)
+        shape = c_dim_as_shape(self.thisptr.get_storage().all_dim)
+        # In C++, the lookup dimension is stored in the last dimension (go figure)
+        # So we need to rotate the shape left to right
+        rotated_shape = tuple([shape[-1]] + list(shape[:-1]))
+        return rotated_shape
 
     def __getitem__(self, int i):
         """
@@ -973,15 +980,16 @@ cdef class ParameterCollection: # {{{
         separator) or :code:`_` (which is used as an index separator).
     """
     cdef CModel thisptr  # Not a pointer...
+    cdef ParameterCollection parent
     def __cinit__(self, ):
         pass
 
-    def __init__(self):
-        pass
+    def __init__(self, parent=None):
+        self.parent = parent
 
     @staticmethod
-    cdef wrap(CModel m):
-        self = ParameterCollection()
+    cdef wrap(CModel m, ParameterCollection parent=None):
+        self = ParameterCollection(parent)
         self.thisptr = m
         return self
 
@@ -1062,31 +1070,61 @@ cdef class ParameterCollection: # {{{
         loader.populate(self.thisptr, _key)
         del loader
 
-    # TODO: for debug, remove
-    cpdef pl(self): return self.thisptr.parameters_list().size()
+    cpdef parameters_list(self):
+        """Returns list of all parameters in the collection
+        
+        Returns:
+            (list): All dy.Parameters in the collection
+        """
+        cdef vector[shared_ptr[CParameterStorage]] pl = self.thisptr.parameters_list()
+        parameters_list = []
+        for p in pl:
+            parameters_list.append(Parameters.wrap_ptr(CParameters(p)))
+        return parameters_list
 
-    cpdef parameters_from_numpy(self, array,string name=""):
+    cpdef lookup_parameters_list(self):
+        """Returns list of all looku parameters in the collection
+        
+        Returns:
+            (list): All dy.LookupParameters in the collection
+        """
+        cdef vector[shared_ptr[CLookupParameterStorage]] pl = self.thisptr.lookup_parameters_list()
+        lookup_parameters_list = []
+        for p in pl:
+            lookup_parameters_list.append(LookupParameters.wrap_ptr(CLookupParameters(p)))
+        return lookup_parameters_list
+
+    cpdef parameters_from_numpy(self, array, name="", device=""):
         """Create parameter from numpy array
         
         Args:
             array (np.ndarray): Numpy array
             name  (string): optional name for this parameter.
+            device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
             (dynet.Parameters): Parameter
         """
         dim = array.shape
-        cdef CParameters p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer),name)
+        cdef CDevice* dev
+        cdef CParameters p
+        cdef string _name = <string> name.encode("utf8")
+        if str(device) != "":
+            dev = c_str2dev(device)
+            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name, dev)
+        else:
+            p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
     # TODO this may fail with >2 dim arrays.
-    cpdef lookup_parameters_from_numpy(self, array, string name=""):
+    cpdef lookup_parameters_from_numpy(self, array, name="", device=""):
         """Create LookupParameters from numpy array
         
         Args:
             array (np.ndarray): Numpy array. rows: vocab_size, cols: dims.
             name  (string): optional name for this parameter.
+            device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
             (dynet.LookupParameters): LookupParameter
@@ -1094,11 +1132,19 @@ cdef class ParameterCollection: # {{{
         vocab_size = array.shape[0]
         emb_dim = array.shape[1:]
         init = NumpyInitializer(array.T)
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), name)
+        cdef CDevice* dev
+        cdef CLookupParameters p
+        cdef string _name = <string> name.encode("utf8")
+        if str(device) != "":
+            dev = c_str2dev(device)
+            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), _name, dev)
+        else:
+            p = self.thisptr.add_lookup_parameters(vocab_size, Dim(emb_dim), deref(init.initializer), _name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, init=None, string name="", scale=1.0, mean=0.0, std=1.0):
+
+    cpdef add_parameters(self, dim, init=None, string name="", string device="", scale=1.0, mean=0.0, std=1.0):
         """Add a parameter to the ParameterCollection with a given initializer. There are different ways of specifying an initializer:
 
         .. code-block:: python
@@ -1109,7 +1155,7 @@ cdef class ParameterCollection: # {{{
             p = m.add_parameters((5,5), init='identity')                # Creates 5x5 identity matrix
             p = m.add_parameters((5,5), init='saxe')                    # Creates 5x5 orthogonal matrix (NOT SUPPORTED YET)
             p = m.add_parameters((3,5), init='glorot')                  # Creates 3x5 matrix with glorot init
-            p = m.add_parameters((3,5), init='he')                      # Creates 3x5 matrix with glorot init
+            p = m.add_parameters((3,5), init='he')                      # Creates 3x5 matrix with he init
             p = m.add_parameters(np.zeros((3,5)))                       # Creates 3x5 matrix from a numpy array (size is inferred)
             p = m.add_parameters((3,5), init=dy.PyInitializer())        # Any parameter initializer
         
@@ -1119,6 +1165,7 @@ cdef class ParameterCollection: # {{{
         Keyword Arguments:
             init (number, string, dynet.PyInitializer): Initializer, see description for details (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
+            device (string)           : Optional device name for this parameter (default: "", default device)
             scale (number): Scale for uniform initialization
             mean (number): Mean for normal initialization
             std (number): Standard deviation for normal initialization
@@ -1126,13 +1173,15 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.Parameters): Created Parameter
         """
-        assert(isinstance(dim,(tuple, int, np.ndarray)))
+        assert (isinstance(dim,(tuple, int, np.ndarray))), 'First argument of add_parameters should be a valid dimension or a numpy array'
         if isinstance(dim, np.ndarray):
-            return self.parameters_from_numpy(dim, name=name)
+            return self.parameters_from_numpy(dim, name=name, device=device)
         elif isinstance(dim, int):
             dim = (dim,)
         cdef CParameters p
         cdef CParameterInit *initializer
+        cdef CDevice *dev
+        cdef string _name = <string> name.encode("utf8")
         cdef PyInitializer pyinit
         if init is None:
             pyinit = GlorotInitializer()
@@ -1158,32 +1207,81 @@ cdef class ParameterCollection: # {{{
             else:
                 raise ValueError('Didn\'t recognize initializer')
         initializer = pyinit.initializer
-        p = self.thisptr.add_parameters(Dim(dim), deref(initializer), name)
+        if str(device) != "":
+            dev = c_str2dev(device)
+            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name, dev)
+        else:
+            p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters_int
-
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, string name=""):
-        """Add a lookup parameter to the ParameterCollection
+    cpdef add_lookup_parameters(self, dim, init=None, string name="", string device="", scale=1.0, mean=0.0, std=1.0):
+        """Add a lookup parameter to the ParameterCollection with a given initializer
+        
+        .. code-block:: python
+            
+            lp = m.add_lookup_parameters((3,5), init=0)                         # Creates 3 vectors of dimension 5 filled with zeros
+            lp = m.add_lookup_parameters((3,5), init='uniform', scale=a)        # Creates 3 vectors of dimension 5 initialized with U([-a,a])
+            lp = m.add_lookup_parameters((3,5), init='normal', mean=a, std=b)   # Creates 3 vectors of dimension 5 initialized with N(a, b)
+            lp = m.add_lookup_parameters((3,5), init='glorot')                  # Creates 3 vectors of dimension 5 with glorot init
+            lp = m.add_lookup_parameters((3,5), init='he')                      # Creates 3 vectors of dimension 5 with he init
+            lp = m.add_lookup_parameters(np.zeros((3,5)))                       # Creates 3 vectors of dimension 5 from a numpy array (first dimension is the lookup dimension)
+            lp = m.add_lookup_parameters((3,5), init=dy.PyInitializer())        # Any parameter initializer
         
         Args:
-            dim (tuple): Shape of the parameter. The first dimension is the vocab size
+            dim (tuple, np.ndarray): Shape of the parameter. The first dimension is the lookup dimension (number of records in the lookup table). If only a numpy array is passed the dimension is inferred
         
         Keyword Arguments:
-            init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            init (number, string, dynet.PyInitializer): Initializer, see description for details (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
+            device (string)           : Optional device name for this parameter (default: "", default device)
+            scale (number)            : Scale for uniform initialization
+            mean (number)             : Mean for normal initialization
+            std (number)              : Standard deviation for normal initialization
         
         Returns:
             (dynet.LookupParameters): Created LookupParameter
         """
-        assert(isinstance(dim, tuple))
+        assert (isinstance(dim,(tuple, np.ndarray))), 'First argument of add_parameters should be a valid dimension or a numpy array'
+        if isinstance(dim, np.ndarray):
+            return self.lookup_parameters_from_numpy(dim, name=name, device=device)
+        cdef CLookupParameters p
+        cdef CParameterInit *initializer
+        cdef CDevice *dev
+        cdef string _name = <string> name.encode("utf8")
+        cdef PyInitializer pyinit
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
+
         if init is None:
-            init = GlorotInitializer(True)
-        initializer = init.initializer
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), name)
+            pyinit = GlorotInitializer()
+        else:
+            if isinstance(init, (int, float)):
+                val = init
+                pyinit = ConstInitializer(val)
+            elif isinstance(init, str):
+                if init == 'identity':
+                    pyinit = IdentityInitializer()
+                elif init == 'glorot':
+                    pyinit = GlorotInitializer()
+                elif init == 'he':
+                    pyinit = NormalInitializer(0, 1 / (2 * rest[-1]))
+                elif init == 'uniform':
+                    pyinit = UniformInitializer(scale)
+                elif init == 'normal':
+                    pyinit = NormalInitializer(mean, std*std)
+                else:
+                    raise ValueError('Didn\'t recognize initializer')
+            elif isinstance(init, PyInitializer):
+                pyinit = init
+            else:
+                raise ValueError('Didn\'t recognize initializer')
+        initializer = pyinit.initializer
+        if str(device) != "":
+            dev = c_str2dev(device)
+            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), _name, dev)
+        else:
+            p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), _name)
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
@@ -1214,14 +1312,16 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.ParameterCollection) a parameter collection.
         """
-        if name is None: return ParameterCollection.wrap(self.thisptr.add_subcollection("".encode()))
-        else: return ParameterCollection.wrap(self.thisptr.add_subcollection(name.encode()))
+        return ParameterCollection.wrap(self.thisptr.add_subcollection((name or "").encode()), self)
 
     cpdef name(self):
         """
         Return the full name of this collection.
         """
         return self.thisptr.get_fullname().decode("utf8")
+
+    cpdef parameter_count(self):
+      return self.thisptr.parameter_count()
 
 # Alias Model and ParameterCollection
 Model=ParameterCollection
@@ -1401,18 +1501,18 @@ cdef class ComputationGraph:
     # 
     # We have the classes UnsignedValue, FloatValue and FloatVectorValue for
     # this purpose.
-    cdef inputValue(self, float v = 0.0):
-        return _inputExpression(self, v)
-    cdef inputVector(self, int dim):
-        return _vecInputExpression(self, vector[float](dim))
-    cdef inputVectorLiteral(self, vector[float] v):
-        return _vecInputExpression(self, v)
-    cdef inputMatrix(self, int d1, int d2):
-        return _vecInputExpression(self, vector[float](d1*d2), (d1,d2))
-    def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1):
-        return _vecInputExpression(self, v, d,batch_size)
-    def inputSparseTensor(self, vector[unsigned] idxs, vector[float] v, tuple dim, int batch_size=1, float defval=0):
-        return _sparseInputExpression(self, idxs, v, dim, batch_size, defval)
+    cdef inputValue(self, float v = 0.0, device=""):
+        return _inputExpression(self, v, device)
+    cdef inputVector(self, int dim, device=""):
+        return _vecInputExpression(self, vector[float](dim), device=device)
+    cdef inputVectorLiteral(self, vector[float] v, device=""):
+        return _vecInputExpression(self, v, device=device)
+    cdef inputMatrix(self, int d1, int d2, device=""):
+        return _vecInputExpression(self, vector[float](d1*d2), (d1,d2), device=device)
+    def inputMatrixLiteral(self, vector[float] v, tuple d, int batch_size=1,device=""):
+        return _vecInputExpression(self, v, d,batch_size,device=device)
+    def inputSparseTensor(self, vector[unsigned] idxs, vector[float] v, tuple dim, int batch_size=1, float defval=0, device=""):
+        return _sparseInputExpression(self, idxs, v, dim, batch_size, defval, device=device)
     cdef lookup(self, LookupParameters p, unsigned v = 0, update=True):
         return _lookupExpression(self, p, v, update)
     cdef lookup_batch(self, LookupParameters p, vector[unsigned] vs, update=True):
@@ -1423,6 +1523,49 @@ cdef class ComputationGraph:
     cdef outputBatchPicker(self, Expression e, vector[unsigned] vs, unsigned dim=0):
         r = _pickerBatchExpression(self, e, vs, dim)
         return r
+# }}}
+
+# {{{ Devices
+    
+cpdef available_devices():
+    """We use the term Device to refer to a Computation Device.
+    A computation device is a piece of hardware performing computation (e.g., CPU, GPU).
+    Computation devices are identified by string names (e.g., 'CPU', 'GPU:0').
+    This returns the list of available devices.
+    
+    Devices have both a processor and an associated memory.
+    Hence, each Parameters, LookupParameters and Expression are tied to devices.
+    - Parameter and LookupParameters are associated with a device at creation time.
+      If no device is given at creation time, the default device is assumed.
+    - Parameter Expressions reside on the same device as their Parameters.
+    - Other Expressions reside on the same device as the expressions that comprise them.
+    - An Expression e can be copied across devices using dy.to_device(e, name).
+
+    Returns:
+        list : list of available device names (as strings)
+    """
+    cdef CDeviceManager* dm
+    dm = c_get_device_manager()
+    return [dm.get(i).name for i in xrange(dm.num_devices())]
+
+class DeviceInfo(object):
+    def __init__(self, name, id, dtype):
+        self.name = name
+        self.type = dtype
+        self.id = id
+
+cpdef get_device_info(name):
+    cdef CDevice *d = c_str2dev(name)
+    # TODO represent type (enum in cython)
+    # TODO enable query of memory size?
+    return DeviceInfo(d.name, d.device_id, -1)
+
+
+cdef CDevice* c_str2dev(name) except NULL:
+    cdef CDevice* dev
+    cdef string _name = <string> name.encode("utf8")
+    dev = c_get_device_manager().get_global_device(_name)
+    return dev
 # }}}
 
 cdef class Tensor: #{{{
@@ -1889,12 +2032,17 @@ cdef class _inputExpression(Expression):
     
     """
     cdef FloatValue val
-    def __cinit__(self, ComputationGraph g, float s):
+    def __cinit__(self, ComputationGraph g, float s, device=""):
         self.val = FloatValue(s)
         #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cgp()[0], self.val.addr())
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            e = c_input(self.cgp()[0], self.val.addr(),dev)
+        else:
+            e = c_input(self.cgp()[0], self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, float s):
@@ -1909,8 +2057,8 @@ cdef class _inputExpression(Expression):
         self.cgp().invalidate()
         self.val.set(s)
 
-def scalarInput(float s):
-    return _cg.inputValue(s)
+def scalarInput(float s, device=""):
+    return _cg.inputValue(s, device)
 
 cdef class _vecInputExpression(Expression):
     """Subclass of Expression corresponding to any non-scalar input expressions
@@ -1919,13 +2067,18 @@ cdef class _vecInputExpression(Expression):
     TODO : change this
     """
     cdef FloatVectorValue val
-    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None,batch_size=1):
+    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None,batch_size=1,device=""):
         self.val = FloatVectorValue(val)
         if dim is None: dim = self.val.size()
         #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.val.addr())
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.val.addr(), dev)
+        else:
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.val.addr())
         self.vindex = e.i
         g._inputs.append(self)
     def set(self, vector[float] data):
@@ -1947,11 +2100,16 @@ cdef class _sparseInputExpression(Expression):
     Despite the name, this also represents tensors (in column major format).
     TODO : change this
     """
-    def __cinit__(self, ComputationGraph g, vector[unsigned] idxs, vector[float] val, dim ,batch_size=1, defval=0):
+    def __cinit__(self, ComputationGraph g, vector[unsigned] idxs, vector[float] val, dim ,batch_size=1, defval=0, device=""):
         #self.cg = g.thisptr
         self.cg_version = g.version()
         cdef CExpression e
-        e = c_input(self.cgp()[0], Dim(dim, batch_size=batch_size), idxs, val, defval)
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            e = c_input(self.cgp()[0], Dim(dim, batch_size=batch_size), idxs, val, defval, dev)
+        else:
+            e = c_input(self.cgp()[0], Dim(dim, batch_size=batch_size), idxs, val, defval)
         self.vindex = e.i
         g._inputs.append(self)
 
@@ -1967,27 +2125,29 @@ cdef class _sparseInputExpression(Expression):
         """
         raise ValueError('Can\'t set value of sparse input vector for now')
 
-def vecInput(int dim):
+def vecInput(int dim, device=""):
     """Input an empty vector
     
     Args:
         dim(number): Size
+        device(string): Optional, device on which to create the expression.
     
     Returns:
         _vecInputExpression: Corresponding expression
     """
-    return _cg.inputVector(dim)
+    return _cg.inputVector(dim, device)
 
-def inputVector(vector[float] v):
+def inputVector(vector[float] v, device=""):
     """Input a vector by values
     
     Args:
         v(vector[float]): Values
+        device(string): Optional, device on which to create the expression.
     
     Returns:
         _vecInputExpression: Corresponding expression
     """
-    return _cg.inputVectorLiteral(v)
+    return _cg.inputVectorLiteral(v, device)
 
 def matInput(int d1, int d2):
     """DEPRECATED : use inputTensor
@@ -2024,7 +2184,7 @@ def inputMatrix(vector[float] v, tuple d):
     """
     raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
-def inputTensor(arr,batched=False):
+def inputTensor(arr,batched=False,device=""):
     """Creates a tensor expression based on a numpy array or a list.
     
     The dimension is inferred from the shape of the input.
@@ -2036,6 +2196,7 @@ def inputTensor(arr,batched=False):
     
     Keyword Args:
         batched(bool): Whether to use the last dimension as a batch dimension (default: False)
+        device(string): Optional, device on which to create the expression.
     
     Returns:
         _vecInputExpression: Input expression
@@ -2058,10 +2219,10 @@ def inputTensor(arr,batched=False):
         dim = arr.shape
         batch_size= 1
     arr = arr.flatten(order='F')
-    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size)
+    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size,device=device)
 
 
-def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
+def sparse_inputTensor(idxs, values, shape, batched=False, defval=0,device=""):
     """Creates a tensor expression based on indices and values
     
     The dimension is inferred from the shape of the input.
@@ -2075,6 +2236,7 @@ def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
     Keyword Args:
         batched(bool): Whether to use the last dimension as a batch dimension (default: False). For example if :code:`shape=(3, 3, 3)` and :code:`batched=True` the resulting expression will be a batch of 3 3x3 matrices
         defval(number): The default value for all non specified coordinates (default: 0)
+        device(string): Optional, device on which to create the expression.
     
     Returns:
         _vecInputExpression: Input expression
@@ -2096,7 +2258,7 @@ def sparse_inputTensor(idxs, values, shape, batched=False, defval=0):
         dim = shape
         batch_size = 1
     idxs = np.ravel_multi_index(idxs, shape, order='F')
-    return _cg.inputSparseTensor(idxs, values, dim, batch_size=batch_size, defval=defval)
+    return _cg.inputSparseTensor(idxs, values, dim, batch_size=batch_size, defval=defval, device=device)
 
 cdef class _lookupExpression(Expression):
     """Expression corresponding to a lookup from lookup parameter
@@ -2420,7 +2582,11 @@ cpdef Expression flip_gradient(Expression x):
 cpdef Expression cdiv(Expression x, Expression y):
     """Componentwise division
     
-    Do a componentwise division where each value is equal to :math:`\\frac{x_i}{y_i}`
+    Divide an expressions component-wise by another, broadcasting dimensions (currently only of the second expression!) if necessary as follows:
+          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
+          - Now, every dimensions is required to have matching size, or the dim size of the right expression must equal 1 (in which case it will be broadcasted)
+          - In the same way, the batch sizes must match, or the batch size of the right expression must equal 1 in which case it will be broadcasted
+          - The resulting tensor's dimensionality is thus determined as the max of both inputs at every position
     
     Args:
         x (dynet.Expression): The first input expression
@@ -2434,7 +2600,11 @@ cpdef Expression cdiv(Expression x, Expression y):
 cpdef Expression cmult(Expression x, Expression y):
     """Componentwise multiplication
     
-    Do a componentwise multiplication where each value is equal to :math:`x_i\\times y_i`
+    Multiply two expressions component-wise, broadcasting dimensions if necessary as follows:
+          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
+          - Now, every dimensions is required to have matching size, or one of the dimensions must equal 1 (in which case it will be broadcasted)
+          - In the same way, the batch dimension must match, or equal 1 in which case it will be broadcasted
+          - The resulting tensor's dimensionality is thus determined as the max of both inputs at every position
     
     Args:
         x (dynet.Expression): The first input expression
@@ -2926,6 +3096,7 @@ cpdef Expression log_softmax(Expression x, list restrict=None):
         return Expression.from_cexpr(x.cg_version, c_log_softmax(x.c()))
     cdef vector[unsigned] vec = restrict
     return Expression.from_cexpr(x.cg_version, c_log_softmax(x.c(), vec))
+
 cpdef Expression softmax(Expression x):
     """Softmax
     
@@ -2938,6 +3109,7 @@ cpdef Expression softmax(Expression x):
         dynet.Expression: :math:`\\frac{e^{x_i}}{\sum_j e^{x_j}}`
     """
     return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
+
 cpdef Expression sparsemax(Expression x):
     """Sparsemax
     
@@ -2950,6 +3122,7 @@ cpdef Expression sparsemax(Expression x):
         dynet.Expression: The sparsemax of the scores
     """
     return Expression.from_cexpr(x.cg_version, c_sparsemax(x.c()))
+
 cpdef Expression softsign(Expression x):
     """Softsign function
 
@@ -2962,6 +3135,7 @@ cpdef Expression softsign(Expression x):
         dynet.Expression: :math:`y_i = \\frac{x_i}{1+\\vert x_i\\vert}`
     """
     return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
+
 cpdef Expression pow(Expression x, Expression y):
     """Power function
     
@@ -2976,6 +3150,7 @@ cpdef Expression pow(Expression x, Expression y):
     """
     ensure_freshness(y); 
     return Expression.from_cexpr(x.cg_version, c_pow(x.c(), y.c()))
+
 cpdef Expression bmin(Expression x, Expression y):
     """Minimum
     
@@ -2990,6 +3165,7 @@ cpdef Expression bmin(Expression x, Expression y):
     """
     ensure_freshness(y); 
     return Expression.from_cexpr(x.cg_version, c_bmin(x.c(), y.c()))
+
 cpdef Expression bmax(Expression x, Expression y):
     """Maximum
     
@@ -3004,6 +3180,7 @@ cpdef Expression bmax(Expression x, Expression y):
     """
     ensure_freshness(y); 
     return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
+
 cpdef Expression transpose(Expression x, list dims=[1, 0]):
     """Transpose a matrix
     
@@ -3020,6 +3197,7 @@ cpdef Expression transpose(Expression x, list dims=[1, 0]):
     """
     cdef vector[unsigned] vec = dims
     return Expression.from_cexpr(x.cg_version, c_transpose(x.c(), vec))
+
 cpdef Expression select_rows(Expression x, vector[unsigned] rs):
     """Select rows
 
@@ -3033,6 +3211,7 @@ cpdef Expression select_rows(Expression x, vector[unsigned] rs):
         dynet.Expression: An expression containing the selected rows
     """
     return Expression.from_cexpr(x.cg_version, c_select_rows(x.c(), rs))
+
 cpdef Expression select_cols(Expression x, vector[unsigned] cs):
     """Select columns
 
@@ -3046,18 +3225,7 @@ cpdef Expression select_cols(Expression x, vector[unsigned] cs):
         dynet.Expression: An expression containing the selected columns
     """
     return Expression.from_cexpr(x.cg_version, c_select_cols(x.c(), cs))
-cpdef Expression sum_cols(Expression x):
-    """[summary]
-    
-    [description]
-    
-    Args:
-        x (dynet.Expression): 
-    
-    Returns:
-        dynet.Expression: 
-    """
-    return Expression.from_cexpr(x.cg_version, c_sum_cols(x.c()))
+
 cpdef Expression sum_elems(Expression x):
     """Sum all elements
     
@@ -3070,6 +3238,22 @@ cpdef Expression sum_elems(Expression x):
         dynet.Expression: The sum of all of its elements
     """
     return Expression.from_cexpr(x.cg_version, c_sum_elems(x.c()))
+
+cpdef Expression sum_dim(Expression x, list d, bool b=False, unsigned n=0):
+    """Mean along an arbitrary dimension
+    
+    Computes the sum :math:`\sum_ix_i`  along an arbitrary dimension or dimensions.
+
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (list): Dimensions along which to reduce
+        b (bool): Whether to include batch dimension
+    
+    Returns:
+        dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_sum_dim(x.c(), d, b))
 
 cpdef Expression sum_batches(Expression x):
     """Sum over minibatches
@@ -3088,7 +3272,6 @@ cpdef Expression mean_elems(Expression x):
     """Mean of elements of the tensor
     
     Computes the mean :math:`\\frac 1 n \sum_ix_i` of all the elements of each minibatch.
-
     Args:
         x (dynet.Expression): Input expression
     
@@ -3097,12 +3280,27 @@ cpdef Expression mean_elems(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_mean_elems(x.c()))
 
+cpdef Expression mean_dim(Expression x, list d, bool b, unsigned n=0):
+    """Mean along an arbitrary dimension
+    
+    Computes the mean :math:`\\frac 1 n \sum_ix_i`  along an arbitrary dimension.
+
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (list): Dimensions along which to reduce
+        b (bool): Whether to include batch dimension
+        n (int): If > 0, overwrite the n in the equation by this value, useful for masking
+    
+    Returns:
+        dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_mean_dim(x.c(), d, b, n))
+
 cpdef Expression mean_batches(Expression x):
     """Mean along the batch dimension
     
     Computes the mean :math:`\\frac 1 n \sum_ix_i`  along the batch dimension.
-
-
     Args:
         x (dynet.Expression): Input expression
     
@@ -3115,7 +3313,6 @@ cpdef Expression std_elems(Expression x):
     """Standard deviation of elements of the tensor
     
     Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` of all the elements of each minibatch.
-
     Args:
         x (dynet.Expression): Input expression
     
@@ -3124,12 +3321,26 @@ cpdef Expression std_elems(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_std_elems(x.c()))
 
+cpdef Expression std_dim(Expression x, list d, bool b, unsigned n=0):
+    """Standard deviation along an arbitrary dimension
+    
+    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` along arbitrary dimensions.
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (int): Dimensions along which to reduce
+        b (bool): Whether to include batch dimension
+        n (int): If > 0, overwrite the n in the equation by this value, useful for masking
+    
+    Returns:
+        dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_std_dim(x.c(), d, b, n=0))
+
 cpdef Expression std_batches(Expression x):
     """Standard deviation along the batch dimension
     
     Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}`  along the batch dimension.
-
-
     Args:
         x (dynet.Expression): Input expression
     
@@ -3138,42 +3349,10 @@ cpdef Expression std_batches(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_std_batches(x.c()))
 
-cpdef Expression std_dim(Expression x, unsigned d):
-    """Standard deviation along an arbitrary dimension
-    
-    Computes the standard deviation :math:`\sigma=\sqrt{\\frac 1 n \sum_i(x_i-\mu)^2}` along an arbitrary dimension.
-
-
-    Args:
-        x (dynet.Expression): Input expression
-        d (int): Dimension along which to reduce
-    
-    Returns:
-        dynet.Expression: An expression with one less dimension
-    """
-    return Expression.from_cexpr(x.cg_version, c_std_dim(x.c(), d))
-
-
-cpdef Expression mean_dim(Expression x, unsigned d):
-    """Mean along an arbitrary dimension
-    
-    Computes the mean :math:`\\frac 1 n \sum_ix_i`  along an arbitrary dimension.
-
-
-    Args:
-        x (dynet.Expression): Input expression
-        d (int): Dimension along which to reduce
-    
-    Returns:
-        dynet.Expression: An expression with one less dimension
-    """
-    return Expression.from_cexpr(x.cg_version, c_mean_dim(x.c(), d))
-
 cpdef Expression moment_elems(Expression x, unsigned r):
     """Statistical moment of elements of the tensor
     
     Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r` of all the elements of each minibatch.
-
     Args:
         x (dynet.Expression): Input expression
         r (int): Moment order
@@ -3183,12 +3362,28 @@ cpdef Expression moment_elems(Expression x, unsigned r):
     """
     return Expression.from_cexpr(x.cg_version, c_moment_elems(x.c(), r))
 
+cpdef Expression moment_dim(Expression x, list d, unsigned r, bool b, unsigned n=0):
+    """Statistical moment along an arbitrary dimension
+    
+    Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r`  along an arbitrary dimension.
+
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (list): Dimensions along which to reduce
+        r (int): Moment order
+        b (bool): Whether to include batch dimension
+        n (int): If > 0, overwrite the n in the equation by this value, useful for masking
+    
+    Returns:
+        dynet.Expression: An expression with |d| less dimensions and possibly dropped batch dimension
+    """
+    return Expression.from_cexpr(x.cg_version, c_moment_dim(x.c(), d, r, b, n))
+
 cpdef Expression moment_batches(Expression x, unsigned r):
     """Statistical moment along the batch dimension
     
     Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r`  along the batch dimension.
-
-
     Args:
         x (dynet.Expression): Input expression
         r (int): Moment order
@@ -3197,22 +3392,6 @@ cpdef Expression moment_batches(Expression x, unsigned r):
         dynet.Expression: An expression with a single batch
     """
     return Expression.from_cexpr(x.cg_version, c_moment_batches(x.c(), r))
-
-cpdef Expression moment_dim(Expression x, unsigned d, unsigned r):
-    """Statistical moment along an arbitrary dimension
-    
-    Computes the statistical moment of order :math:`r`, :math:`\\frac 1 n \sum_ix_i^r`  along an arbitrary dimension.
-
-
-    Args:
-        x (dynet.Expression): Input expression
-        d (int): Dimension along which to reduce
-        r (int): Moment order
-    
-    Returns:
-        dynet.Expression: An expression with one less dimension
-    """
-    return Expression.from_cexpr(x.cg_version, c_moment_dim(x.c(), d, r))
 
 #expr-opt
 cpdef Expression fold_rows(Expression x, unsigned nrows=2):
@@ -3237,7 +3416,7 @@ cpdef Expression fold_rows(Expression x, unsigned nrows=2):
 cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0):
     """Pairwise rank loss
     
-    A margin-based loss, where every margin violation for each pair of values is penalized: :math:`\sum_i \max(x_i-y_i+m, 0)`
+    A margin-based loss, where every margin violation for each pair of values is penalized: :math:`\sum_i \max(m - x_i + y_i, 0)`
     
     Args:
         x (dynet.Expression): The first input expression
@@ -3767,6 +3946,21 @@ cpdef Expression logsumexp(list xs):
     #print(cvec.size(), file=sys.stderr)
     return Expression.from_cexpr(x.cg_version, c_logsumexp(cvec))
 
+cpdef Expression logsumexp_dim(Expression x, unsigned d=0):
+    """Logsumexp along an arbitrary dimension
+    
+    The "logsumexp" function that calculates :math:`\ln(\sum_i e^{xs_i})`, used in adding probabilities in the log domain.
+    This is performed along a certain dimension.
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (unsigned): Dimensions along which to reduce
+    
+    Returns:
+        dynet.Expression: An expression with one less dimension representing the result
+    """
+    return Expression.from_cexpr(x.cg_version, c_logsumexp_dim(x.c(), d))
+
 cpdef Expression average(list xs):
     """Average
     
@@ -4026,6 +4220,22 @@ cpdef Expression vanilla_lstm_h(Expression c_t, Expression gates_t):
     ensure_freshness(c_t)
     ensure_freshness(gates_t)
     return Expression.from_cexpr(c_t.cg_version, c_vanilla_lstm_h(c_t.c(),gates_t.c()))
+
+cpdef Expression to_device(Expression e, device_str):
+    """Copy Expression's values between devices.
+    Creates a new expression with e's values on device device_str.
+
+    Args:
+        e (dynet.Expression): Expression
+        device_str (string): a device name
+    
+    Returns:
+        dynet.Expression
+    """
+    ensure_freshness(e)
+    cdef CDevice* dev
+    dev = c_str2dev(device_str)
+    return Expression.from_cexpr(e.cg_version, c_to_device(e.c(), dev))
 
 # }}}
     

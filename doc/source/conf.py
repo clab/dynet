@@ -23,8 +23,10 @@ import doc_util
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 # sys.path.insert(0, os.path.abspath('../../examples/tutorials'))
-if not os.path.islink('tutorials_notebooks'):
-    os.symlink('../../examples/python/tutorials', 'tutorials_notebooks')
+tutorials_folder = 'tutorials_notebooks'
+if os.path.islink(tutorials_folder):
+    os.remove(tutorials_folder)
+os.symlink('../../examples/jupyter-tutorials', tutorials_folder)
 
 # Create copy of _dynet.pyx for documentation purposes
 doc_util.create_doc_copy(in_file = '../../python/_dynet.pyx',out_file = 'dynet.py')
@@ -46,6 +48,7 @@ extensions = [
     'breathe',
     'nbsphinx',
     'sphinx.ext.autodoc',
+    'm2r',
     'sphinxcontrib.napoleon' # Yay Napoleon! Go France!
 ]
 
@@ -60,7 +63,7 @@ nbsphinx_execute = 'never'
 templates_path = ['_templates']
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'

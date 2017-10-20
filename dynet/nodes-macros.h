@@ -97,7 +97,10 @@ inline std::string print_vecs(const std::vector<std::vector<T> > & vec) {
   void MyNode::forward_impl(const std::vector<const Tensor*>& xs, Tensor& fx) const { \
     DYNET_ASSERT(fx.device, "Device not allocated for expression"); \
     if(fx.device->type == DeviceType::CPU) { forward_dev_impl<dynet::Device_CPU>(*(dynet::Device_CPU*)fx.device,xs,fx); } \
-    else if(fx.device->type == DeviceType::GPU) { forward_dev_impl<dynet::Device_GPU>(*(dynet::Device_GPU*)fx.device,xs,fx); } \
+    else if(fx.device->type == DeviceType::GPU) { \
+      CUDA_CHECK(cudaSetDevice(((Device_GPU*)fx.device)->cuda_device_id)); \
+      forward_dev_impl<dynet::Device_GPU>(*(dynet::Device_GPU*)fx.device,xs,fx); \
+    } \
     else { throw std::runtime_error("Invalid device in MyNode::forward_impl"); } \
   } \
   void MyNode::backward_impl(const std::vector<const Tensor*>& xs, \
@@ -107,7 +110,10 @@ inline std::string print_vecs(const std::vector<std::vector<T> > & vec) {
                 Tensor& dEdxi) const { \
     DYNET_ASSERT(fx.device, "Device not allocated for expression"); \
     if(fx.device->type == DeviceType::CPU) { backward_dev_impl<dynet::Device_CPU>(*(dynet::Device_CPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
-    else if(fx.device->type == DeviceType::GPU) { backward_dev_impl<dynet::Device_GPU>(*(dynet::Device_GPU*)fx.device,xs,fx,dEdf,i,dEdxi); } \
+    else if(fx.device->type == DeviceType::GPU) { \
+      CUDA_CHECK(cudaSetDevice(((Device_GPU*)fx.device)->cuda_device_id)); \
+      backward_dev_impl<dynet::Device_GPU>(*(dynet::Device_GPU*)fx.device,xs,fx,dEdf,i,dEdxi); \
+    } \
     else { throw std::runtime_error("Invalid device in MyNode::backward_impl"); } \
   }
 #else

@@ -121,8 +121,8 @@ namespace std {
   %template(LongVector)                   vector<long>;
   %template(StringVector)                 vector<std::string>;
   %template(ExpressionVector)             vector<dynet::Expression>;
-  %template(ParameterStorageVector)       vector<dynet::ParameterStorage*>;
-  %template(LookupParameterStorageVector) vector<dynet::LookupParameterStorage*>;
+  %template(ParameterStorageVector)       vector<shared_ptr<dynet::ParameterStorage>>;
+  %template(LookupParameterStorageVector) vector<shared_ptr<dynet::LookupParameterStorage>>;
   %template(ExpressionVectorVector)       vector<vector<dynet::Expression>>;
   %template(ParameterVector)              vector<dynet::Parameter>;
   %template(ParameterVectorVector)        vector<vector<dynet::Parameter>>;
@@ -361,11 +361,11 @@ struct LookupParameterStorage : public ParameterStorageBase {
    // SWIG can't get the types right for `parameters_list`, so here are replacement methods
    // for which it can. (You might worry that these would cause infinite recursion, but
    // apparently they don't.
-   std::vector<ParameterStorage*> parameters_list() const {
+   std::vector<std::shared_ptr<ParameterStorage>> parameters_list() const {
      return $self->parameters_list();
    }
 
-   std::vector<LookupParameterStorage*> lookup_parameters_list() const {
+   std::vector<std::shared_ptr<LookupParameterStorage>> lookup_parameters_list() const {
      return $self->lookup_parameters_list();
    }
 };
@@ -798,7 +798,7 @@ struct AdamTrainer : public Trainer {
 %nodefaultctor RNNBuilder;
 struct RNNBuilder {
   RNNPointer state() const;
-  void new_graph(ComputationGraph& cg);
+  void new_graph(ComputationGraph& cg, bool update = true);
   void start_new_sequence(const std::vector<Expression>& h_0 = {});
   Expression set_h(const RNNPointer& prev, const std::vector<Expression>& h_new = {});
   Expression set_s(const RNNPointer& prev, const std::vector<Expression>& s_new = {});
@@ -818,6 +818,8 @@ struct RNNBuilder {
 
   virtual unsigned num_h0_components() const = 0;
   virtual void copy(const RNNBuilder& params) = 0;
+
+  virtual ParameterCollection & get_parameter_collection() = 0;
 };
 
 struct SimpleRNNBuilder : public RNNBuilder {
@@ -840,6 +842,8 @@ struct SimpleRNNBuilder : public RNNBuilder {
   void copy(const RNNBuilder& params) override;
 
   unsigned num_h0_components() const override;
+
+  ParameterCollection & get_parameter_collection() override;
 };
 
 ////////////////////////////////////
@@ -865,6 +869,11 @@ struct CoupledLSTMBuilder : public RNNBuilder {
   void set_dropout(float d);
   void set_dropout(float d, float d_h, float d_c);
   void disable_dropout();
+  void set_dropout_masks(unsigned batch_size = 1);
+
+  ParameterCollection & get_parameter_collection() override;
+
+  ParameterCollection local_model;
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
@@ -872,12 +881,12 @@ struct CoupledLSTMBuilder : public RNNBuilder {
   // first index is layer, then ...
   std::vector<std::vector<Expression>> param_vars;
 
-  // first index is time, second is layer
-  std::vector<std::vector<Expression>> h, c;
-
   // first index is layer, then ...
   // masks for Gal dropout
   std::vector<std::vector<Expression>> masks;
+
+  // first index is time, second is layer
+  std::vector<std::vector<Expression>> h, c;
 
   // initial values of h and c at each layer
   // - both default to zero matrix input
@@ -885,6 +894,11 @@ struct CoupledLSTMBuilder : public RNNBuilder {
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
+  unsigned input_dim = 0;
+  unsigned hid = 0;
+  bool dropout_masks_valid;
+
+  float dropout_rate_h = 0.f, dropout_rate_c = 0.f;
 };
 
 struct VanillaLSTMBuilder : public RNNBuilder {
@@ -908,6 +922,11 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   void set_dropout(float d);
   void set_dropout(float d, float d_r);
   void disable_dropout();
+  void set_dropout_masks(unsigned batch_size = 1);
+
+  ParameterCollection & get_parameter_collection() override;
+
+  ParameterCollection local_model;
 
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
@@ -919,6 +938,9 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   // first index is layer, then ...
   std::vector<std::vector<Expression>> ln_param_vars;
 
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> masks;
+
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
 
@@ -928,10 +950,64 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
-  unsigned hid;
+  unsigned input_dim, hid;
+  float dropout_rate_h;
+  bool ln_lstm;
+  bool dropout_masks_valid;
 };
 
 typedef VanillaLSTMBuilder LSTMBuilder;
+
+struct CompactVanillaLSTMBuilder : public RNNBuilder {
+  CompactVanillaLSTMBuilder();
+  explicit CompactVanillaLSTMBuilder(unsigned layers,
+                              unsigned input_dim,
+                              unsigned hidden_dim,
+                              ParameterCollection& model);
+
+  Expression back() const override;
+  std::vector<Expression> final_h() const override;
+  std::vector<Expression> final_s() const override;
+  unsigned num_h0_components() const override;
+
+  std::vector<Expression> get_h(RNNPointer i) const override;
+  std::vector<Expression> get_s(RNNPointer i) const override;
+
+  void copy(const RNNBuilder & params) override;
+
+  void set_dropout(float d);
+  void set_dropout(float d, float d_r);
+  void disable_dropout();
+  void set_dropout_masks(unsigned batch_size = 1);
+  void set_weightnoise(float std);
+
+  ParameterCollection & get_parameter_collection() override;
+
+  ParameterCollection local_model;
+
+  // first index is layer, then ...
+  std::vector<std::vector<Parameter>> params;
+
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> param_vars;
+
+  // first index is layer, then ...
+  std::vector<std::vector<Expression>> masks;
+
+  // first index is time, second is layer
+  std::vector<std::vector<Expression>> h, c;
+
+  // initial values of h and c at each layer
+  // - both default to zero matrix input
+  bool has_initial_state; // if this is false, treat h0 and c0 as 0
+  std::vector<Expression> h0;
+  std::vector<Expression> c0;
+  unsigned layers;
+  unsigned input_dim, hid;
+  float dropout_rate_h;
+  float weightnoise_std;
+  bool dropout_masks_valid;
+};
 
 ///////////////////////////////////
 // declarations from dynet/gru.h //
@@ -950,6 +1026,7 @@ struct GRUBuilder : public RNNBuilder {
   std::vector<Expression> get_s(RNNPointer i) const override;
   unsigned num_h0_components() const override;
   void copy(const RNNBuilder & params) override;
+  ParameterCollection & get_parameter_collection() override;
 };
 
 
@@ -973,6 +1050,10 @@ struct FastLSTMBuilder : public RNNBuilder {
   std::vector<Expression> get_s(RNNPointer i) const override;
 
   void copy(const RNNBuilder & params) override;
+
+  ParameterCollection & get_parameter_collection() override;
+
+  ParameterCollection local_model;
 
   std::vector<std::vector<Parameter>> params;
   std::vector<std::vector<Expression>> param_vars;
