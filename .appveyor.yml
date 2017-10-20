@@ -62,7 +62,6 @@ deploy_script:
   - echo index-servers =                             >> %USERPROFILE%\\.pypirc
   - echo     pypi                                    >> %USERPROFILE%\\.pypirc
   - echo [pypi]                                      >> %USERPROFILE%\\.pypirc
-  - echo repository=https://pypi.python.org/pypi     >> %USERPROFILE%\\.pypirc
   - echo username=%PYPI_USERNAME%                    >> %USERPROFILE%\\.pypirc
   - echo password=%PYPI_PASSWORD%                    >> %USERPROFILE%\\.pypirc
   - python -m pip install twine
