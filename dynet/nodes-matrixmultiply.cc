@@ -53,7 +53,7 @@ void MatrixMultiply::forward_dev_impl(const MyDevice & dev, const vector<const T
   // fx = 0*fx + xs[0] * xs[1]
   dynet::MatrixMultiply(dev, *xs[0], *xs[1], fx, dev.kSCALAR_ZERO);
 #else
-  DYNET_ASSERT(fx.d.bd == max(xs[0]->d.bd, xs[1]->d.bd), "Failed dimension check in MatrixMultiply::forward");
+  DYNET_ARG_CHECK(fx.d.bd == max(xs[0]->d.bd, xs[1]->d.bd), "Failed dimension check in MatrixMultiply::forward");
   if(xs[0]->d.bd == 1) {
     // If the left side has one batch, multiply by columns
     // [x, z, b] = [x, y] * [y, z, b]
@@ -61,7 +61,9 @@ void MatrixMultiply::forward_dev_impl(const MyDevice & dev, const vector<const T
     fx.colbatch_matrix().noalias() = **xs[0] * xs[1]->colbatch_matrix();
   } else {
     // Otherwise, loop over the batches
-    DYNET_ASSERT(xs[1]->d.bd == 1 || xs[1]->d.bd == xs[0]->d.bd, "Failed dimension check in MatrixMultiply::forward");
+    DYNET_ARG_CHECK(xs[1]->d.bd == 1 || xs[1]->d.bd == xs[0]->d.bd,
+            "Number of batch elements in matrix multiply must match, but got:"
+            << xs[0]->d.bd << " != " << xs[1]->d.bd);
     for(unsigned b = 0; b < xs[0]->d.bd; ++b)
       fx.batch_matrix(b).noalias() = xs[0]->batch_matrix(b) * xs[1]->batch_matrix(b);
   }
