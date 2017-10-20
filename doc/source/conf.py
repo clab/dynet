@@ -48,6 +48,7 @@ extensions = [
     'breathe',
     'nbsphinx',
     'sphinx.ext.autodoc',
+    'm2r',
     'sphinxcontrib.napoleon' # Yay Napoleon! Go France!
 ]
 
@@ -62,7 +63,7 @@ nbsphinx_execute = 'never'
 templates_path = ['_templates']
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
