@@ -1144,7 +1144,7 @@ cdef class ParameterCollection: # {{{
         return pp
 
 
-    cpdef add_parameters(self, dim, init=None, string name="", string device="", scale=1.0, mean=0.0, std=1.0):
+    cpdef add_parameters(self, dim, init=None, name="", device="", scale=1.0, mean=0.0, std=1.0):
         """Add a parameter to the ParameterCollection with a given initializer. There are different ways of specifying an initializer:
 
         .. code-block:: python
@@ -1215,7 +1215,7 @@ cdef class ParameterCollection: # {{{
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim, init=None, string name="", string device="", scale=1.0, mean=0.0, std=1.0):
+    cpdef add_lookup_parameters(self, dim, init=None, name="", device="", scale=1.0, mean=0.0, std=1.0):
         """Add a lookup parameter to the ParameterCollection with a given initializer
         
         .. code-block:: python
