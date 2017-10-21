@@ -621,7 +621,7 @@ cdef class Parameters: # {{{
 
         """
         if not isinstance(arr, np.ndarray):
-            arr = np.array(arr)
+            arr = np.asarray(arr)
         shape = arr.shape
         if self.shape() != shape:
             raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
