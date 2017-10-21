@@ -606,20 +606,22 @@ cdef class Parameters: # {{{
         """
         cdef CTensor t
         return c_tensor_as_np(self.thisptr.get_storage().g)
-    
+
     cpdef clip_inplace(self, float left, float right):
         """Clip the values in the parameter to a fixed range [left, right] (in place)
-        
+
         Args:
             arr(np.ndarray): Scale
         """
         self.thisptr.clip_inplace(left, right)
-        
+
     # TODO: make more efficient
     cpdef set_value(self, arr):
         """Set value of the parameter
 
         """
+        if not isinstance(arr, np.ndarray):
+            arr = np.array(arr)
         shape = arr.shape
         if self.shape() != shape:
             raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
