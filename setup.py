@@ -1,7 +1,6 @@
 import distutils.sysconfig
 import logging as log
 import platform
-import tarfile
 import zipfile
 import sys
 from distutils.command.build import build as _build
@@ -134,6 +133,7 @@ COMPILER_ARGS = []
 EXTRA_LINK_ARGS = []
 RUNTIME_LIB_DIRS = []
 INCLUDE_DIRS = []
+DATA_FILES=[]
 
 # Add all environment variables from CMake for Cython extensions
 append_cmake_lib_list(LIBRARIES, ENV.get("CUDA_CUBLAS_FILES"))
@@ -153,6 +153,7 @@ if ENV.get("MSVC") == "1":
     append_cmake_list(LIBRARY_DIRS, ENV.get("MKL_LINK_DIRS"))  # Add the MKL dirs, if MKL is being used
     append_cmake_lib_list(LIBRARIES, ENV.get("CUDA_RT_FILES"))
     append_cmake_list(LIBRARY_DIRS, ENV.get("CUDA_RT_DIRS"))
+    DATA_FILES += [DYNET_LIB_DIR + lib + ".lib" for lib in LIBRARIES]
 else:
     COMPILER_ARGS[:] = ["-std=c++11", "-Wno-unused-function"]
     RUNTIME_LIB_DIRS.extend([DYNET_LIB_DIR, LIBS_INSTALL_DIR])
@@ -369,4 +370,5 @@ setup(
     cmdclass={"build": build, "build_py": build_py, "build_ext": build_ext},
     ext_modules=TARGET,
     py_modules=["dynet", "dynet_viz", "dynet_config"],
+    data_files=[("../..", DATA_FILES)],
 )
