@@ -598,7 +598,7 @@ Expression block_dropout(const Expression& x, real p);
 Expression filter1d_narrow(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows=2);
-Expression sum_dim(const Expression& x, unsigned d);
+Expression sum_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
 Expression sum_cols(const Expression& x);
 Expression sum_rows(const Expression& x);
 Expression average_cols(const Expression& x);
