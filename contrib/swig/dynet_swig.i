@@ -100,6 +100,10 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 %include "std_string.i"
 %include "std_pair.i"
 %include "cpointer.i"
+%include <std_shared_ptr.i>
+
+%shared_ptr(dynet::ParameterStorage)
+%shared_ptr(dynet::LookupParameterStorage)
 
 // Convert C++ exceptions into Java exceptions. This provides
 // nice error messages for each listed exception, and a default
