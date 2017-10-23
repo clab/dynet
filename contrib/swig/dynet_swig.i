@@ -100,6 +100,10 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 %include "std_string.i"
 %include "std_pair.i"
 %include "cpointer.i"
+%include <std_shared_ptr.i>
+
+%shared_ptr(dynet::ParameterStorage)
+%shared_ptr(dynet::LookupParameterStorage)
 
 // Convert C++ exceptions into Java exceptions. This provides
 // nice error messages for each listed exception, and a default
@@ -594,7 +598,7 @@ Expression block_dropout(const Expression& x, real p);
 Expression filter1d_narrow(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows=2);
-Expression sum_dim(const Expression& x, unsigned d);
+Expression sum_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
 Expression sum_cols(const Expression& x);
 Expression sum_rows(const Expression& x);
 Expression average_cols(const Expression& x);

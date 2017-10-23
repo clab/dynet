@@ -2,7 +2,7 @@ lazy val root = (project in file("."))
     .settings(
       name         := "dynet_scala_helpers",
       organization := "edu.cmu.dynet",
-      scalaVersion := "2.11.8",
+      scalaVersion := "2.11.11",
       version      := "0.0.1-SNAPSHOT"
     )
 
