@@ -59,7 +59,7 @@ TextFileSaver::TextFileSaver(const std::string & filename, bool append) :
         p_datastream(
             new std::ofstream(
                 filename.c_str(),
-                append ? std::ios_base::app : std::ios_base::out)),
+                (append ? std::ios_base::app : std::ios_base::out) | std::ios_base::binary)),
         datastream(*p_datastream) {
   if(!datastream)
     DYNET_RUNTIME_ERR("Could not write model to " << filename);
@@ -139,7 +139,7 @@ TextFileLoader::TextFileLoader(const std::string & filename) :
 TextFileLoader::~TextFileLoader() {}
 
 void TextFileLoader::populate(ParameterCollection & model, const std::string & key) {
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad = false;
@@ -202,7 +202,7 @@ void TextFileLoader::populate(Parameter & param,
                     const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.populate() requires non-empty key");
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad=false;
@@ -235,7 +235,7 @@ void TextFileLoader::populate(LookupParameter & lookup_param,
                               const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.populate() requires non-empty key");
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad=false;
@@ -268,7 +268,7 @@ Parameter TextFileLoader::load_param(ParameterCollection & model,
                                      const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.load_param() requires non-empty key");
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad=false;
@@ -301,7 +301,7 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
                                                   const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.load_lookup_param() requires non-empty key");
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad=false;
