@@ -770,7 +770,7 @@ Expression sum_cols(const Expression& x);
 /**
  * \ingroup arithmeticoperations
  * \brief Compute cumulative sum along a specific dimension
- * \details Compute the cumulative sum along a specific dimension
+ * \details Compute the cumulative sum along a specific dimension: \f$y_i=\sum_{j\leq i}x_j\f$
  *
  * \param x The input mini-batched expression
  * \param d Dimensions along which to compute the cumulative sum
