@@ -767,6 +767,17 @@ Expression sum_dim(const Expression& x, const std::vector<unsigned>& dims, bool 
 // These are deprecated but kept for backward compatibility
 Expression sum_rows(const Expression& x);
 Expression sum_cols(const Expression& x);
+/**
+ * \ingroup arithmeticoperations
+ * \brief Compute cumulative sum along a specific dimension
+ * \details Compute the cumulative sum along a specific dimension
+ *
+ * \param x The input mini-batched expression
+ * \param d Dimensions along which to compute the cumulative sum
+ *
+ * \return An expression of the same shape as the input
+ */
+Expression cumsum(const Expression& x, unsigned d);
 
 /**
  * \ingroup arithmeticoperations

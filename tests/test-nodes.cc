@@ -298,6 +298,18 @@ BOOST_AUTO_TEST_CASE( sum_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression sum(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( cumsum_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param_cube1);
+  vector<Expression> y;
+  for (unsigned d=0;d<3;d++){
+      y.push_back(squared_norm(cumsum(x, d)));
+  }
+  Expression z = sum(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression logsumexp(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( logsumexp_gradient ) {
   dynet::ComputationGraph cg;

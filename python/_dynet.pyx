@@ -3161,7 +3161,7 @@ cpdef Expression sum_elems(Expression x):
     return Expression.from_cexpr(x.cg_version, c_sum_elems(x.c()))
 
 cpdef Expression sum_dim(Expression x, list d, bool b=False, unsigned n=0):
-    """Mean along an arbitrary dimension
+    """Sum along an arbitrary dimension
     
     Computes the sum :math:`\sum_ix_i`  along an arbitrary dimension or dimensions.
 
@@ -3188,6 +3188,21 @@ cpdef Expression sum_batches(Expression x):
         dynet.Expression: An expression with a single batch
     """
     return Expression.from_cexpr(x.cg_version, c_sum_batches(x.c()))
+
+cpdef Expression cumsum(Expression x, unsigned d=0):
+    """Cumulative sum along an arbitrary dimension
+    
+    Computes the cumulative sum :math:`y_i=\sum_{j\leq i}x_j`  along an arbitrary dimension.
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (int): Dimension along which to compute the cumulative sums (default: 0)
+    
+    Returns:
+        dynet.Expression: An expression with the same dimension as the input
+    """
+    return Expression.from_cexpr(x.cg_version, c_cumsum(x.c(), d))
+
 
 cpdef Expression mean_elems(Expression x):
     """Mean of elements of the tensor

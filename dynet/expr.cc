@@ -160,6 +160,8 @@ Expression sum_rows(const Expression& x) { return Expression(x.pg, x.pg->add_fun
 Expression sum_cols(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, vector<unsigned>({1}), false)); }
 Expression sum_elems(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumElements>({x.i})); }
 
+Expression cumsum(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<CumulativeSum>({x.i}, d)); }
+
 Expression sum_batches(const Expression& x) { return Expression(x.pg, x.pg->add_function<SumDimension>({x.i}, vector<unsigned>(), true)); }
 
 Expression moment_dim(const Expression& x, const vector<unsigned>& dims, unsigned r, bool b, unsigned n) { return Expression(x.pg, x.pg->add_function<MomentDimension>({x.i}, dims, r, b, n)); }

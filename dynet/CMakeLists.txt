@@ -43,6 +43,7 @@ set(dynet_library_SRCS
     nodes-maxpooling2d.cc
     nodes-minmax.cc
     nodes-moments.cc
+    nodes-cumulative.cc
     nodes-normalization.cc
     nodes-norms.cc
     nodes-pickneglogsoftmax.cc
@@ -122,6 +123,7 @@ set(dynet_library_HDRS
     nodes-maxpooling2d.h
     nodes-minmax.h
     nodes-moments.h
+    nodes-cumulative.h
     nodes-normalization.h
     nodes-norms.h
     nodes-pickneglogsoftmax.h

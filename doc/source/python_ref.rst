@@ -211,6 +211,8 @@ Arithmetic operations
 
 .. autofunction:: dynet.bmax
 
+.. autofunction:: dynet.cumsum
+
 Reduction/moment operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
