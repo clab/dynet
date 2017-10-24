@@ -53,6 +53,9 @@ after_build:
   - python ../../setup.py EIGEN3_INCLUDE_DIR=C:/projects/eigen build --build-dir=.. --skip-build bdist_wheel install
 
 test_script:
+  - cmd: cd build
+  - cmd: ctest -C %configuration% --output-on-failure --timeout 300
+  - cmd: cd ..
   - python -m unittest discover %APPVEYOR_BUILD_FOLDER%\tests\python -v
 
 deploy_script:
