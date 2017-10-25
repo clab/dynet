@@ -97,7 +97,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}
                     ${PROJECT_SOURCE_DIR}/external/easyloggingpp/src)
 
 function(find_cudnn)
-  set(CUDNN_ROOT /usr/local/cuda CACHE PATH "CUDNN root path")
+  if (DEFINED ENV{CUDNN_ROOT} AND NOT DEFINED CUDNN_ROOT)  # use env variable if not defined
+    set(CUDNN_ROOT $ENV{CUDNN_ROOT})
+  endif()
+#  set(CUDNN_ROOT /usr/local/cuda CACHE PATH "CUDNN root path")
   find_path(CUDNN_INCLUDE_DIRS cudnn.h
     HINTS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/include
