@@ -20,7 +20,6 @@ string Softmax::as_string(const vector<string>& arg_names) const {
 Dim Softmax::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Softmax");
   DYNET_ARG_CHECK(xs[0].nd <= 2, "Bad input dimensions in Softmax, must be 2 or fewer: " << xs);
-  DYNET_ARG_CHECK(dimension < xs[0].nd && dimension >= 0, "illegal dimension " << dimension << " in Softmax.");
   return xs[0];
 }
 
@@ -103,6 +102,72 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
   scratch_allocator->free();
 }
 DYNET_NODE_INST_DEV_IMPL(Softmax)
+
+// ************* SoftmaxRows *************
+
+#ifndef __CUDACC__
+
+string SoftmaxRows::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "rows_softmax(" << arg_names[0] << ')';
+  return s.str();
+}
+
+Dim SoftmaxRows::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in SoftmaxRows");
+  DYNET_ARG_CHECK(xs[0].nd <= 2, "Bad input dimensions in SoftmaxRows, must be 2 or fewer: " << xs);
+  return xs[0];
+}
+
+int SoftmaxRows::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::softmax);
+  s.add_dim(dim);
+  return sm.get_idx(s);
+}
+
+std::vector<int> SoftmaxRows::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>(1, 1);
+}
+
+#endif
+
+template<class MyDevice>
+void SoftmaxRows::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in Softmax::forward");
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+  Tensor z(Dim({xs[0]->d.rows()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
+  z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
+  Tensor m(Dim({xs[0]->d.rows()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
+  m.v = static_cast<float*>(scratch_allocator->allocate(m.d.size() * sizeof(float)));
+  Eigen::array<int, 1> red_dim = {1};
+  m.tb<1>().device(*dev.edevice) = xs[0]->tb<2>().maximum(red_dim);
+  Eigen::array<int, 3> bcasts = {1, (int)xs[0]->d.cols(), 1};
+  Eigen::array<int, 3> morph = {(int)z.d[0], 1, (int)z.d.bd};
+  fx.tb<2>().device(*dev.edevice) = (xs[0]->tb<2>() - m.tvec().reshape(morph).broadcast(bcasts)).exp();
+  z.tb<1>().device(*dev.edevice) = fx.tb<2>().sum(red_dim);
+  fx.tb<2>().device(*dev.edevice) = fx.tb<2>() / z.tvec().reshape(morph).broadcast(bcasts);
+  scratch_allocator->free();
+}
+
+template<class MyDevice>
+void SoftmaxRows::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+  Tensor z(Dim({fx.d.rows()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
+  z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
+  Eigen::array<int, 1> red_axis = {1};
+  z.tb<1>().device(*dev.edevice) = (fx.tb<2>() * dEdf.tb<2>()).sum(red_axis);
+  Eigen::array<int, 3> bcast = {1, (int)xs[0]->d.cols(), 1};
+  Eigen::array<int, 3> morph = {(int)z.d[0], 1, (int)z.d.bd};
+  dEdxi.tb<2>().device(*dev.edevice) += (dEdf.tb<2>() - z.tvec().reshape(morph).broadcast(bcast)) * fx.tb<2>();
+  scratch_allocator->free();
+}
+DYNET_NODE_INST_DEV_IMPL(SoftmaxRows)
+
 
 // ************* LogSoftmax *************
 

@@ -3031,6 +3031,19 @@ cpdef Expression softmax(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
 
+cpdef Expression softmax_rows(Expression x):
+    """Softmax over rows
+    
+    This softmax function normalizes each row to ensure that all values are between 0 and 1 and add to one by applying the :math:`\\frac{e^{x_j}}{sum_i e^{x_i}}`.
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`\\frac{e^{x_j}}{\sum_i e^{x_i}}`
+    """
+    return Expression.from_cexpr(x.cg_version, c_softmax_rows(x.c()))
+
 cpdef Expression sparsemax(Expression x):
     """Sparsemax
     

@@ -1130,6 +1130,19 @@ Expression softmax(const Expression& x);
 
 /**
  * \ingroup lossoperations
+ * \brief SoftmaxRows
+ * \details This softmax function normalizes each row to ensure that all
+ *          values are between 0 and 1 and add to one by applying the
+ *          e^{x[j]}/{sum_i e^{x[i]}}.
+ *
+ * \param x A vector or matrix
+ *
+ * \return A vector or matrix after calculating the softmax
+ */
+Expression softmax_rows(const Expression& x);
+
+/**
+ * \ingroup lossoperations
  * \brief Log softmax
  * \details The log softmax function normalizes each column to ensure that all
  *          values are between 0 and 1 and add to one by applying the
