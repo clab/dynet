@@ -106,7 +106,8 @@ cdef class DynetParams: # {{{
                   '--dynet-viz' in sys.argv):
             cpu_use = True
 
-        cdef int argc = len(sys.argv) + 2 if cpu_use else len(sys.argv)
+        argv_count = int(len(sys.argv))
+        cdef int argc = argv_count + 2 if cpu_use else argv_count
         cdef char** c_argv
         c_argv = <char**>malloc(sizeof(char*) * argc) # TODO check failure?
         args = [bytearray(x, encoding="utf-8") for x in sys.argv]

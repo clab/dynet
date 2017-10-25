@@ -113,7 +113,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         vector[shared_ptr[CLookupParameterStorage]] lookup_parameters_list()
         CModel add_subcollection(string name) except +
         string get_fullname()
-        int parameter_count() except +
+        size_t parameter_count() except +
 
 cdef extern from "dynet/io.h" namespace "dynet":
     cdef cppclass CTextFileSaver "dynet::TextFileSaver":
@@ -239,7 +239,7 @@ cdef extern from "dynet/devices.h" namespace "dynet":
     cdef cppclass CDeviceManager "dynet::DeviceManager":
         CDevice* get_global_device(string name) except +
         CDevice* get(unsigned i)
-        unsigned num_devices()
+        size_t num_devices()
 
     CDeviceManager* c_get_device_manager "dynet::get_device_manager" () 
 
@@ -248,7 +248,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
         CExpression()
         CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
-        long i
+        unsigned i
         CDim dim() except +
         bool is_stale()
         const CTensor& gradient() except +
