@@ -178,6 +178,7 @@ set(dynet_gpu_mergeable_SRCS
     nodes-maxpooling2d
     nodes-minmax
     nodes-moments
+    nodes-cumulative
     nodes-normalization
     nodes-norms
     nodes-pickneglogsoftmax
