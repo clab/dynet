@@ -20,11 +20,11 @@ string CwiseSum::as_string(const vector<string>& arg_names) const {
 Dim CwiseSum::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseSum");
   std::vector<long> dims({});
-  for(int i=0; i < min(xs[0].nd, xs[1].nd); i++){
+  for(unsigned int i = 0; i < min(xs[0].nd, xs[1].nd); i++){
     DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] || min(xs[0].d[i], xs[1].d[i])==1, "CwiseSum: For each dimension, the dim size needs to match or equal 1.");
   }
   DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || min(xs[0].bd, xs[1].bd)==1, "CwiseSum: batch size must match or equal 1");
-  for(int i=0; i < max(xs[0].nd, xs[1].nd); i++){
+  for(unsigned int i = 0; i < max(xs[0].nd, xs[1].nd); i++){
     if(i < min(xs[0].nd, xs[1].nd)) dims.push_back(max(xs[0].d[i], xs[1].d[i]));
     else if(i < xs[0].nd) dims.push_back(xs[0].d[i]);
     else dims.push_back(xs[1].d[i]);
@@ -42,7 +42,7 @@ void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*
   Eigen::array<int, 5> bcast_left = {1,1,1,1,1};
   Eigen::array<int, 5> bcast_right = {1,1,1,1,1};
   bool same_nonbatch_dims = true;
-  for(int i=0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
+  for(unsigned int i = 0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
     if(i >= xs[0]->d.nd || (xs[0]->d[i] == 1 && xs[0]->d[i] != dim[i])){
       bcast_left[i] = dim[i];
       same_nonbatch_dims = false;
@@ -94,7 +94,7 @@ void CwiseSum::backward_dev_impl(const MyDevice & dev,
 #endif
   } else {
     int n_red = xs[i]->d.bd!=fx.d.bd?1:0;
-    for(int j=0; j < fx.d.nd; j++){
+    for(unsigned int j = 0; j < fx.d.nd; j++){
       unsigned dim_j = (j<xs[i]->d.nd ? xs[i]->d[j] : 1);
       if(dim_j != fx.d[j]){
         n_red++;
@@ -120,14 +120,14 @@ void CwiseSum::backward_helper(const MyDevice & dev,
   Eigen::array<int, ReductionOrder> red_axis;
   if(ReductionOrder>0) red_axis[ReductionOrder-1] = 4;
   int curr_red_axis = 0;
-  for(int di=0; di < fx.d.nd; di++){
+  for(unsigned int di = 0; di < fx.d.nd; di++){
     if((di >= xs[i]->d.nd && fx.d[di]>1) || xs[i]->d[di] != fx.d[di]){
       red_axis[curr_red_axis] = di;
       curr_red_axis++;
     }
   }
   Eigen::array<int, 5> morph = {1,1,1,1,1};
-  for(int di=0; di<xs[0]->d.nd; di++){
+  for(unsigned int di = 0; di < xs[0]->d.nd; di++){
     morph[di] = xs[i]->d[di];
   }
   morph[4] = xs[i]->d.bd;
@@ -148,11 +148,11 @@ string CwiseMultiply::as_string(const vector<string>& arg_names) const {
 Dim CwiseMultiply::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseMultiply");
   std::vector<long> dims({});
-  for(int i=0; i < min(xs[0].nd, xs[1].nd); i++){
+  for(unsigned int i = 0; i < min(xs[0].nd, xs[1].nd); i++){
     DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] || min(xs[0].d[i], xs[1].d[i])==1, "CwiseMultiply: For each dimension, the dim size needs to match or equal 1.");
   }
   DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || min(xs[0].bd, xs[1].bd)==1, "CwiseMultiply: batch size must match or equal 1");
-  for(int i=0; i < max(xs[0].nd, xs[1].nd); i++){
+  for(unsigned int i = 0; i < max(xs[0].nd, xs[1].nd); i++){
     if(i < min(xs[0].nd, xs[1].nd)) dims.push_back(max(xs[0].d[i], xs[1].d[i]));
     else if(i < xs[0].nd) dims.push_back(xs[0].d[i]);
     else dims.push_back(xs[1].d[i]);
@@ -179,7 +179,7 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
   Eigen::array<int, 5> bcast_left = {1,1,1,1,1};
   Eigen::array<int, 5> bcast_right = {1,1,1,1,1};
   bool same_dims = true;
-  for(int i=0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
+  for(unsigned int i = 0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
     if(i>=xs[0]->d.nd || xs[0]->d[i]==1){
       bcast_left[i] = dim[i];
       same_dims = false;
@@ -213,14 +213,14 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in CwiseMultiply::backward (cmult)");
   int n_red = xs[i]->d.bd!=fx.d.bd?1:0;
-  for(int j=0; j < fx.d.nd; j++){
+  for(unsigned int j = 0; j < fx.d.nd; j++){
     unsigned dim_j = (j<xs[i]->d.nd ? xs[i]->d[j] : 1);
     if(dim_j != fx.d[j]){
       n_red++;
     }
   }
   bool same_dims = n_red==0 && xs[0]->d.bd == xs[1]->d.bd && xs[0]->d.nd == xs[1]->d.nd;
-  for(int j=0; j < min(xs[0]->d.nd, xs[1]->d.nd); j++) if(xs[0]->d[j] != xs[1]->d[j]) same_dims = false;
+  for(unsigned int j = 0; j < min(xs[0]->d.nd, xs[1]->d.nd); j++) if(xs[0]->d[j] != xs[1]->d[j]) same_dims = false;
   DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseMultiply::backward (cmult)");
   if(same_dims)     dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() * xs[1-i]->tb<4>();
   else if(n_red==0) backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
@@ -241,20 +241,20 @@ void CwiseMultiply::backward_helper(const MyDevice & dev,
   Eigen::array<int, ReductionOrder> red_axis;
   if(ReductionOrder>0) red_axis[ReductionOrder-1] = 4;
   int curr_red_axis = 0;
-  for(int di=0; di < fx.d.nd; di++){
+  for(unsigned int di = 0; di < fx.d.nd; di++){
     if((di >= xs[i]->d.nd && fx.d[di]>1) || xs[i]->d[di] != fx.d[di]){
       red_axis[curr_red_axis] = di;
       curr_red_axis++;
     }
   }
   Eigen::array<int, 5> morph = {1,1,1,1,1};
-  for(int di=0; di<xs[i]->d.nd; di++){
+  for(unsigned int di = 0; di<xs[i]->d.nd; di++){
     morph[di] = xs[i]->d[di];
   }
   morph[4] = xs[i]->d.bd;
 
   Eigen::array<int, 5> bcast_other = {1,1,1,1,1};
-  for(int di=0; di < fx.d.nd; di++){
+  for(unsigned int di = 0; di < fx.d.nd; di++){
       if(di>=xs[1-i]->d.nd || xs[1-i]->d[di]==1) bcast_other[di] = fx.d[di];
   }
   if(xs[1-i]->d.bd == 1) bcast_other[4] = dim.bd;
@@ -275,11 +275,11 @@ string CwiseQuotient::as_string(const vector<string>& arg_names) const {
 Dim CwiseQuotient::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in CwiseQuotient");
   std::vector<long> dims({});
-  for(int i=0; i < min(xs[0].nd, xs[1].nd); i++){
+  for(unsigned int i = 0; i < min(xs[0].nd, xs[1].nd); i++){
     DYNET_ARG_CHECK(xs[0].d[i]==xs[1].d[i] ||  xs[1].d[i]==1, "CwiseQuotient: For each dimension, the dim size needs to match or the right side needs to equal 1, but got dimensions: " << xs[0] << " and " << xs[1]);
   }
   DYNET_ARG_CHECK(xs[0].bd==xs[1].bd || xs[1].bd==1, "CwiseQuotient: batch size must match or right side must equal 1");
-  for(int i=0; i < max(xs[0].nd, xs[1].nd); i++){
+  for(unsigned int i = 0; i < max(xs[0].nd, xs[1].nd); i++){
     if(i < min(xs[0].nd, xs[1].nd)) dims.push_back(max(xs[0].d[i], xs[1].d[i]));
     else if(i < xs[0].nd) dims.push_back(xs[0].d[i]);
     else dims.push_back(xs[1].d[i]);
@@ -298,7 +298,7 @@ void CwiseQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Te
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() / xs[1]->tb<4>();
   } else {
   Eigen::array<int, 5> bcast = {1,1,1,1,1};
-  for(int di=0; di<xs[0]->d.nd; di++){
+  for(unsigned int di = 0; di<xs[0]->d.nd; di++){
     if(xs[1]->d[di]==1) bcast[di] = xs[0]->d[di];
   }
   if(xs[1]->d.bd == 1) bcast[4] = xs[0]->d.bd;
@@ -319,7 +319,7 @@ void CwiseQuotient::backward_dev_impl(const MyDevice & dev,
       dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() / xs[1]->tb<4>();
     } else {
       Eigen::array<int, 5> bcast = {1,1,1,1,1};
-      for(int di=0; di<xs[0]->d.nd; di++){
+      for(unsigned int di = 0; di<xs[0]->d.nd; di++){
         if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
       }
       if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[0]->d.bd;
@@ -330,7 +330,7 @@ void CwiseQuotient::backward_dev_impl(const MyDevice & dev,
       dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs[1]->tb<4>().square() * xs[0]->tb<4>());
     } else {
       int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
-      for(int di=0;di<xs[0]->d.nd; di++) if(xs[0]->d[di]!=xs[1]->d[di]) n_red++;
+      for(unsigned int di = 0; di < xs[0]->d.nd; di++) if(xs[0]->d[di]!=xs[1]->d[di]) n_red++;
       DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseQuotient::backward (cdiv)");
       if(n_red==0)      backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
       else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
@@ -352,19 +352,19 @@ void CwiseQuotient::backward_helper(const MyDevice & dev,
   Eigen::array<int, ReductionOrder> red_axis;
   if(ReductionOrder>0) red_axis[ReductionOrder-1] = 4;
   int curr_red_axis = 0;
-  for(int di=0;di<xs[0]->d.nd; di++){
+  for(unsigned int di = 0; di < xs[0]->d.nd; di++){
     if(xs[0]->d[di]!=xs[1]->d[di]){
       red_axis[curr_red_axis] = di;
       curr_red_axis++;
     }
   }
   Eigen::array<int, 5> morph = {1,1,1,1,1};
-  for(int di=0; di<xs[0]->d.nd; di++){
+  for(unsigned int di = 0; di < xs[0]->d.nd; di++){
     morph[di] = xs[i]->d[di];
   }
   morph[4] = xs[i]->d.bd;
     Eigen::array<int, 5> bcast = {1,1,1,1,1};
-    for(int di=0; di<xs[0]->d.nd; di++){
+    for(unsigned int di = 0; di < xs[0]->d.nd; di++){
       if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
     }
     if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[0]->d.bd;

@@ -106,7 +106,8 @@ cdef class DynetParams: # {{{
                   '--dynet-viz' in sys.argv):
             cpu_use = True
 
-        cdef int argc = len(sys.argv) + 2 if cpu_use else len(sys.argv)
+        argv_count = int(len(sys.argv))
+        cdef int argc = argv_count + 2 if cpu_use else argv_count
         cdef char** c_argv
         c_argv = <char**>malloc(sizeof(char*) * argc) # TODO check failure?
         args = [bytearray(x, encoding="utf-8") for x in sys.argv]
@@ -763,7 +764,8 @@ cdef class LookupParameters: # {{{
         Args:
             arr (np.array): numpy array of shape :code:`(num_lookups,...)`
         """
-        if len(arr) > self.thisptr.get_storage().values.size():
+        rows = long(self.thisptr.get_storage().values.size())
+        if len(arr) > rows:
             raise Exception("too many rows")
         if arr.shape[1] != self.thisptr.get_storage().values[0].d.rows():
             raise Exception("dim mismatch")
