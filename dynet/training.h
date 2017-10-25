@@ -134,10 +134,10 @@ struct Trainer {
 protected:
   Trainer() {}
   virtual unsigned alloc_impl() {
-      return model->parameters_list().size() - aux_allocated;
+      return static_cast<unsigned>(model->parameters_list().size()) - aux_allocated;
   }
   virtual unsigned alloc_lookup_impl() {
-      return model->lookup_parameters_list().size() - aux_allocated_lookup;
+      return static_cast<unsigned>(model->lookup_parameters_list().size()) - aux_allocated_lookup;
   }
   /**
    * \brief The actual rule to update the parameters
