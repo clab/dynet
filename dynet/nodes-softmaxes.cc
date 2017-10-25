@@ -20,6 +20,7 @@ string Softmax::as_string(const vector<string>& arg_names) const {
 Dim Softmax::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in Softmax");
   DYNET_ARG_CHECK(xs[0].nd <= 2, "Bad input dimensions in Softmax, must be 2 or fewer: " << xs);
+  DYNET_ARG_CHECK(dimension < xs[0].nd && dimension >= 0, "illegal dimension " << dimension << " in Softmax.");
   return xs[0];
 }
 
@@ -33,18 +34,17 @@ std::vector<int> Softmax::autobatch_concat(const ComputationGraph & cg) const {
   return vector<int>(1, 1);
 }
 
-size_t Softmax::aux_storage_size() const {
-  return 2 * dim.size() / dim.rows() * sizeof(float);
-}
-
 #endif
 
 template<class MyDevice>
 void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in Softmax::forward");
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
 #ifdef __CUDACC__ // GPU impl
-  Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem + z.d.size(), fx.device, DeviceMempool::FXS);
+  Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
+  z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
+  Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
+  m.v = static_cast<float*>(scratch_allocator->allocate(m.d.size() * sizeof(float)));
   Eigen::array<int, 1> red_dim = {0};
   m.tb<1>().device(*dev.edevice) = xs[0]->tb<2>().maximum(red_dim);
   Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
@@ -53,8 +53,10 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
   z.tb<1>().device(*dev.edevice) = fx.tb<2>().sum(red_dim);
   fx.tb<2>().device(*dev.edevice) = fx.tb<2>() / z.tvec().reshape(morph).broadcast(bcasts);
 #else // CPU impl
-  Tensor z(Dim({1}), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  Tensor m(Dim({1}), (float*)aux_mem + 1, fx.device, DeviceMempool::FXS);
+  Tensor z(Dim({1}), nullptr, fx.device, DeviceMempool::FXS);
+  z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
+  Tensor m(Dim({1}), nullptr, fx.device, DeviceMempool::FXS);
+  m.v = static_cast<float*>(scratch_allocator->allocate(m.d.size() * sizeof(float)));
   unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
   Tensor col_x(Dim({xs[0]->d[0]}), (float*)xs[0]->v, fx.device, DeviceMempool::FXS);
   Tensor col_fx(Dim({xs[0]->d[0]}), (float*)fx.v, fx.device, DeviceMempool::FXS);
@@ -67,6 +69,7 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
     col_fx.v += size;
   }
 #endif
+  scratch_allocator->free();
 }
 
 template<class MyDevice>
@@ -76,7 +79,9 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  Tensor z(Dim({fx.d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+  Tensor z(Dim({fx.d.cols()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
+  z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
   Eigen::array<int, 1> red_axis = {0};
   z.tb<1>().device(*dev.edevice) = (fx.tb<2>() * dEdf.tb<2>()).sum(red_axis);
 #ifdef __CUDACC__ // GPU impl
@@ -95,6 +100,7 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
     col_dEdxi.v += size;
   }
 #endif
+  scratch_allocator->free();
 }
 DYNET_NODE_INST_DEV_IMPL(Softmax)
 
