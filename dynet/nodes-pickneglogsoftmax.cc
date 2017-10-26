@@ -96,6 +96,11 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
       for(unsigned b = 0; b < fx.d.bd; ++b)
         ids_host[b] = batch_size * b + (*pvals)[b];
     }
+#ifndef DYNET_SKIP_ARG_CHECK
+    for(unsigned i = 0; i < fx.d.bd; ++i)
+      DYNET_ARG_CHECK(ids_host[i] < xs[0]->d.rows(),
+                      "Index error in PickNegLogSoftmax: Index " << ids_host[i] << " out of bounds for input tensor " << xs[0]->d);
+#endif
 #ifdef __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync(ids_dev, ids_host, fx.d.bd * sizeof(unsigned int), cudaMemcpyHostToDevice));
     TensorTools::logsumexp_dev(dev, *xs[0], m, z);
