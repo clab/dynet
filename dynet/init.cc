@@ -210,7 +210,7 @@ void initialize(DynetParams& params) {
 
   Device *d;
   if (gpudevices.size()) {
-    d = new Device_CPU(device_manager->num_devices(), "512", params.shared_parameters);
+    d = new Device_CPU(device_manager->num_devices(), std::string("512"), params.shared_parameters);
   } else {
     d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
   }
