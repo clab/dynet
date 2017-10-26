@@ -208,7 +208,12 @@ void initialize(DynetParams& params) {
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
   int default_index = 0;
 
-  Device *d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
+  Device *d;
+  if (gpudevices.size()) {
+    d = new Device_CPU(device_manager->num_devices(), std::string("128"), params.shared_parameters);
+  } else {
+    d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
+  }
   device_manager->add(d);
   default_device = device_manager->get(default_index);
 #if HAVE_CUDA
