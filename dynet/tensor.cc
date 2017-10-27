@@ -133,7 +133,7 @@ void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rinde
       } else {
         cudaMemcpyPeerAsync(&r.v[rindex], ((Device_GPU*)r.device)->cuda_device_id,
                             &l.v[lindex], ((Device_GPU*)l.device)->cuda_device_id,
-                            sizeof(real), dynet::default_stream);
+                            sizeof(real));
       }
     } else { throw std::runtime_error("Bad device type"); }
 #endif
@@ -173,7 +173,7 @@ void TensorTools::copy_elements(Tensor& v, const Tensor& v_src) {
       } else {
         cudaMemcpyPeerAsync(v.v, ((Device_GPU*)v.device)->cuda_device_id,
                             v_src.v, ((Device_GPU*)v_src.device)->cuda_device_id,
-                            sizeof(real) * v.d.size(), dynet::default_stream);
+                            sizeof(real) * v.d.size());
       }
     }
 #endif
