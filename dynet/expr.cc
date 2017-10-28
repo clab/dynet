@@ -84,8 +84,7 @@ Expression logsumexp_dim(const Expression& x, unsigned d) { return Expression(x.
 Expression sparsemax(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sparsemax>({x.i})); }
 Expression sparsemax_loss(const Expression& x, const vector<unsigned>& target_support) { return Expression(x.pg, x.pg->add_function<SparsemaxLoss>({x.i}, target_support)); }
 Expression sparsemax_loss(const Expression& x, const vector<unsigned>* ptarget_support) { return Expression(x.pg, x.pg->add_function<SparsemaxLoss>({x.i}, ptarget_support)); }
-Expression softmax(const Expression& x) { return Expression(x.pg, x.pg->add_function<Softmax>({x.i})); }
-Expression softmax_rows(const Expression& x) { return Expression(x.pg, x.pg->add_function<SoftmaxRows>({x.i})); }
+Expression softmax(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<Softmax>({x.i}, d)); }
 Expression softsign(const Expression& x) { return Expression(x.pg, x.pg->add_function<SoftSign>({x.i})); }
 Expression pow(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Pow>({x.i, y.i})); }
 Expression min(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Min>({x.i, y.i})); }
