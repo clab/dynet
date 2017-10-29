@@ -2774,6 +2774,22 @@ cpdef Expression selu(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_selu(x.c()))
 
+cpdef Expression swish(Expression x, float beta=1.0): 
+    """Swish
+
+    Calculate elementwise :math:`y_i = \\frac{x_i}{1+e^{-beta * x_i}}`
+        
+    Reference: `Ramachandran et al., 2017 <https://arxiv.org/pdf/1710.05941>`_
+ 
+    Args:
+        x (dynet.Expression): Input expression
+        beta (number): :math:`\\beta` parameter
+    
+    Returns:
+        dynet.Expression: :math:`\\text{swish}(x_i, \\beta)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_swish(x.c(), beta))
+
 cpdef Expression log_softmax(Expression x, list restrict=None):
     """Restricted log softmax
     

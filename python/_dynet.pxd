@@ -365,6 +365,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
 
     CExpression c_elu "dynet::elu" (CExpression& x, float alpha) except + #
     CExpression c_selu "dynet::selu" (CExpression& x) except + #
+    CExpression c_swish "dynet::swish" (CExpression& x, float beta) except + #
     
     # expecting a vector of CExpression
     CExpression c_average     "dynet::average" (vector[CExpression]& xs) except +
