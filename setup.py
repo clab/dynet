@@ -101,7 +101,6 @@ BUILT_EXTENSIONS = False
 CMAKE_PATH = ENV.get("CMAKE", find_executable("cmake"))
 MAKE_PATH = ENV.get("MAKE", find_executable("make"))
 MAKE_FLAGS = ENV.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
-# HG_PATH = find_executable("hg")
 CC_PATH = ENV.get("CC", find_executable("gcc"))
 CXX_PATH = ENV.get("CXX", find_executable("g++"))
 INSTALL_PREFIX = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
@@ -207,7 +206,6 @@ class build(_build):
         log.info("CMAKE_PATH=%r" % CMAKE_PATH)
         log.info("MAKE_PATH=%r" % MAKE_PATH)
         log.info("MAKE_FLAGS=%r" % " ".join(MAKE_FLAGS))
-        # log.info("HG_PATH=%r" % HG_PATH)
         log.info("EIGEN3_INCLUDE_DIR=%r" % EIGEN3_INCLUDE_DIR)
         log.info("EIGEN3_DOWNLOAD_URL=%r" % EIGEN3_DOWNLOAD_URL)
         log.info("CC_PATH=%r" % CC_PATH)
@@ -251,12 +249,18 @@ class build(_build):
                     log.info("Fetching Eigen...")
                     urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
                     log.info("Unpacking Eigen...")
-                    zfile = zipfile.ZipFile("eigen.zip", 'r')
-                    zfile.extractall('eigen')
                     #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
-                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
+                    with zipfile.ZipFile("eigen.zip") as zfile:
+                        for zipinfo in zfile.infolist():
+                            try:
+                                i = zipinfo.filename.index("/")
+                                zipinfo.filename = zipinfo.filename[i+1:]
+                                zfile.extract(zipinfo, "eigen")
+                            except ValueError:
+                                pass
+                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
                 except:
-                    raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_URL)
+                    raise DistutilsSetupError("Could not download Eigen from %r" % EIGEN3_DOWNLOAD_URL)
 
             os.environ["CXX"] = CXX_PATH
             os.environ["CC"] = CC_PATH
@@ -288,9 +292,8 @@ class build(_build):
                 raise DistutilsSetupError(" ".join(make_cmd))
 
         # This will generally be called by the manual install
-        else:    
-            if not os.path.isdir(EIGEN3_INCLUDE_DIR):
-                raise RuntimeError("Could not find Eigen in EIGEN3_INCLUDE_DIR={}. If doing manual install, please set the EIGEN3_INCLUDE_DIR variable with the absolute path to Eigen manually. If doing install via pip, please file an issue at the github site.".format(EIGEN3_INCLUDE_DIR))
+        elif not os.path.isdir(EIGEN3_INCLUDE_DIR):
+            raise RuntimeError("Could not find Eigen in EIGEN3_INCLUDE_DIR={}. If doing manual install, please set the EIGEN3_INCLUDE_DIR variable with the absolute path to Eigen manually. If doing install via pip, please file an issue on github.com/clab/dynet".format(EIGEN3_INCLUDE_DIR))
 
         BUILT_EXTENSIONS = True  # because make calls build_ext
         _build.run(self)
