@@ -77,7 +77,7 @@ struct Dim {
         x.size() <= DYNET_MAX_TENSOR_DIM,
         "Out of bounds exception in Dim::Dim() with vector of size "
         << x.size());
-    for (auto v : x) d[nd++] = v;
+    for (auto v : x) d[nd++] = static_cast<unsigned int>(v);
   }
   /**
      * \brief Initialize from a vector of dimensions and a batch size
@@ -90,7 +90,7 @@ struct Dim {
         x.size() <= DYNET_MAX_TENSOR_DIM,
         "Out of bounds exception in Dim::Dim() with vector of size "
         << x.size());
-    for (auto v : x) d[nd++] = v;
+    for (auto v : x) d[nd++] = static_cast<unsigned int>(v);
   }
   /**
    * \brief Total size of a batch
@@ -118,16 +118,14 @@ struct Dim {
     return p;
   }
   /**
-   * \brief [TODO]
-   * \details [long description]
-   * \return [description]
+   * \brief remove trailing dimensions of 1
+   * \details iterate all the dimensions of Dim, stop at last dimension of 1
+   * \return truncated dimension
    */
   inline Dim truncate() const {
     Dim r = *this;
-    unsigned int m = 1;
-    unsigned int s = size();
-    for (unsigned int i = 1; i < s; ++i)
-      if (size(i) > 1) m = i + 1;
+    unsigned int m = nd;
+    while (m > 1 && size(m-1) == 1) --m;
     r.resize(m);
     return r;
   }
@@ -304,7 +302,7 @@ struct Dim {
  */
 inline bool operator==(const Dim& a, const Dim& b) {
   if (a.nd != b.nd || a.bd != b.bd) return false;
-  return std::memcmp(a.d, b.d, a.nd) == 0;
+  return std::memcmp(a.d, b.d, a.nd * sizeof(unsigned int)) == 0;
 }
 
 /**

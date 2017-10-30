@@ -35,7 +35,7 @@ following command:
 
 ::
 
-    hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
+    hg clone https://bitbucket.org/eigen/eigen/ -r 699b659
     
 The `-r NUM` specified a revision number that is known to work.  Adventurous
 users can remove it and use the very latest version, at the risk of the code
@@ -55,7 +55,7 @@ To get and build DyNet, clone the repository
 
     git clone https://github.com/clab/dynet.git
 
-then enter the directory and use ```cmake`` <http://www.cmake.org/>`__
+then enter the directory and use `cmake <http://www.cmake.org/>`__
 to generate the makefiles. When you run ``cmake``, you will need to specify
 the path to Eigen, and will probably want to specify ``ENABLE_CPP_EXAMPLES``
 to compile the C++ examples.
@@ -200,7 +200,7 @@ options:
     -DBOOST_ROOT:PATHNAME=$HOME/boost -DBoost_LIBRARY_DIRS:FILEPATH=$HOME/boost/lib
     -DBoost_NO_BOOST_CMAKE=TRUE -DBoost_NO_SYSTEM_PATHS=TRUE
 
-Note that you will also have to set your ``LD_LIBRARY_PATH`` to point to
+Note that you will also have to set your ``LD_LIBRARY_PATH``(``DYLD_LIBRARY_PATH`` instead for osx) to point to
 the ``boost/lib`` directory.
 Note also that Boost must be compiled with the same compiler version as
 you are using to compile DyNet.

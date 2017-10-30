@@ -244,7 +244,7 @@ object Expression {
   def filter1DNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.filter1d_narrow)
   def kMaxPooling(x: Expression, k: Long): Expression = unary(x, x => dn.kmax_pooling(x, k))
   def foldRows(x: Expression, nRows: Long = 2l): Expression = unary(x, x => dn.fold_rows(x, nRows))
-  def sumDim(x: Expression, d: Long): Expression = unary(x, x => dn.sum_dim(x, d))
+  def sumDim(x: Expression, dims: UnsignedVector): Expression = unary(x, x => dn.sum_dim(x, dims.vector))
   def sumCols(x: Expression): Expression = unary(x, dn.sum_cols)
   def sumRows(x: Expression): Expression = unary(x, dn.sum_rows)
   def averageCols(x: Expression): Expression = unary(x, dn.average_cols)

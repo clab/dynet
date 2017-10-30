@@ -85,7 +85,7 @@ struct RNNBuilder {
   Expression set_h(const RNNPointer& prev, const std::vector<Expression>& h_new = {}) {
     sm.transition(RNNOp::add_input);
     head.push_back(prev);
-    cur = head.size() - 1;
+    cur = static_cast<int>(head.size()) - 1;
     return set_h_impl(prev, h_new);
   }
 
@@ -105,7 +105,7 @@ struct RNNBuilder {
   Expression set_s(const RNNPointer& prev, const std::vector<Expression>& s_new = {}) {
     sm.transition(RNNOp::add_input);
     head.push_back(prev);
-    cur = head.size() - 1;
+    cur = static_cast<int>(head.size()) - 1;
     return set_s_impl(prev, s_new);
   }
 
@@ -121,7 +121,7 @@ struct RNNBuilder {
     sm.transition(RNNOp::add_input);
     head.push_back(cur);
     int rcp = cur;
-    cur = head.size() - 1;
+    cur = static_cast<int>(head.size()) - 1;
     return add_input_impl(rcp, x);
   }
 
@@ -140,7 +140,7 @@ struct RNNBuilder {
   Expression add_input(const RNNPointer& prev, const Expression& x) {
     sm.transition(RNNOp::add_input);
     head.push_back(prev);
-    cur = head.size() - 1;
+    cur = static_cast<int>(head.size()) - 1;
     return add_input_impl(prev, x);
   }
 

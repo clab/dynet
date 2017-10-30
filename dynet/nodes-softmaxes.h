@@ -9,9 +9,8 @@ namespace dynet {
 // z = \sum_j \exp (x_i)_j
 // y_i = (x_1)_i / z
 struct Softmax : public Node {
-  explicit Softmax(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  explicit Softmax(const std::initializer_list<VariableIndex>& a, unsigned d=0) : Node(a), dimension(d) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
-  size_t aux_storage_size() const override;
   virtual bool supports_multibatch() const override { return true; }
   virtual int autobatch_sig(const ComputationGraph& cg,
                             SigMap& sm) const override;
@@ -24,6 +23,7 @@ struct Softmax : public Node {
                                  Tensor& fx) const override {
     autobatch_reshape_concatonly(cg, batch_ids, concat, xs, fx);
   }
+  unsigned dimension;
 };
 
 // z = \sum_j \exp (x_i)_j

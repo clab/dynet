@@ -250,10 +250,9 @@ namespace dynet {
           batch_counter++;
 
           bool do_update = !header.is_dev_set && cid == 0;
-          unsigned counter = 0;
           if (!header.is_dev_set) {
             shared_object->counter_mutex.wait();
-            counter = ++shared_object->counter;
+            ++shared_object->counter;
             if (do_update) { shared_object->counter = 0; }
             shared_object->counter_mutex.post();
           }
@@ -271,9 +270,6 @@ namespace dynet {
             batch_loss = S();
             batch_counter = 0;
           }
-        }
-        if (header.end_of_epoch && trainer != nullptr) {
-          trainer->update_epoch();
         }
 
         // Let the parent know that we're done and return the loss value
@@ -370,7 +366,6 @@ namespace dynet {
           if (stop_requested) {
             break;
           }
-          trainer->update_epoch();
           if (new_best) {
             learner->SaveModel();
             best_dev_loss = dev_loss;

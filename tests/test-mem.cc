@@ -5,6 +5,7 @@
 #include <dynet/training.h>
 #include <dynet/grad-check.h>
 #include <boost/test/unit_test.hpp>
+#include "test.h"
 #include <stdexcept>
 
 using namespace dynet;
@@ -17,6 +18,7 @@ struct MemTest {
     for (auto x : {"MemTest", "--dynet-mem", "4"}) {
       av.push_back(strdup(x));
     }
+    ADD_EXTRA_ARGUMENTS(av)
     char **argv = &av[0];
     int argc = av.size();
     dynet::initialize(argc, argv);
@@ -38,7 +40,7 @@ BOOST_AUTO_TEST_CASE( expand_test ) {
     SimpleSGDTrainer trainer(mod);
     dynet::ComputationGraph cg;
     Expression x = parameter(cg, param);
-    Expression z = sum_rows(sum_cols(x));
+    Expression z = sum_elems(x);
     cg.forward(z);
     cg.backward(z);
     trainer.update();

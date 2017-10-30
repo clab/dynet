@@ -25,7 +25,6 @@ set(dynet_library_SRCS
     nodes-affinetransform.cc
     nodes-arith-const.cc
     nodes-arith-cwise.cc
-    nodes-arith-scalar.cc
     nodes-arith-sum.cc
     nodes-arith-unary.cc
     nodes-concat.cc
@@ -104,7 +103,6 @@ set(dynet_library_HDRS
     nodes-affinetransform.h
     nodes-arith-const.h
     nodes-arith-cwise.h
-    nodes-arith-scalar.h
     nodes-arith-sum.h
     nodes-arith-unary.h
     nodes-concat.h
@@ -160,7 +158,6 @@ set(dynet_gpu_mergeable_SRCS
     nodes-affinetransform
     nodes-arith-const
     nodes-arith-cwise
-    nodes-arith-scalar
     nodes-arith-sum
     nodes-arith-unary
     nodes-concat
@@ -251,17 +248,7 @@ if(WITH_CUDA_BACKEND)
   if(CUDNN_FOUND)
     list(APPEND CUDA_NVCC_FLAGS "-DHAVE_CUDNN")
   endif()
-  if(CMAKE_COMPILER_IS_GNUCXX)
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 4.9)
-      # gcc 4.9 or later versions raise SEGV due to the optimization problem.
-      # Use -O1 instead for now.
-      list(APPEND CUDA_NVCC_FLAGS "-O1")
-    else()
-      list(APPEND CUDA_NVCC_FLAGS "-O2")
-    endif()
-  else()
-    list(APPEND CUDA_NVCC_FLAGS "-O2")
-  endif()
+  list(APPEND CUDA_NVCC_FLAGS "-O2")
   if(MSVC)
     # If MSVC, we need the boost flag because nvcc doesn't properly parse part of the boost template definitions
     list(APPEND CUDA_NVCC_FLAGS "-DBOOST_NO_CXX11_ALLOCATOR")

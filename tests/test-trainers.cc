@@ -5,6 +5,7 @@
 #include <dynet/training.h>
 #include <dynet/grad-check.h>
 #include <boost/test/unit_test.hpp>
+#include "test.h"
 #include <stdexcept>
 
 using namespace dynet;
@@ -18,6 +19,7 @@ struct TrainerTest {
       for (auto x : {"TrainerTest", "--dynet-mem", "10"}) {
         av.push_back(strdup(x));
       }
+      ADD_EXTRA_ARGUMENTS(av)
       char **argv = &av[0];
       int argc = av.size();
       dynet::initialize(argc, argv);
@@ -177,6 +179,20 @@ BOOST_AUTO_TEST_CASE( simple_sgd_update_subset ) {
     BOOST_CHECK_NE(param_vals[i], param_after[i]);
   for(size_t i = 0; i < param2_after.size(); ++i)
     BOOST_CHECK_EQUAL(param2_vals[i], param2_after[i]);
+}
+
+BOOST_AUTO_TEST_CASE( simple_edge_case_test_dynet_867 ) {
+  ParameterCollection model;
+  LookupParameter emb_weight = model.add_lookup_parameters(1, {1});
+  model.add_parameters({1, 1});
+  SimpleSGDTrainer trainer(model);
+  ComputationGraph cg;
+  dynet::real zero = 0.0;
+  Expression loss2 = input(cg, zero);
+  for (int i = 0; i < 1000; ++i)
+    dynet::lookup(cg, emb_weight, 0u);
+  cg.backward(loss2);
+  trainer.update();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

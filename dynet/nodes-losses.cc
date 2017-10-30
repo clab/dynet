@@ -60,8 +60,8 @@ string BinaryLogLoss::as_string(const vector<string>& arg_names) const {
 
 Dim BinaryLogLoss::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed input count check in BinaryLogLoss")
-  DYNET_ARG_CHECK(xs[0].rows() == 2 || xs[0].ndims() == 1, "Bad input dimensions in BinaryLogLoss: " << xs);
-  DYNET_ARG_CHECK(xs[1].rows() == 2 || xs[1].ndims() == 1, "Bad input dimensions in BinaryLogLoss: " << xs);
+  DYNET_ARG_CHECK(xs[0].single_batch() == xs[1].single_batch(), "Bad input dimensions in BinaryLogLoss: " << xs);
+  DYNET_ARG_CHECK(xs[0].bd == xs[1].bd, "BinaryLogLoss with unmatched batches is not implemented yet (pull requests welcome): " << xs);
   return Dim({1}, max(xs[0].bd, xs[1].bd));
 }
 

@@ -54,6 +54,10 @@ function(find_mkl)
   endif()
 endfunction()
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 ######## Cross-compiler, cross-platform options
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_FAST_MATH")
 if (MKL OR MKL_ROOT)
@@ -84,14 +88,19 @@ endif()
 if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W1 /MP")   # -Wall produces 20k warnings. Enable parallel compilation
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -funroll-loops -fno-finite-math-only -Wall -Wno-missing-braces -std=c++11 -Ofast -g -march=native")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fno-finite-math-only -Wall -Wno-missing-braces -std=c++11 -g")
+  set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-omit-frame-pointer")
+  set(CMAKE_CXX_FLAGS_RELEASE "-funroll-loops -Ofast -march=native")
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
                     ${PROJECT_SOURCE_DIR}/external/easyloggingpp/src)
 
 function(find_cudnn)
-  set(CUDNN_ROOT /usr/local/cuda CACHE PATH "CUDNN root path")
+  if (DEFINED ENV{CUDNN_ROOT} AND NOT DEFINED CUDNN_ROOT)  # use env variable if not defined
+    set(CUDNN_ROOT $ENV{CUDNN_ROOT})
+  endif()
+#  set(CUDNN_ROOT /usr/local/cuda CACHE PATH "CUDNN root path")
   find_path(CUDNN_INCLUDE_DIRS cudnn.h
     HINTS ${CUDNN_ROOT}
           ${CUDNN_ROOT}/include
@@ -171,6 +180,7 @@ if (DEFINED ENV{EIGEN3_INCLUDE_DIR} AND NOT DEFINED EIGEN3_INCLUDE_DIR) # use en
   set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
 endif()
 get_filename_component(EIGEN3_INCLUDE_DIR "${EIGEN3_INCLUDE_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+set(EIGEN3_INCLUDE_DIR ${EIGEN3_INCLUDE_DIR} CACHE STRING "" FORCE)
 message("-- Eigen dir is " ${EIGEN3_INCLUDE_DIR})
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})

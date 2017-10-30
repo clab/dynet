@@ -13,6 +13,7 @@
 namespace dynet {
 
 inline void MatrixMultiply(const Device_GPU & dev, const Tensor& l, const Tensor& r, Tensor& y, const float* acc_scalar) {
+  CUDA_CHECK(cudaSetDevice(dev.cuda_device_id));
   if(l.d.bd == 1 && r.d.bd == y.d.bd) {
     // If the left side has one batch, multiply by columns
     // [x, z, b] = [x, y] * [y, z, b]
@@ -25,7 +26,7 @@ inline void MatrixMultiply(const Device_GPU & dev, const Tensor& l, const Tensor
           acc_scalar, y.v, y.d.rows()));
   } else {
     // Otherwise, loop over the batches
-    DYNET_ASSERT(r.d.bd != 1 || r.d.bd != l.d.bd,
+    DYNET_ARG_CHECK(r.d.bd != 1 || r.d.bd != l.d.bd,
                  "Number of batch elements in matrix multiply must match, but got: " << r.d.bd << ", " << l.d.bd);
     for(unsigned b = 0; b < y.d.bd; ++b) {
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
@@ -57,7 +58,7 @@ inline void MatrixMultiply(const Device_CPU & dev, const Tensor& l, const Tensor
 
   } else {
     // Otherwise, loop over the batches
-    DYNET_ASSERT(r.d.bd != 1 || r.d.bd != l.d.bd,
+    DYNET_ARG_CHECK(r.d.bd != 1 || r.d.bd != l.d.bd,
                  "Number of batch elements in matrix multiply must match, but got: " << r.d.bd << ", " << l.d.bd);
 
     for(unsigned b = 0; b < y.d.bd; ++b)

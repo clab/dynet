@@ -15,7 +15,9 @@
   template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real gscale, const std::vector<Tensor*> & values); \
   void MyTrainer::update_rule(real gscale, const std::vector<Tensor*> & values) { \
     if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,gscale,values); } \
-    else if(values[0]->device->type == DeviceType::GPU) { update_rule_dev(*(Device_GPU*)values[0]->device,gscale,values); } \
+    else if(values[0]->device->type == DeviceType::GPU) { \
+      cudaSetDevice(((Device_GPU*)values[0]->device)->cuda_device_id); \
+      update_rule_dev(*(Device_GPU*)values[0]->device,gscale,values); } \
     else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #else
@@ -77,22 +79,25 @@ void Trainer::update_epoch(real r) {
 
 // this calls the rule-specific updates over all updated parameters
 void Trainer::update() {
+  const auto & params = model->parameters_list();
+  const auto & lparams = model->lookup_parameters_list();
+  
   // Allocate if necessary
-  if(!aux_allocated) {
-    alloc_impl();
-    aux_allocated = true;
+  if(aux_allocated < params.size()) {
+    aux_allocated = alloc_impl();
+  }
+  if(aux_allocated_lookup < lparams.size()) {
+    aux_allocated_lookup = alloc_lookup_impl();
   }
 
   // Perform gradient clipping and cycle through parameters
   const float gscale = clip_gradients();
-  const auto & params = model->parameters_list();
   for(size_t i = 0; i < params.size(); ++i) {
     if(params[i]->updated) {
       update_params(gscale, i);
       params[i]->clear();
     }
   }
-  const auto & lparams = model->lookup_parameters_list();
   for(size_t i = 0; i < lparams.size(); ++i) {
     auto &p = lparams[i];
     if(sparse_updates_enabled && p->updated && !p->all_updated) {
@@ -191,9 +196,13 @@ void MomentumSGDTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h});
 }
-void MomentumSGDTrainer::alloc_impl() {
-  vp = allocate_shadow_parameters(*model);
-  vlp = allocate_shadow_lookup_parameters(*model);
+unsigned MomentumSGDTrainer::alloc_impl() {
+  allocate_shadow_parameters(*model, aux_allocated, vp);
+  return vp.size();
+}
+unsigned MomentumSGDTrainer::alloc_lookup_impl() {
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, vlp);
+  return vlp.size();
 }
 
 void MomentumSGDTrainer::restart() {
@@ -229,9 +238,13 @@ void AdagradTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h});
 }
-void AdagradTrainer::alloc_impl() {
-  vp = allocate_shadow_parameters(*model);
-  vlp = allocate_shadow_lookup_parameters(*model);
+unsigned AdagradTrainer::alloc_impl() {
+  allocate_shadow_parameters(*model, aux_allocated, vp);
+  return vp.size();
+}
+unsigned AdagradTrainer::alloc_lookup_impl() {
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, vlp);
+  return vlp.size();
 }
 
 void AdagradTrainer::restart() {
@@ -269,11 +282,15 @@ void AdadeltaTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(gscale, {&p->all_values, &p->all_grads, &hlg[idx].all_h, &hld[idx].all_h});
 }
-void AdadeltaTrainer::alloc_impl() {
-  hg = allocate_shadow_parameters(*model);
-  hlg = allocate_shadow_lookup_parameters(*model);
-  hd = allocate_shadow_parameters(*model);
-  hld = allocate_shadow_lookup_parameters(*model);
+unsigned AdadeltaTrainer::alloc_impl() {
+  allocate_shadow_parameters(*model, aux_allocated, hg);
+  allocate_shadow_parameters(*model, aux_allocated, hd);
+  return hd.size();
+}
+unsigned AdadeltaTrainer::alloc_lookup_impl() {
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, hlg);
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, hld);
+  return hld.size();
 }
 
 void AdadeltaTrainer::restart() {
@@ -320,9 +337,13 @@ void RMSPropTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(gscale, {&p->all_values, &p->all_grads, &hlmsg[idx].all_h});
 }
-void RMSPropTrainer::alloc_impl() {
-  hmsg = allocate_shadow_parameters(*model);
-  hlmsg = allocate_shadow_lookup_parameters(*model);
+unsigned RMSPropTrainer::alloc_impl() {
+  allocate_shadow_parameters(*model, aux_allocated, hmsg);
+  return hmsg.size();
+}
+unsigned RMSPropTrainer::alloc_lookup_impl() {
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, hlmsg);
+  return hlmsg.size();
 }
 
 void RMSPropTrainer::restart() {
@@ -360,11 +381,15 @@ void AdamTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(gscale, {&p->all_values, &p->all_grads, &lm[idx].all_h, &lv[idx].all_h});
 }
-void AdamTrainer::alloc_impl() {
-  m = allocate_shadow_parameters(*model);
-  lm = allocate_shadow_lookup_parameters(*model);
-  v = allocate_shadow_parameters(*model);
-  lv = allocate_shadow_lookup_parameters(*model);
+unsigned AdamTrainer::alloc_impl() {
+  allocate_shadow_parameters(*model, aux_allocated, m);
+  allocate_shadow_parameters(*model, aux_allocated, v);
+  return v.size();
+}
+unsigned AdamTrainer::alloc_lookup_impl() {
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, lm);
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, lv);
+  return lv.size();
 }
 
 void AdamTrainer::restart() {
@@ -404,9 +429,13 @@ void EGTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(gscale, {&p->all_grads, &p->all_grads, &hlp[idx].all_h, &meg, &zeg});
 }
-void EGTrainer::alloc_impl() {
-  hp = allocate_shadow_parameters(*model);
-  hlp = allocate_shadow_lookup_parameters(*model); 
+unsigned EGTrainer::alloc_impl() {
+  allocate_shadow_parameters(*model, aux_allocated, hp);
+  return hp.size();
+}
+unsigned EGTrainer::alloc_lookup_impl() {
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, hlp);
+  return hlp.size();
 }
 
 void EGTrainer::restart() {

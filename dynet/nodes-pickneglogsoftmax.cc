@@ -87,14 +87,19 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
 #endif
     if(pval) {
       *ids_host = *pval;
+      DYNET_ARG_CHECK(*pval < xs[0]->d.rows(),
+                      "Index error in PickNegLogSoftmax: Index " << *pval << " out of bounds for input tensor " << xs[0]->d);
     } else {
       DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickNegLogSoftmax::forward");
       DYNET_ARG_CHECK(pvals->size() == fx.d.batch_elems(), 
                               "In PickNegLogSoftmax::forward, number of elements in the passed-in index vector (" << pvals->size() << ")"
                               " did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
       size_t batch_size = xs[0]->d.batch_size();
-      for(unsigned b = 0; b < fx.d.bd; ++b)
+      for(unsigned b = 0; b < fx.d.bd; ++b) {
+        DYNET_ARG_CHECK((*pvals)[b] < xs[0]->d.rows(),
+                        "Index error in PickNegLogSoftmax: Index " << (*pvals)[b] << " out of bounds for input tensor " << xs[0]->d);
         ids_host[b] = batch_size * b + (*pvals)[b];
+      }
     }
 #ifdef __CUDACC__
     CUDA_CHECK(cudaMemcpyAsync(ids_dev, ids_host, fx.d.bd * sizeof(unsigned int), cudaMemcpyHostToDevice));

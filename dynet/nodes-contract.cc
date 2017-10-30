@@ -74,7 +74,7 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
   Dim new_fx_d({fx.d[0] * fx.d[1]}, fx.d.bd);
   Tensor new_fx(new_fx_d, fx.v, fx.device, fx.mem_pool);
   // CUDA matrix multiply ftw
-  MatrixMultiply(dev, new_xs0, *xs[1], new_fx, kSCALAR_ONE);
+  MatrixMultiply(dev, new_xs0, *xs[1], new_fx, dev.kSCALAR_ONE);
 #else
   // Otherwise use Eigen tensor contraction.
   // TODO : maybe on CPU broadcast is not as affective as looping?
@@ -124,10 +124,10 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
       // CUDA matrix multiply ftw
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
                                dEdxi.d[0] * dEdxi.d[1], dEdxi.d[2] , dEdf.d.bd,
-                               kSCALAR_ONE,
+                               dev.kSCALAR_ONE,
                                dEdf.v, dEdf.d.batch_size(),
                                xs[1]->v, dEdxi.d[2],
-                               kSCALAR_ONE, dEdxi.v, dEdxi.d[0] * dEdxi.d[1]));
+                               dev.kSCALAR_ONE, dEdxi.v, dEdxi.d[0] * dEdxi.d[1]));
     } else {
       // In this case dEdxi is batched and b isn't or neither dEdxi nor b are batched but dEdf is (ie C is batched)
       // Iterate over the batches of dEdf and then do an outer product beween flattened dEdf and b
@@ -138,7 +138,7 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
           dEdAv = dEdxi.batch_ptr(b);
         CUBLAS_CHECK(cublasSger(dev.cublas_handle,
                                 dEdxi.d[0] * dEdxi.d[1], dEdxi.d[2] ,
-                                kSCALAR_ONE,
+                                dev.kSCALAR_ONE,
                                 dEdf.batch_ptr(b), 1,
                                 xs[1]->v, 1,
                                 dEdAv, dEdxi.d[0] * dEdxi.d[1]));
@@ -180,10 +180,10 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
       // dEdxi_kb = \sum_ij A_ijk dEdf_ijb = \sum_(i*j) A^T_k(i*j) dEdf_(i*j)b
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
                                dEdxi.d.rows(), dEdxi.d.batch_elems(), dEdf.d.batch_size(),
-                               kSCALAR_ONE,
+                               dev.kSCALAR_ONE,
                                xs[0]->v, xs[0]->d[0] * xs[0]->d[1],
                                dEdf.v, dEdf.d.batch_size(),
-                               kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
+                               dev.kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
     } else {
       // Here dEdf is batched so we iterate over it and depending on whether A or b is
       // batched we take the slice/accumulate
@@ -199,10 +199,10 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
         }
         CUBLAS_CHECK(cublasSgemv(dev.cublas_handle, CUBLAS_OP_T,
                                  dEdf.d.batch_size(), dEdxi.d.rows(),
-                                 kSCALAR_ONE,
+                                 dev.kSCALAR_ONE,
                                  Av, dEdf.d.batch_size(),
                                  dEdf.batch_ptr(b), 1,
-                                 kSCALAR_ONE, dEdbv, 1));
+                                 dev.kSCALAR_ONE, dEdbv, 1));
       }
     }
 #else

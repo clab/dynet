@@ -66,7 +66,7 @@ The following is a list of all the commands needed to perform a manual install:
     cd dynet-base
     # getting dynet and eigen
     git clone https://github.com/clab/dynet.git
-    hg clone https://bitbucket.org/eigen/eigen -r 346ecdb  # -r NUM specified a known working revision
+    hg clone https://bitbucket.org/eigen/eigen -r 699b659  # -r NUM specified a known working revision
     cd dynet
     mkdir build
     cd build
@@ -77,12 +77,14 @@ The following is a list of all the commands needed to perform a manual install:
 
     make -j 2 # replace 2 with the number of available cores
     cd python
-    python ../../setup.py build --build-dir=.. --skip-build install  # add `--user` for a user-local install.
+    python ../../setup.py build --build-dir=.. --skip-build install # add `--user` for a user-local install.
     
     # this should suffice, but on some systems you may need to add the following line to your
     # init files in order for the compiled .so files be accessible to Python.
     # /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
+    # if the environment is Linux, use LD_LIBRARY_PATH instead.
+    export LD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$LD_LIBRARY_PATH
 
 
 To explain these one-by-one, first we get DyNet:
@@ -187,8 +189,8 @@ installation is likely to be working:
 
 ::
 
-    from dynet import *
-    pc = ParameterCollection()
+    import dynet as dy
+    pc = dy.ParameterCollection()
 
 If it doesn't work and you get an error similar to the following:
 ::
@@ -199,9 +201,12 @@ If it doesn't work and you get an error similar to the following:
 
 then you may need to run the following (and add it to your shell init files):
 
+    # OSX 
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
+    # Linux
+    export LD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$LD_LIBRARY_PATH
 
-# /path/to/dynet/build/dynet is the location in which libdynet.dylib resides.
+# /path/to/dynet/build/dynet is the location in which libdynet.so(libdynet.dylib under osx) resides.
 
 Anaconda Support
 ----------------

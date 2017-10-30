@@ -8,6 +8,7 @@
 
 #include <initializer_list>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -478,7 +479,7 @@ struct ComputationGraph {
                                                // that can be updated (subset of
                                                // nodes)
 
-  ExecutionEngine* ee;  // handles the execution
+  std::unique_ptr<ExecutionEngine> ee;  // handles the execution
 
  private:
   unsigned graph_id;

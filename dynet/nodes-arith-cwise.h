@@ -6,20 +6,49 @@
 
 namespace dynet {
 
+// y = \sum_i x_i
+struct CwiseSum : public Node {
+  template <typename T> explicit CwiseSum(const T& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  template<class MyDevice, int ReductionOrder>
+  void backward_helper(const MyDevice & dev,
+					   const std::vector<const Tensor*>& xs,
+					   const Tensor& fx,
+					   const Tensor& dEdf,
+					   unsigned i,
+					   Tensor& dEdxi) const;
+  virtual bool supports_multibatch() const override { return true; }
+};
+
+
 // y = x_1 \cdot x_2  (Hadamard product)
 struct CwiseMultiply : public Node {
   explicit CwiseMultiply(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
   virtual bool supports_multibatch() const override { return true; }
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;
-  DYNET_NODE_DEFINE_DEV_IMPL()
+  template<class MyDevice, int ReductionOrder>
+  void backward_helper(const MyDevice & dev,
+		                             const std::vector<const Tensor*>& xs,
+		                             const Tensor& fx,
+		                             const Tensor& dEdf,
+		                             unsigned i,
+		                             Tensor& dEdxi) const;
 };
 
 // y = x_1 / x_2  (cwiseQuotient)
 struct CwiseQuotient : public Node {
   explicit CwiseQuotient(const std::initializer_list<VariableIndex>& a) : Node(a) {}
-  virtual bool supports_multibatch() const override { return true; }
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+  template<class MyDevice, int ReductionOrder>
+  void backward_helper(const MyDevice & dev,
+		       const std::vector<const Tensor*>& xs,
+		       const Tensor& fx,
+		       const Tensor& dEdf,
+		       unsigned i,
+		       Tensor& dEdxi) const;
 };
 
 // y = pow(x_1, x_2)

@@ -107,9 +107,9 @@ void Node::autobatch_reshape_concatonly(const ComputationGraph & cg,
 
 ComputationGraph::ComputationGraph() {
   if(autobatch_flag) {
-    ee = new BatchedExecutionEngine(*this);
+    ee.reset(new BatchedExecutionEngine(*this));
   } else {
-    ee = new SimpleExecutionEngine(*this);
+    ee.reset(new SimpleExecutionEngine(*this));
   }
   if (n_hgs > 0) {
     cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
@@ -124,9 +124,9 @@ ComputationGraph::ComputationGraph() {
 
 ComputationGraph::ComputationGraph(bool batched) {
   if(batched) {
-    ee = new BatchedExecutionEngine(*this);
+    ee.reset(new BatchedExecutionEngine(*this));
   } else {
-    ee = new SimpleExecutionEngine(*this);
+    ee.reset(new SimpleExecutionEngine(*this));
   }
   if (n_hgs > 0) {
     cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
@@ -141,7 +141,6 @@ ComputationGraph::ComputationGraph(bool batched) {
 
 ComputationGraph::~ComputationGraph() {
   this->clear();
-  delete ee;
   --n_hgs;
 }
 
@@ -181,7 +180,7 @@ void ComputationGraph::checkpoint() {
 }
 
 void ComputationGraph::revert() {
-  if (checkpoints.size() == 0) return;
+  if (checkpoints.empty()) return;
   _revert(checkpoints.back());
   checkpoints.pop_back();
 }

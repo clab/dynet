@@ -33,20 +33,21 @@ void ShadowLookupParameters::initialize_lookups() {
   }
 }
 
-vector<ShadowParameters> allocate_shadow_parameters(const ParameterCollection& m) {
+void allocate_shadow_parameters(const ParameterCollection& m, unsigned allocated, vector<ShadowParameters>& target) {
+  auto& params = m.parameters_list();
+  vector<shared_ptr<ParameterStorage>> to_allocate(params.begin() + allocated, params.end());
   vector<ShadowParameters> v;
-  v.reserve(m.parameters_list().size());
-  for (auto& p : m.parameters_list())
-    v.emplace_back(*p);
-  return v;
+  target.reserve(params.size());
+  for (auto& p : to_allocate)
+    target.emplace_back(*p);
 }
 
-vector<ShadowLookupParameters> allocate_shadow_lookup_parameters(const ParameterCollection& m) {
-  vector<ShadowLookupParameters> v;
-  v.reserve(m.lookup_parameters_list().size());
-  for (auto& p : m.lookup_parameters_list())
-    v.emplace_back(*p);
-  return v;
+void allocate_shadow_lookup_parameters(const ParameterCollection& m, unsigned allocated, vector<ShadowLookupParameters>& target) {
+  auto& params = m.lookup_parameters_list();
+  vector<shared_ptr<LookupParameterStorage>> to_allocate(params.begin() + allocated, params.end());
+  target.reserve(params.size());
+  for (auto& p : to_allocate)
+    target.emplace_back(*p);
 }
 
 } // namespace dynet

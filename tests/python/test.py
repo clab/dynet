@@ -1,6 +1,7 @@
 import dynet as dy
 import numpy as np
 import unittest
+import gc
 
 
 def npvalue_callable(x):
@@ -96,6 +97,30 @@ class TestParameters(unittest.TestCase):
         self.trainer = dy.SimpleSGDTrainer(self.m, learning_rate=0.1)
         self.trainer.set_clip_threshold(-1)
 
+    def test_list(self):
+        [p1, p2] = self.m.parameters_list()
+        [lp1, lp2] = self.m.lookup_parameters_list()
+
+    def test_shape(self):
+        shape = (10, 5, 2)
+        lp = self.m.add_lookup_parameters(shape)
+        lp_shape = lp.shape()
+        self.assertEqual(shape[0], lp_shape[0])
+        self.assertEqual(shape[1], lp_shape[1])
+        self.assertEqual(shape[2], lp_shape[2])
+
+    def test_as_array(self):
+        # Values
+        self.p1.as_array()
+        self.lp1.as_array()
+        self.lp1.row_as_array(0)
+        self.lp1.rows_as_array([5, 6, 9])
+        # Gradients
+        self.p1.grad_as_array()
+        self.lp1.as_array()
+        self.lp1.row_grad_as_array(0)
+        self.lp1.rows_grad_as_array([5, 6, 9])
+
     def test_grad(self):
         # add parameter
         p = self.m.parameters_from_numpy(np.arange(5))
@@ -190,6 +215,31 @@ class TestParameters(unittest.TestCase):
                         0] * 0.9), msg=np.array_str(self.lp1.as_array()[1]))
         self.assertTrue(np.allclose(self.lp2.as_array()[1], ones[
                         0] * 0.9), msg=np.array_str(self.lp2.as_array()))
+
+    def test_param_change_after_update(self):
+        for trainer_type in dy.SimpleSGDTrainer, dy.AdamTrainer:
+            trainer = trainer_type(self.m)
+            for _ in range(100):
+                p = self.m.add_parameters((1,))
+                dy.renew_cg()
+                x = dy.parameter(p)
+                x.forward()
+                x.backward()
+                trainer.update()
+
+    def test_delete_model(self):
+        p = dy.parameter(dy.ParameterCollection().add_parameters((1,), init=dy.ConstInitializer(1)))
+        p.value()
+        gc.collect()
+        p.value()
+
+
+    def test_delete_parent_model(self):
+        model = dy.ParameterCollection().add_subcollection()
+        p = dy.parameter(model.add_parameters((1,), init=dy.ConstInitializer(1)))
+        p.value()
+        gc.collect()
+        p.value()
 
 
 class TestBatchManipulation(unittest.TestCase):

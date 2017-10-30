@@ -31,7 +31,7 @@ namespace dynet {
     unsigned input_dim=xs[num_inputs+1][1];
     unsigned batch_size=xs[0].bd;
     unsigned inputs_dim_sum=0;
-    for(int i=0; i<num_inputs; i++){
+    for(unsigned i=0; i<num_inputs; i++){
         DYNET_ARG_CHECK(xs[i].ndims() == 1, "VanillaLSTMGates: x_t[" << i << "] expected to be a vector");
         DYNET_ARG_CHECK(xs[i].bd == batch_size, "VanillaLSTMGates: x_t has inconsistent batch size");
         inputs_dim_sum += xs[i][0];
@@ -62,7 +62,7 @@ namespace dynet {
     unsigned num_inputs = dropout?args.size()-6:args.size()-4;
     // Assume parameter vectors must be same
     if(dim.bd == 1) {
-      for(int i=0; i<num_inputs; i++)
+      for(unsigned i=0; i<num_inputs; i++)
         s.add_dim(cg.nodes[args[i]]->dim);
       // TODO: correct? parameter vectors would be args[num_inputs+1] .. args[num_inputs+3]
       // s.add_dim(cg.nodes[args[num_inputs]]->dim); // not necessary, as will be the same
@@ -132,7 +132,7 @@ namespace dynet {
       tmp.v = static_cast<float*>(scratch_allocator->allocate(tmp.d.size() * sizeof(float)));
       Eigen::DSizes<ptrdiff_t, 2> indices_tmp(0, 0);
       Eigen::DSizes<ptrdiff_t, 2> sizes_tmp(0, static_cast<ptrdiff_t>(fx.d.bd));
-      for(int i=0; i<num_inputs; i++){
+      for(unsigned i=0; i<num_inputs; i++){
         sizes_tmp[0] = xs[i]->d[0];
         tmp.tbvec().slice(indices_tmp, sizes_tmp).device(*dev.edevice) = xs[i]->tbvec();
         indices_tmp[0] += xs[i]->d[0];
@@ -214,8 +214,8 @@ namespace dynet {
       b_noisy.tvec().device(*dev.edevice) += b->tvec();
 
     } else {
-      MatrixMultiply(dev, *Wx, x_t, fx, kSCALAR_ONE);
-      MatrixMultiply(dev, *Wh, h_tm1, fx, kSCALAR_ONE);
+      MatrixMultiply(dev, *Wx, x_t, fx, dev.kSCALAR_ONE);
+      MatrixMultiply(dev, *Wh, h_tm1, fx, dev.kSCALAR_ONE);
     }
 
     // non-linearities
@@ -337,7 +337,7 @@ namespace dynet {
         Wx_slice.v = Wx->v;
       } else {
         unsigned offset=0;
-        for(int j=0; j<i; j++) offset += xs[j]->d[0];
+        for(unsigned j=0; j<i; j++) offset += xs[j]->d[0];
         Eigen::DSizes<ptrdiff_t, 3> indices_Wx(0, offset, 0);
         Eigen::DSizes<ptrdiff_t, 3> sizes_Wx(hidden_dim*4, xs[i]->d[0], 1);
         Wx_slice.v = static_cast<float*>(scratch_allocator->allocate(Wx_slice.d.size() * sizeof(float)));
@@ -372,7 +372,7 @@ namespace dynet {
           dropout_mask.v = mask_x.v;
         } else {
           unsigned offset=0;
-          for(int j=0; j<i; j++) offset += xs[j]->d[0];
+          for(unsigned j=0; j<i; j++) offset += xs[j]->d[0];
           Eigen::DSizes<ptrdiff_t, 2> indices_dropout(offset, 0);
           Eigen::DSizes<ptrdiff_t, 2> sizes_dropout(xs[i]->d[0], mask_x.d.bd);
           dropout_mask.v = static_cast<float*>(scratch_allocator->allocate(dropout_mask.d.size() * sizeof(float)));
@@ -439,7 +439,7 @@ namespace dynet {
         tmp.v = static_cast<float*>(scratch_allocator->allocate(tmp.d.size() * sizeof(float)));
         Eigen::DSizes<ptrdiff_t, 2> indices_tmp(0, 0);
         Eigen::DSizes<ptrdiff_t, 2> sizes_tmp(0, static_cast<ptrdiff_t>(fx.d.bd));
-        for(int i=0; i<num_inputs; i++){
+        for(unsigned i=0; i<num_inputs; i++){
           sizes_tmp[0] = xs[i]->d[0];
           tmp.tbvec().slice(indices_tmp, sizes_tmp).device(*dev.edevice) = xs[i]->tbvec();
           indices_tmp[0] += xs[i]->d[0];
