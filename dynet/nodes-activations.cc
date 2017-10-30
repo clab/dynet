@@ -198,7 +198,7 @@ Dim SigmoidLinearUnit::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void SigmoidLinearUnit::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SigmoidLinearUnit::forward");
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FSLUForward(beta));;
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FSILUForward(beta));;
 }
 
 template<class MyDevice>
@@ -208,7 +208,7 @@ void SigmoidLinearUnit::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FSLUBackward(beta));
+  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FSILUBackward(beta));
 }
 DYNET_NODE_INST_DEV_IMPL(SigmoidLinearUnit)
 
