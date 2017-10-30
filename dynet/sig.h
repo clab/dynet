@@ -9,10 +9,10 @@
 namespace dynet {
 
   namespace nt {
-    enum NodeType { 
+    enum NodeType {
       tanh=1, sqrt, abs, erf, square, cube, exp, loggamma, log, nobackprop, flipgradient, identity, negate, rectify, logistic, softsign, silu,
       plus_const, concat, cmult, sum, squared_distance, softmax, pnls, pickrange, scalar_mult,
-      input, scalar_input, lookup, 
+      input, scalar_input, lookup,
       COMPLEX,
       affine, matmul,
       vanilla_lstm_gates, vanilla_lstm_h, vanilla_lstm_c,
