@@ -968,6 +968,15 @@ BOOST_AUTO_TEST_CASE( softmax_colbatch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression softmax(const Expression& x, unsigned v);
+BOOST_AUTO_TEST_CASE( softmax_cols_colbatch_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = reshape(parameter(cg, param_cube1), Dim({3, 3}, 3));
+  Expression y = softmax(x, 1);
+  Expression z = sum_batches(input(cg, {1, 3}, first_one_vals) * y * input(cg, {3}, first_one_vals));
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression sparsemax(const Expression& x);
 BOOST_AUTO_TEST_CASE( sparsemax_gradient ) {
   dynet::ComputationGraph cg;
