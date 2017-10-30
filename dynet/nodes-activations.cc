@@ -178,39 +178,39 @@ void ExponentialLinearUnit::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(ExponentialLinearUnit)
 
-// ************* SwishUnit *************
+// ************* SigmoidLinearUnit *************
 
 #ifndef __CUDACC__
 
-string SwishUnit::as_string(const vector<string>& arg_names) const {
+string SigmoidLinearUnit::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << arg_names[0] << "*\\sigma(" << arg_names[0] << "*beta), beta=" << beta << ')';
   return s.str();
 }
 
-Dim SwishUnit::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed input count check in SwishUnit")
+Dim SigmoidLinearUnit::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in SigmoidLinearUnit")
   return xs[0];
 }
 
 #endif
 
 template<class MyDevice>
-void SwishUnit::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SwishUnit::forward");
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FSwishForward(beta));;
+void SigmoidLinearUnit::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SigmoidLinearUnit::forward");
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FSLUForward(beta));;
 }
 
 template<class MyDevice>
-void SwishUnit::backward_dev_impl(const MyDevice & dev,
+void SigmoidLinearUnit::backward_dev_impl(const MyDevice & dev,
                              const vector<const Tensor*>& xs,
                              const Tensor& fx,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FSwishBackward(beta));
+  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FSLUBackward(beta));
 }
-DYNET_NODE_INST_DEV_IMPL(SwishUnit)
+DYNET_NODE_INST_DEV_IMPL(SigmoidLinearUnit)
 
 }
 

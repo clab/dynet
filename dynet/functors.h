@@ -328,16 +328,16 @@ struct FELUBackward {
   float alpha, lambda;
 };
 
-struct FSwishForward {
-  explicit FSwishForward(float beta) : beta(beta) {}
+struct FSILUForward {
+  explicit FSILUForward(float beta) : beta(beta) {}
   DYNET_DEVICE_FUNC inline float operator()(float x) const {
     return x * (0.5 + 0.5 * tanh(beta * x * 0.5));
   }
   float beta;
 };
 
-struct FSwishBackward {
-  explicit FSwishBackward(float beta) : beta(beta) {}
+struct FSILUBackward {
+  explicit FSILUBackward(float beta) : beta(beta) {}
   DYNET_DEVICE_FUNC inline float operator()(float x, float d) const {
     float l = (0.5 + 0.5 * tanh(beta * x * 0.5));
     return (l + x * l * (1 - l)) * d;
