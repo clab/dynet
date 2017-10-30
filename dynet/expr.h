@@ -1123,10 +1123,11 @@ Expression colwise_add(const Expression& x, const Expression& bias);
  *          e^{x[i]}/{sum_j e^{x[j]}}.
  *
  * \param x A vector or matrix
+ * \param d dimension to normalize over (default: 0)
  *
  * \return A vector or matrix after calculating the softmax
  */
-Expression softmax(const Expression& x);
+Expression softmax(const Expression& x, unsigned d=0);
 
 /**
  * \ingroup lossoperations
