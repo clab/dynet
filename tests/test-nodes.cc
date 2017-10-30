@@ -728,11 +728,11 @@ BOOST_AUTO_TEST_CASE( selu_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression swish(const Expression& x);
-BOOST_AUTO_TEST_CASE( swish_gradient ) {
+// Expression silu(const Expression& x);
+BOOST_AUTO_TEST_CASE( silu_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
-  Expression y = swish(x1);
+  Expression y = silu(x1);
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
