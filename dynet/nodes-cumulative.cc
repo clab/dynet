@@ -43,7 +43,8 @@ void CumulativeSum::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in CumulativeSum::backward");
   Eigen::array<bool, 4> reverse_dim = {false, false, false, false};
   reverse_dim[d] = true;
-  dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>().reverse(reverse_dim).cumsum(d).reverse(reverse_dim);
+  // Check whether the issue stems from reverse
+  dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>().cumsum(d);//.reverse(reverse_dim).cumsum(d).reverse(reverse_dim);
 }
 DYNET_NODE_INST_DEV_IMPL(CumulativeSum)
 
