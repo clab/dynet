@@ -997,6 +997,21 @@ Expression selu(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief SILU / SiL / Swish
+ * \details Calculate elementwise y_i = x_i / (1 + e^{-beta * x_i})
+ *
+ * Reference: [Hendrycks and Gimpel, 2016](https://openreview.net/pdf?id=Bk0MRI5lg),
+ * [Elfwing et al, 2017](https://arxiv.org/pdf/1702.03118.pdf), and
+ * [Ramachandran et al., 2017](https://arxiv.org/pdf/1710.05941)
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to y_i = x_i / (1 + e^{-beta * x_i})
+ */
+Expression silu(const Expression& x, float beta=1.f);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Soft Sign
  * \details Calculate elementwise the softsign function y_i = x_i/(1+|x_i|)
  *

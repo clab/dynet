@@ -834,6 +834,15 @@ BOOST_AUTO_TEST_CASE( selu_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression silu(const Expression& x);
+BOOST_AUTO_TEST_CASE( silu_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = silu(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression hinge(const Expression& x, unsigned index, float m = 1.0);
 BOOST_AUTO_TEST_CASE( hinge_gradient ) {
   unsigned index = 0;
