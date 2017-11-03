@@ -178,4 +178,39 @@ void ExponentialLinearUnit::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(ExponentialLinearUnit)
 
+// ************* SigmoidLinearUnit *************
+
+#ifndef __CUDACC__
+
+string SigmoidLinearUnit::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << arg_names[0] << "*\\sigma(" << arg_names[0] << "*beta), beta=" << beta << ')';
+  return s.str();
 }
+
+Dim SigmoidLinearUnit::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ASSERT(xs.size() == 1, "Failed input count check in SigmoidLinearUnit")
+  return xs[0];
+}
+
+#endif
+
+template<class MyDevice>
+void SigmoidLinearUnit::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SigmoidLinearUnit::forward");
+  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(FSILUForward(beta));;
+}
+
+template<class MyDevice>
+void SigmoidLinearUnit::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().binaryExpr(dEdf.tvec(), FSILUBackward(beta));
+}
+DYNET_NODE_INST_DEV_IMPL(SigmoidLinearUnit)
+
+}
+

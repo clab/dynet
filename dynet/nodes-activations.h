@@ -52,6 +52,16 @@ struct ExponentialLinearUnit : public Node {
   float lambda, alpha;
 };
 
+// y = SILU(x)
+struct SigmoidLinearUnit : public Node {
+  explicit SigmoidLinearUnit(const std::initializer_list<VariableIndex>& a, float beta=1.f) : Node(a), beta(beta) {}
+  virtual bool supports_multibatch() const override { return true; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::silu); return sm.get_idx(s); }
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  float beta;
+};
+
 } // namespace dynet
 
 #endif
