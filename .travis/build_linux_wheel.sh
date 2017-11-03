@@ -11,7 +11,7 @@ for PYBIN in /opt/python/*${PYVER/./}*/bin; do
   if [[ "$BUILD_ARCH" != i686 ]]; then
     yum install -y gmp-devel
     "$PYBIN/python" -c 'from pypandoc.pandoc_download import *; download_pandoc()'
-  fi
+  fi || true  # It's ok if we fail installing pandoc; only important for deployment
   if [[ -n "$DYNET_TEST" ]]; then
     "$TRAVIS_BUILD_DIR"/.travis/test_dynet.sh
   else  # build
