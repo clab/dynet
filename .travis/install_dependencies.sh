@@ -15,6 +15,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     pip install -U $PYTHON_PACKAGES
   fi
 else
+  brew update
   brew install pandoc
   # Install Miniconda
   export MINICONDA_OS_NAME=MacOSX MINICONDA_ARCH=x86_64

@@ -8,7 +8,7 @@ environment:
     BOOST_ROOT: C:\Libraries\boost_1_59_0
     BOOST_LIBRARYDIR: C:\Libraries\boost_1_59_0\lib64-msvc-14.0
     MSVC: 1
-    MINICONDA: "C:\\Miniconda3-x64"
+    MINICONDA: "C:\\Miniconda36-x64"
     TWINE_USERNAME: danielh
     TWINE_PASSWORD:
       secure: cpMn69tLzuhwO7EPhhiVwA==
