@@ -298,6 +298,8 @@ Dim PickBatchElements::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void PickBatchElements::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (pval) {
+    DYNET_ARG_CHECK(*pval < xs[0]->d.bd,
+                    "PickBatchElements::forward_impl requested element " << *pval << " from a batch size of " << xs[0]->d.bd);
     fx.tvec().device(*dev.edevice) = xs[0]->tbvec().chip<1>(*pval);
   } else {
     DYNET_ASSERT(pvals != nullptr, "Neither single nor vector of elements available in PickBatchElements::forward");
