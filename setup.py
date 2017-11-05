@@ -160,10 +160,11 @@ else:
     if platform.system() == "Darwin":
         COMPILER_ARGS.extend(["-stdlib=libc++", "-mmacosx-version-min=10.7"])
         EXTRA_LINK_ARGS.append("-Wl,-rpath," + LIBS_INSTALL_DIR)
+        DATA_FILES += [LIBS_INSTALL_DIR + "lib" + lib + ".dylib" for lib in LIBRARIES]
     else:
         EXTRA_LINK_ARGS.append("-Wl,-rpath=%r" % LIBS_INSTALL_DIR + ",--no-as-needed")
 
-LIBRARY_DIRS.append(DYNET_LIB_DIR)
+LIBRARY_DIRS.insert(0, DYNET_LIB_DIR)
 
 INCLUDE_DIRS[:] = filter(None, [PROJECT_SOURCE_DIR, EIGEN3_INCLUDE_DIR])
 
