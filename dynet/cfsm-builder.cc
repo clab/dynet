@@ -1,17 +1,13 @@
 #include "dynet/cfsm-builder.h"
+#include "dynet/except.h"
+#include "dynet/param-init.h"
 
 #include <fstream>
 #include <iostream>
 
-#include <boost/serialization/vector.hpp>
-
-#include "dynet/io-macros.h"
-
 using namespace std;
 
 namespace dynet {
-
-using namespace expr;
 
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
 inline bool not_ws(char x) { return (x != ' ' && x != '\t'); }
@@ -20,23 +16,42 @@ SoftmaxBuilder::~SoftmaxBuilder() {}
 
 StandardSoftmaxBuilder::StandardSoftmaxBuilder() {}
 
-StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model& model) {
-  p_w = model.add_parameters({vocab_size, rep_dim});
-  p_b = model.add_parameters({vocab_size});
+StandardSoftmaxBuilder::StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, ParameterCollection& model, bool bias) : bias(bias) {
+  local_model = model.add_subcollection("standard-softmax-builder");
+  p_w = local_model.add_parameters({vocab_size, rep_dim});
+  if (bias)
+    p_b = local_model.add_parameters({vocab_size}, ParameterInitConst(0.f));
+}
+StandardSoftmaxBuilder::StandardSoftmaxBuilder(Parameter& p_w, Parameter& p_b) : bias(true){
+  this->p_w = p_w;
+  this->p_b = p_b;
+  this->local_model = *(this->p_w.get_storage().owner);
 }
 
-void StandardSoftmaxBuilder::new_graph(ComputationGraph& cg) {
+StandardSoftmaxBuilder::StandardSoftmaxBuilder(Parameter& p_w) : bias(false){
+  this->p_w = p_w;
+  this->local_model = *(this->p_w.get_storage().owner);
+}
+
+
+void StandardSoftmaxBuilder::new_graph(ComputationGraph& cg, bool update) {
   pcg = &cg;
-  w = parameter(cg, p_w);
-  b = parameter(cg, p_b);
+  w = update ? parameter(cg, p_w) : const_parameter(cg, p_w);
+  if (bias)
+    b = update ? parameter(cg, p_b) : const_parameter(cg, p_b);
 }
 
-Expression StandardSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
-  return pickneglogsoftmax(affine_transform({b, w, rep}), wordidx);
+Expression StandardSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned classidx) {
+  return pickneglogsoftmax(full_logits(rep), classidx);
+}
+
+Expression StandardSoftmaxBuilder::neg_log_softmax(const Expression& rep, const std::vector<unsigned>& classidxs) {
+  DYNET_ARG_CHECK(rep.dim().bd == classidxs.size(), "Inputs of StandardSoftmaxBuilder::neg_log_softmax should have same batch size, got " << rep.dim().bd << " for rep and " << classidxs.size() << " for classidxs");
+  return pickneglogsoftmax(full_logits(rep), classidxs);
 }
 
 unsigned StandardSoftmaxBuilder::sample(const Expression& rep) {
-  Expression dist_expr = softmax(affine_transform({b, w, rep}));
+  Expression dist_expr = bias ? softmax(affine_transform({b, w, rep})) : w * rep;
   vector<float> dist = as_vector(pcg->incremental_forward(dist_expr));
   unsigned c = 0;
   double p = rand01();
@@ -51,62 +66,68 @@ unsigned StandardSoftmaxBuilder::sample(const Expression& rep) {
 }
 
 Expression StandardSoftmaxBuilder::full_log_distribution(const Expression& rep) {
-  return log(softmax(affine_transform({b, w, rep})));
+  return log_softmax(full_logits(rep));
 }
 
-template<class Archive>
-void StandardSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<SoftmaxBuilder>(*this);
-  ar & p_w;
-  ar & p_b;
+Expression StandardSoftmaxBuilder::full_logits(const Expression& rep) {
+  if (bias)
+    return affine_transform({b, w, rep});
+  else
+    return w * rep;
 }
-DYNET_SERIALIZE_IMPL(StandardSoftmaxBuilder)
 
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder() {}
 
 ClassFactoredSoftmaxBuilder::ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
                              Dict& word_dict,
-                             Model& model) {
+                             ParameterCollection& model,
+                             bool bias) : bias(bias){
   read_cluster_file(cluster_file, word_dict);
   const unsigned num_clusters = cdict.size();
-  p_r2c = model.add_parameters({num_clusters, rep_dim});
-  p_cbias = model.add_parameters({num_clusters});
+  local_model = model.add_subcollection("class-factored-softmax-builder");
+  p_r2c = local_model.add_parameters({num_clusters, rep_dim});
+  if (bias)
+    p_cbias = local_model.add_parameters({num_clusters}, ParameterInitConst(0.f));
   p_rc2ws.resize(num_clusters);
-  p_rcwbiases.resize(num_clusters);
+  if (bias)
+    p_rcwbiases.resize(num_clusters);
   for (unsigned i = 0; i < num_clusters; ++i) {
     auto& words = cidx2words[i];  // vector of word ids
     const unsigned num_words_in_cluster = words.size();
     if (num_words_in_cluster > 1) {
       // for singleton clusters, we don't need these parameters, so
       // we don't create them
-      p_rc2ws[i] = model.add_parameters({num_words_in_cluster, rep_dim});
-      p_rcwbiases[i] = model.add_parameters({num_words_in_cluster});
+      p_rc2ws[i] = local_model.add_parameters({num_words_in_cluster, rep_dim});
+      if (bias)
+        p_rcwbiases[i] = local_model.add_parameters({num_words_in_cluster}, ParameterInitConst(0.f));
     }
   }
 }
 
-void ClassFactoredSoftmaxBuilder::new_graph(ComputationGraph& cg) {
+void ClassFactoredSoftmaxBuilder::new_graph(ComputationGraph& cg, bool update) {
   pcg = &cg;
   const unsigned num_clusters = cdict.size();
-  r2c = parameter(cg, p_r2c);
-  cbias = parameter(cg, p_cbias);
+  r2c = update ? parameter(cg, p_r2c) : const_parameter(cg, p_r2c);
+  cbias = update ? parameter(cg, p_cbias) : const_parameter(cg, p_cbias);
   rc2ws.clear();
   rc2biases.clear();
   rc2ws.resize(num_clusters);
   rc2biases.resize(num_clusters);
+  this->update = update;
 }
 
-Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned wordidx) {
-  // TODO assert that new_graph has been called
-  int clusteridx = widx2cidx[wordidx];
-  assert(clusteridx >= 0);  // if this fails, wordid is missing from clusters
-  Expression cscores = affine_transform({cbias, r2c, rep});
+Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, unsigned classidx) {
+  // TODO check that new_graph has been called
+  int clusteridx = widx2cidx[classidx];
+  DYNET_ARG_CHECK(clusteridx >= 0,
+                          "Word ID " << classidx << " missing from clusters in ClassFactoredSoftmaxBuilder::neg_log_softmax");
+  Expression cscores = class_logits(rep);
   Expression cnlp = pickneglogsoftmax(cscores, clusteridx);
   if (singleton_cluster[clusteridx]) return cnlp;
   // if there is only one word in the cluster, just return -log p(class | rep)
   // otherwise predict word too
-  unsigned wordrow = widx2cwidx[wordidx];
+  unsigned wordrow = widx2cwidx[classidx];
   Expression& cwbias = get_rc2wbias(clusteridx);
   Expression& r2cw = get_rc2w(clusteridx);
   Expression wscores = affine_transform({cwbias, r2cw, rep});
@@ -114,9 +135,18 @@ Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, u
   return cnlp + wnlp;
 }
 
+Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, const std::vector<unsigned>& classidxs) {
+  unsigned batch_size = classidxs.size();
+  std::vector<Expression> nlps;
+  for (unsigned i=0;i<batch_size;++i)
+    nlps.push_back(neg_log_softmax(pick_batch_elem(rep, i), classidxs[i]));
+  
+  return concatenate_to_batch(nlps);
+}
+
 unsigned ClassFactoredSoftmaxBuilder::sample(const Expression& rep) {
-  // TODO assert that new_graph has been called
-  Expression cscores = affine_transform({cbias, r2c, rep});
+  // TODO check that new_graph has been called
+  Expression cscores = class_logits(rep);
   Expression cdist_expr = softmax(cscores);
   auto cdist = as_vector(pcg->incremental_forward(cdist_expr));
   unsigned c = 0;
@@ -128,9 +158,7 @@ unsigned ClassFactoredSoftmaxBuilder::sample(const Expression& rep) {
   if (c == cdist.size()) --c;
   unsigned w = 0;
   if (!singleton_cluster[c]) {
-    Expression& cwbias = get_rc2wbias(c);
-    Expression& r2cw = get_rc2w(c);
-    Expression wscores = affine_transform({cwbias, r2cw, rep});
+    Expression wscores = subclass_logits(rep, c);
     Expression wdist_expr = softmax(wscores);
     auto wdist = as_vector(pcg->incremental_forward(wdist_expr));
     p = rand01();
@@ -144,9 +172,12 @@ unsigned ClassFactoredSoftmaxBuilder::sample(const Expression& rep) {
 }
 
 Expression ClassFactoredSoftmaxBuilder::full_log_distribution(const Expression& rep) {
-  vector<Expression> full_dist(widx2cidx.size());
-  Expression cscores = log(softmax(affine_transform({cbias, r2c, rep})));
+  return log_softmax(full_logits(rep));
+}
 
+Expression ClassFactoredSoftmaxBuilder::full_logits(const Expression& rep) {
+  vector<Expression> full_dist(widx2cidx.size());
+  Expression cscores = class_log_distribution(rep);
   for (unsigned i = 0; i < widx2cidx.size(); ++i) {
     if (widx2cidx[i] == -1) {
       // XXX: Should be -inf
@@ -163,9 +194,7 @@ Expression ClassFactoredSoftmaxBuilder::full_log_distribution(const Expression& 
       }
     }
     else {
-      Expression& cwbias = get_rc2wbias(c);
-      Expression& r2cw = get_rc2w(c);
-      Expression wscores = affine_transform({cwbias, r2cw, rep});
+      Expression wscores = subclass_logits(rep, c);
       Expression wdist = softmax(wscores);
 
       for (unsigned i = 0; i < cidx2words[c].size(); ++i) {
@@ -175,13 +204,38 @@ Expression ClassFactoredSoftmaxBuilder::full_log_distribution(const Expression& 
     }
   }
 
-  return log(softmax(concatenate(full_dist)));
+  return concatenate(full_dist);
+}
+
+Expression ClassFactoredSoftmaxBuilder::class_log_distribution(const Expression& rep) {
+  return log_softmax(class_logits(rep));
+}
+
+Expression ClassFactoredSoftmaxBuilder::class_logits(const Expression& rep) {
+  if (bias)
+    return affine_transform({cbias, r2c, rep});
+  else
+    return r2c * rep;
+}
+
+Expression ClassFactoredSoftmaxBuilder::subclass_log_distribution(const Expression& rep, unsigned clusteridx) {
+  return log_softmax(subclass_logits(rep, clusteridx));
+}
+
+Expression ClassFactoredSoftmaxBuilder::subclass_logits(const Expression& rep, unsigned clusteridx) {
+  Expression& r2cw = get_rc2w(clusteridx);
+  if (bias){
+    Expression& cwbias = get_rc2wbias(clusteridx);
+    return affine_transform({cwbias, r2cw, rep});
+  } else
+    return r2cw * rep;
 }
 
 void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_file, Dict& word_dict) {
   cerr << "Reading clusters from " << cluster_file << " ...\n";
   ifstream in(cluster_file);
-  assert(in);
+  if(!in)
+    DYNET_INVALID_ARG("Could not find cluster file " << cluster_file << " in ClassFactoredSoftmax");
   int wc = 0;
   string line;
   while(getline(in, line)) {
@@ -195,9 +249,8 @@ void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_f
     while (is_ws(line[startw]) && startw < len) { ++startw; }
     unsigned endw = startw;
     while (not_ws(line[endw]) && endw < len) { ++endw; }
-    assert(endc > startc);
-    assert(startw > endc);
-    assert(endw > startw);
+    if(endc <= startc || startw <= endc || endw <= startw)
+      DYNET_INVALID_ARG("Invalid format in cluster file " << cluster_file << " in ClassFactoredSoftmax");
     unsigned c = cdict.convert(line.substr(startc, endc - startc));
     unsigned word = word_dict.convert(line.substr(startw, endw - startw));
     if (word >= widx2cidx.size()) {
@@ -220,21 +273,6 @@ void ClassFactoredSoftmaxBuilder::read_cluster_file(const std::string& cluster_f
   cerr << "Read " << wc << " words in " << cdict.size() << " clusters (" << scs << " singleton clusters)\n";
 }
 
-template<class Archive>
-void ClassFactoredSoftmaxBuilder::serialize(Archive& ar, const unsigned int) {
-  ar & boost::serialization::base_object<SoftmaxBuilder>(*this);
-  ar & cdict;
-  ar & widx2cidx;
-  ar & widx2cwidx;
-  ar & cidx2words;
-  ar & singleton_cluster;
-  ar & p_r2c;
-  ar & p_cbias;
-  ar & p_rc2ws;
-  ar & p_rcwbiases;
-}
-
-
 void ClassFactoredSoftmaxBuilder::initialize_expressions() {
   for (unsigned c = 0; c < p_rc2ws.size(); ++c) {
     //get_rc2w(_bias) creates the expression at c if the expression does not already exist.
@@ -243,9 +281,4 @@ void ClassFactoredSoftmaxBuilder::initialize_expressions() {
   }
 }
 
-DYNET_SERIALIZE_IMPL(ClassFactoredSoftmaxBuilder)
-
 } // namespace dynet
-
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::StandardSoftmaxBuilder)
-BOOST_CLASS_EXPORT_IMPLEMENT(dynet::ClassFactoredSoftmaxBuilder)

@@ -1,44 +1,143 @@
-language: cpp
-
-matrix:
+sudo: required
+services:
+  - docker
+dist: trusty
+env:
+  global:
+    - PYTHON=python TWINE_USERNAME=danielh
+    - secure: "j8Ro21/7h5FKuJHPJRHYfOiZHMoAfD/dfpqXZreGrl79jVSEdPZmmOdvFH++CqrRdttpxOf2Lg5qOfpXfziC5ecJx1USslBSo2qwAG9JwPkwjCK7MhouM64yhVedj9Es/H635aufbyRsDIhKr5poPrrH+UebEq/63QpEdDWIWq8="
+branches:
+  only:
+    - master
+jobs:
   include:
-    - os: linux
-      compiler: gcc
-      env: CXX=g++-4.8 CC=gcc-4.8
-      dist: trusty
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - boost-latest
-          packages:
-            - gcc-4.8
-            - g++-4.8
-            - libboost-filesystem1.55-dev
-            - libboost-program-options1.55-dev
-            - libboost-serialization1.55-dev
-            - libboost-test1.55-dev
-            - libboost-regex1.55-dev
     - os: osx
       compiler: clang
+      language: cpp
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
+      if: type = cron
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: type = cron
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+      if: type = cron
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: type = cron
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
+      if: type = cron
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: type = cron
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - os: linux
+      compiler: gcc
+      language: cpp
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
+    - os: linux
+      compiler: gcc
+      language: python
+      python: 2.7
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: type = cron
+    - os: linux
+      compiler: gcc
+      language: python
+      python: 2.7
+      env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - os: linux
+      compiler: gcc
+      language: cpp
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+      if: type = cron
+    - os: linux
+      compiler: gcc
+      language: python
+      python: 3.4
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: type = cron
+    - os: linux
+      compiler: gcc
+      language: python
+      python: 3.4
+      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: type = cron
+    - os: linux
+      compiler: gcc
+      language: cpp
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
+      if: type = cron
+    - os: linux
+      compiler: gcc
+      language: python
+      python: 3.5
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: type = cron
+    - os: linux
+      compiler: gcc
+      language: python
+      python: 3.5
+      env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+      if: type = cron
+    - os: linux
+      compiler: gcc
+      language: cpp
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual
+    - os: linux
+      compiler: gcc
+      language: python
+      python: 3.6
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: type = cron
+    - os: linux
+      compiler: gcc
+      language: python
+      python: 3.6
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - os: linux
+      compiler: gcc
+      language: cpp
+      env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual BACKEND=cuda
 
 install:
-  - hg clone https://bitbucket.org/eigen/eigen/ -r 346ecdb
-  - cd eigen
-  - mkdir build && cd build
-  - cmake ..
-  - sudo make install
+  - travis_retry .travis/install_dependencies.sh
+  - export EIGEN3_INCLUDE_DIR=/usr/local/include/eigen3
+  - if [ "$TRAVIS_OS_NAME" == osx ]; then export PATH="$PWD/miniconda/bin:$PATH"; source activate "$PYVER"; fi
 
 before_script:
-  - cd $TRAVIS_BUILD_DIR
-  - mkdir build
-  - cd build
-  - cmake .. -DEIGEN3_INCLUDE_DIR=/usr/local/include/eigen3
+  - .travis/build_dynet.sh
 
 after_failure:
   - cat $TRAVIS_BUILD_DIR/build/CMakeFiles/CMakeError.log
 
 script:
-  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then make -j$(nproc); fi
-  - if [[ $TRAVIS_OS_NAME == "osx" ]]; then make -j$(sysctl -n hw.ncpu); fi
-  - make test
+  - .travis/test_dynet.sh
+
+deploy:
+  provider: script
+  skip_cleanup: true
+  script:
+    - .travis/deploy.sh
+  on:
+    repo: clab/dynet
+    tags: true
+    condition: "$PYTHON_INSTALL = pip && $TRAVIS_OS_NAME = linux"

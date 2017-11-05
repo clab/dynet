@@ -75,14 +75,14 @@ template<typename Scalar> struct scalar_logistic_sigmoid_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_logistic_sigmoid_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
     using std::exp;
-    const Scalar one = Scalar(1);
-    return one / (one + exp(-x));
+    const Scalar half = Scalar(0.5);
+    return half + half * tanh(x * half);
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
     using namespace Eigen::internal;
-    const Packet one = pset1<Packet>(1);
-    return pdiv(one, padd(one, pexp(pnegate(x))));
+    const Packet half = pset1<Packet>(0.5);
+    return padd(half, pmul(half, ptanh(pmul(x, half))));
   }
 };
 }

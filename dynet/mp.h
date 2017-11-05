@@ -24,6 +24,7 @@
 #include <sstream>
 #include <random>
 #include <algorithm>
+#include <chrono>
 
 namespace dynet {
   namespace mp {
@@ -85,14 +86,16 @@ namespace dynet {
     T read_data(int pipe) {
       T v;
       int err = read(pipe, (void*)&v, sizeof(T));
-      assert (err != -1);
+      if(err == -1)
+        DYNET_RUNTIME_ERR("Failed to read data from pipe in multi-processing");
       return v;
     }
 
     template <class T>
     void write_data(int pipe, const T& v) {
       int err = write(pipe, (void*)&v, sizeof(T));
-      assert (err != -1);
+      if(err == -1)
+        DYNET_RUNTIME_ERR("Failed to write data to pipe in multi-processing");
     }
 
     std::string generate_queue_name();
@@ -172,10 +175,15 @@ namespace dynet {
           if (end > train_indices.end()) {
             end = train_indices.end();
           }
+
+
+          std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
           double fractional_iter = iter + 1.0 * distance(train_indices.begin(), end) / train_indices.size();
           S batch_loss = run_data_set<S>(begin, end, workloads, mq, {false, end == train_indices.end(), report_frequency});
+          std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
+          double seconds_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count() / 1000000.0;
           train_loss += batch_loss;
-          std::cerr << fractional_iter << "\t" << "loss = " << batch_loss << std::endl;
+          std::cerr << fractional_iter << "\t" << "loss = " << batch_loss << " (" << seconds_elapsed << "s)" << std::endl;
 
           if (stop_requested) {
             break;
@@ -209,8 +217,7 @@ namespace dynet {
     int run_child(unsigned cid, ILearner<D, S>* learner, Trainer* trainer,
         std::vector<Workload>& workloads, const std::vector<D>& train_data,
         const std::vector<D>& dev_data) {
-      const unsigned num_children = workloads.size();
-      assert (cid >= 0 && cid < num_children);
+      DYNET_ASSERT(cid >= 0 && cid < workloads.size(), "Bad child ID " << cid << " in run_child()");
       unsigned i;
       unsigned priority;
       boost::interprocess::message_queue::size_type recvd_size;
@@ -235,7 +242,7 @@ namespace dynet {
             break;
           }
 
-          assert (i < (header.is_dev_set ? dev_data.size() : train_data.size()));
+          DYNET_ASSERT(i < (header.is_dev_set ? dev_data.size() : train_data.size()), "Out-of-bounds ID in MP dev/train set");
           const D& datum = (header.is_dev_set ? dev_data[i] : train_data[i]);
           S datum_loss = learner->LearnFromDatum(datum, !header.is_dev_set);
           total_loss += datum_loss;
@@ -243,16 +250,17 @@ namespace dynet {
           batch_counter++;
 
           bool do_update = !header.is_dev_set && cid == 0;
-          unsigned counter = 0;
           if (!header.is_dev_set) {
             shared_object->counter_mutex.wait();
-            counter = ++shared_object->counter;
+            ++shared_object->counter;
             if (do_update) { shared_object->counter = 0; }
             shared_object->counter_mutex.post();
           }
-          if (do_update) {
+          if (do_update && trainer != nullptr) {
             shared_object->update_mutex.wait();
-            trainer->update(1.0 / counter); 
+            // TODO: The scaling was originally this
+            // trainer->update(1.0 / counter); 
+            trainer->update(); 
             shared_object->update_mutex.post();
           }
           if (batch_counter == header.report_frequency) {
@@ -262,9 +270,6 @@ namespace dynet {
             batch_loss = S();
             batch_counter = 0;
           }
-        }
-        if (header.end_of_epoch) {
-          trainer->update_epoch();
         }
 
         // Let the parent know that we're done and return the loss value
@@ -276,7 +281,6 @@ namespace dynet {
     template<class D, class S>
     void run_multi_process(unsigned num_children, ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
         const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
-      //assert (dynet::ps->is_shared());
       queue_name = generate_queue_name();
       boost::interprocess::message_queue::remove(queue_name.c_str());
       boost::interprocess::message_queue::remove(queue_name.c_str());
@@ -286,6 +290,7 @@ namespace dynet {
       unsigned cid = spawn_children(workloads);
       if (cid < num_children) {
         run_child(cid, learner, trainer, workloads, train_data, dev_data);
+        exit(0);
       }
       else {
         run_parent(train_data, dev_data, learner, workloads, num_iterations, dev_frequency, report_frequency);
@@ -321,13 +326,15 @@ namespace dynet {
           S batch_loss;
           for (auto it = begin; it != end; ++it) {
             unsigned i = *it;
-            assert (i < train_data.size());
+            DYNET_ASSERT(i < train_data.size(), "Out-of-bounds ID in train set for multiprocessing");
             const D& datum = train_data[i];
             S datum_loss = learner->LearnFromDatum(datum, true);
             batch_loss += datum_loss;
             train_loss += datum_loss;
             if (++batch_counter == batch_size) {
-              trainer->update(1.0 / batch_size);
+              // TODO: The scaling was originally this
+              // trainer->update(1.0 / batch_size); 
+              trainer->update(); 
               batch_counter = 0;
             }
             data_processed++;
@@ -347,7 +354,7 @@ namespace dynet {
           S dev_loss;
           for (auto it = dev_indices.begin(); it != dev_indices.end(); ++it) {
             unsigned i = *it;
-            assert (i < dev_data.size());
+            DYNET_ASSERT(i < dev_data.size(), "Out-of-bounds ID in dev set for multiprocessing");
             const D& datum = dev_data[i];
             S datum_loss = learner->LearnFromDatum(datum, false);
             dev_loss += datum_loss;
@@ -359,7 +366,6 @@ namespace dynet {
           if (stop_requested) {
             break;
           }
-          trainer->update_epoch();
           if (new_best) {
             learner->SaveModel();
             best_dev_loss = dev_loss;
@@ -367,6 +373,92 @@ namespace dynet {
 
           begin = end;
         }
+      }
+    }
+
+    void cleanup(const std::vector<Workload>& workloads);
+    
+    template<class D, class S>
+    S run_simple_parent(const std::vector<D>& train_data, ILearner<D, S>* learner, std::vector<Workload>& workloads) {
+      const unsigned num_children = workloads.size();
+      boost::interprocess::message_queue mq(boost::interprocess::open_or_create, queue_name.c_str(), 10000, sizeof(unsigned));
+      std::vector<unsigned> train_indices(train_data.size());
+      std::iota(train_indices.begin(), train_indices.end(), 0);
+
+      S train_loss = S();
+
+      std::vector<unsigned>::iterator begin = train_indices.begin();
+      std::vector<unsigned>::iterator end = train_indices.end();
+      S batch_loss = run_data_set<S>(begin, end, workloads, mq, {false, true, (unsigned)-1});
+      train_loss += batch_loss;
+
+      // Kill all children one by one and wait for them to exit
+      for (unsigned cid = 0; cid < num_children; ++cid) {
+        bool cont = false;
+        write_data(workloads[cid].p2c[1], cont);
+        wait(NULL);
+      }
+
+      return train_loss;
+    }
+
+    template<class D, class S>
+    S run_mp_minibatch(unsigned num_children, ILearner<D, S>* learner, const std::vector<D>& data) {
+      queue_name = generate_queue_name();
+      boost::interprocess::message_queue::remove(queue_name.c_str());
+      boost::interprocess::message_queue::remove(queue_name.c_str());
+      shared_memory_name = generate_shared_memory_name();
+      shared_object = get_shared_memory<SharedObject>();
+      std::vector<Workload> workloads = create_workloads(num_children);
+      std::vector<D> dev_data;
+      Trainer* trainer = nullptr;
+      unsigned cid = spawn_children(workloads);
+      if (cid < num_children) {
+        run_child(cid, learner, trainer, workloads, data, dev_data);
+        exit(0);
+      }
+      else {
+        S return_value = run_simple_parent(data, learner, workloads);
+        cleanup(workloads);
+        return return_value;
+      }
+    }
+    
+    template<class D, class S>
+    S run_sp_minibatch_trainer(ILearner<D, S>* learner, Trainer* inputTrainer, const std::vector<D>& data) {
+      Trainer* trainer = inputTrainer;
+      S total_loss;
+      for (unsigned i = 0; i < data.size(); ++i) {
+        const D& datum = data[i];
+        S datum_loss = learner->LearnFromDatum(datum, (trainer != nullptr));
+        total_loss += datum_loss;
+
+        if (trainer != nullptr) {
+          trainer->update();
+        }
+      }
+      return total_loss;
+    }
+
+    template<class D, class S>
+    S run_mp_minibatch_trainer(unsigned num_children, ILearner<D, S>* learner, Trainer* inputTrainer, const std::vector<D>& data) {
+      queue_name = generate_queue_name();
+      boost::interprocess::message_queue::remove(queue_name.c_str());
+      boost::interprocess::message_queue::remove(queue_name.c_str());
+      shared_memory_name = generate_shared_memory_name();
+      shared_object = get_shared_memory<SharedObject>();
+      std::vector<Workload> workloads = create_workloads(num_children);
+      std::vector<D> dev_data;
+      Trainer* trainer = inputTrainer;
+      unsigned cid = spawn_children(workloads);
+      if (cid < num_children) {
+        run_child(cid, learner, trainer, workloads, data, dev_data);
+        exit(0);
+      }
+      else {
+        S return_value = run_simple_parent(data, learner, workloads);
+        cleanup(workloads);
+        return return_value;
       }
     }
   }

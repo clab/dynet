@@ -1,6 +1,7 @@
 #include <dynet/dynet.h>
 #define BOOST_TEST_MODULE DYNETBasicTest
 #include <boost/test/unit_test.hpp>
+#include "test.h"
 
 struct ConfigureDYNETTest {
   ConfigureDYNETTest() {
@@ -8,6 +9,7 @@ struct ConfigureDYNETTest {
     for (auto x : {"ConfigureDYNETTest", "--dynet-mem", "10"}) {
       av.push_back(strdup(x));
     }
+    ADD_EXTRA_ARGUMENTS(av)
     char **argv = &av[0];
     int argc = av.size();
     dynet::initialize(argc, argv);

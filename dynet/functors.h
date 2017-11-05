@@ -2,13 +2,13 @@
 #define DYNET_GPU_FUNCTORS_H
 
 #include <cstdint>
+#include <cmath>
 #include <limits>
 
 #if HAVE_CUDA
 #  define DYNET_DEVICE_FUNC __device__
-#  define DYNET_DEVICE_MIN -1.175494351e-38f
+#  define DYNET_DEVICE_MIN 1.175494351e-38f
 #else
-#  include <boost/math/special_functions/digamma.hpp>
 #  define DYNET_DEVICE_FUNC
 #  define DYNET_DEVICE_MIN std::numeric_limits<float>::min()
 #endif
@@ -181,12 +181,6 @@ struct FSoftmaxBackward {
   float off_diag_sum;
 };
 
-// struct FLogGammaBackward {
-//   DYNET_DEVICE_FUNC inline float operator()(float x, float d) const {
-//     return boost::math::digamma(x) * d;
-//   }
-// };
-
 struct FNegLogSoftmaxBackward {
   FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}
   DYNET_DEVICE_FUNC inline float operator()(float t) const {
@@ -249,7 +243,7 @@ struct FSoftSignBackward {
 
 struct FLogisticSigmoid {
   DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return 1.f / (1.f + expf(-x));
+    return 0.5 + 0.5 * tanh(x * 0.5);
   }
 };
 
@@ -287,17 +281,17 @@ struct FL2SGDUpdate {
 struct FBinaryLogLoss {
   DYNET_DEVICE_FUNC inline float operator()(float x, float x_true) const {
     if (x_true == 1.f) {
-      if (x == 0.f) x = DYNET_DEVICE_MIN;
-      return -1.f * x_true * log(x);
+      if (x == 0.f) return -1.f * log(DYNET_DEVICE_MIN);
+      return -1.f * log(x);
     }
     else if (x_true == 0.f) {
-      if (x == 1.f) x = DYNET_DEVICE_MIN;
-      return (x_true - 1.f) * log1p(-x);
+      if (x == 1.f) return -1.f * log(DYNET_DEVICE_MIN);
+      else return (x_true - 1.f) * log1pf(-x);
     }
     else {
-      if (x == 0.f) x = DYNET_DEVICE_MIN;
-      if (x == 1.f) x = DYNET_DEVICE_MIN;
-      return -1.f * (x_true * log(x) + (1.f - x_true) * log1p(-x));
+      if (x == 0.f) return -1.f * log(DYNET_DEVICE_MIN);
+      else if (x == 1.f) return -1.f * log(DYNET_DEVICE_MIN);
+      else return -1.f * (x_true * log(x) + (1.f - x_true) * log1pf(-x));
     }
   }
 };
@@ -317,6 +311,40 @@ struct FBinaryLogLossBackward {
   }
   float d;
 };
+
+struct FELUForward {
+  explicit FELUForward(float alpha, float lambda) : alpha(alpha), lambda(lambda) {}
+  DYNET_DEVICE_FUNC inline float operator()(float x) const {
+    return lambda * ((x > 0.f) ? x : alpha * (expm1f(x)));
+  }
+  float alpha, lambda;
+};
+
+struct FELUBackward {
+  explicit FELUBackward(float alpha, float lambda) : alpha(alpha), lambda(lambda) {}
+  DYNET_DEVICE_FUNC inline float operator()(float x, float d) const {
+    return d * ((x > 0.f) ? lambda : lambda * alpha * expf(x));
+  }
+  float alpha, lambda;
+};
+
+struct FSILUForward {
+  explicit FSILUForward(float beta) : beta(beta) {}
+  DYNET_DEVICE_FUNC inline float operator()(float x) const {
+    return x * (0.5 + 0.5 * tanh(beta * x * 0.5));
+  }
+  float beta;
+};
+
+struct FSILUBackward {
+  explicit FSILUBackward(float beta) : beta(beta) {}
+  DYNET_DEVICE_FUNC inline float operator()(float x, float d) const {
+    float l = (0.5 + 0.5 * tanh(beta * x * 0.5));
+    return (l + x * l * (1 - l)) * d;
+  }
+  float beta;
+};
+
 
 } // namespace dynet
 

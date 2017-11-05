@@ -5,11 +5,9 @@
 #include "dynet/rnn.h"
 #include "dynet/expr.h"
 
-using namespace dynet::expr;
-
 namespace dynet {
 
-class Model;
+class ParameterCollection;
 
 /*
 FastLSTM replaces the matrices from cell to other units, by diagonal matrices.
@@ -19,7 +17,7 @@ struct FastLSTMBuilder : public RNNBuilder {
   explicit FastLSTMBuilder(unsigned layers,
                            unsigned input_dim,
                            unsigned hidden_dim,
-                           Model& model);
+                           ParameterCollection& model);
 
   Expression back() const override { return (cur == -1? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
@@ -38,14 +36,20 @@ struct FastLSTMBuilder : public RNNBuilder {
   }
 
   void copy(const RNNBuilder & params) override;
+  /**
+   * \brief Get parameters in FastLSTMBuilder
+   * \return list of points to ParameterStorage objects
+   */
+  ParameterCollection & get_parameter_collection() override;
  protected:
-  void new_graph_impl(ComputationGraph& cg) override;
+  void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
   Expression add_input_impl(int prev, const Expression& x) override;
   Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override;
 
  public:
+  ParameterCollection local_model;
   // first index is layer, then ...
   std::vector<std::vector<Parameter>> params;
 
