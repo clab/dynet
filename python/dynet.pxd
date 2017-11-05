@@ -261,7 +261,9 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, unsigned v) #
     CExpression c_pickneglogsoftmax "dynet::expr::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) #
 
-    # expecting a vector of CExpression
+    CExpression c_logsumexp "dynet::expr::logsumexp" (vector[CExpression]& xs) #
+
+# expecting a vector of CExpression
     CExpression c_average     "dynet::expr::average" (vector[CExpression]& xs)
     CExpression c_concat_cols "dynet::expr::concatenate_cols" (vector[CExpression]& xs)
     CExpression c_concat      "dynet::expr::concatenate" (vector[CExpression]& xs)
