@@ -91,4 +91,10 @@ print p2.as_array() # below 0.99, updates did occur
 print lp1.as_array() # below 0.99, update did occur
 print lp2.as_array() # 0.99
 
+# Test saving and loading
 
+m = dy.Model()
+b = dy.BiRNNBuilder(2, 10, 10, m, dy.LSTMBuilder)
+m.save("bilstm.model", [b])
+m2 = dy.Model()
+m2.load("bilstm.model")

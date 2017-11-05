@@ -34,7 +34,7 @@ public:
 
 class StandardSoftmaxBuilder : public SoftmaxBuilder {
 public:
-  StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model* model);
+  StandardSoftmaxBuilder(unsigned rep_dim, unsigned vocab_size, Model& model);
   void new_graph(ComputationGraph& cg);
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
   unsigned sample(const expr::Expression& rep);
@@ -60,8 +60,8 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
  public:
   ClassFactoredSoftmaxBuilder(unsigned rep_dim,
                               const std::string& cluster_file,
-                              Dict* word_dict,
-                              Model* model);
+                              Dict& word_dict,
+                              Model& model);
 
   void new_graph(ComputationGraph& cg);
   expr::Expression neg_log_softmax(const expr::Expression& rep, unsigned wordidx);
@@ -71,7 +71,7 @@ class ClassFactoredSoftmaxBuilder : public SoftmaxBuilder {
 
  private:
   ClassFactoredSoftmaxBuilder();
-  void read_cluster_file(const std::string& cluster_file, Dict* word_dict);
+  void read_cluster_file(const std::string& cluster_file, Dict& word_dict);
 
   Dict cdict;
   std::vector<int> widx2cidx; // will be -1 if not present

@@ -15,6 +15,8 @@ For ease of access the documentation is divided into *groups*. For now the group
 
 If you want to create a group, use  :code:`\defgroup [group-name]` at the beginning of your file. Then create a file for this group in sphinx (see next section).
 
+**Important** : You can use latex in doxygen comments with the syntax :code:`\f$ \f$`. For some reason since readthedocs updated their version of sphinx :code:`\f[ \f]` doesn't work anymore so *don't use it* it breaks the build.
+
 Sphinx guidelines
 -----------------
 

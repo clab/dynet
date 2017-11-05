@@ -25,10 +25,10 @@ void save_pretrained_embeddings(const std::string& fname,
 }
 
 void read_pretrained_embeddings(const std::string& fname,
-    Dict* d,
-    std::unordered_map<int, std::vector<float>>* vectors) {
+    Dict& d,
+    std::unordered_map<int, std::vector<float>>& vectors) {
   int unk = -1;
-  if (d->is_frozen()) unk = d->get_unk_id();
+  if (d.is_frozen()) unk = d.get_unk_id();
   cerr << "Loading word vectors from " << fname << " ...\n";
   ifstream in(fname);
   assert(in);
@@ -45,15 +45,15 @@ void read_pretrained_embeddings(const std::string& fname,
     v.push_back(x);
   }
   unsigned vec_size = v.size();
-  int wid = d->convert(word);
-  if (wid != unk) (*vectors)[wid] = v;
+  int wid = d.convert(word);
+  if (wid != unk) vectors[wid] = v;
   while(getline(in, line)) {
     istringstream lin(line);
     lin >> word;
-    int w = d->convert(word);
+    int w = d.convert(word);
     if (w != unk) {
       for (unsigned i = 0; i < vec_size; ++i) lin >> v[i];
-      (*vectors)[w] = v;
+      vectors[w] = v;
     }
   }
 }

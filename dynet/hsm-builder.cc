@@ -58,9 +58,9 @@ void Cluster::add_word(unsigned word) {
   terminals.push_back(word);
 }
 
-void Cluster::initialize(unsigned rep_dim, Model* model) {
+void Cluster::initialize(unsigned rep_dim, Model& model) {
   this->rep_dim = rep_dim;
-  initialize(*model);
+  initialize(model);
 }
 
 void Cluster::initialize(Model& model) {
@@ -199,8 +199,8 @@ DYNET_SERIALIZE_IMPL(Cluster)
 
 HierarchicalSoftmaxBuilder::HierarchicalSoftmaxBuilder(unsigned rep_dim,
                              const std::string& cluster_file,
-                             Dict* word_dict,
-                             Model* model) {
+                             Dict& word_dict,
+                             Model& model) {
   root = read_cluster_file(cluster_file, word_dict);
   root->initialize(rep_dim, model);
 }
@@ -266,7 +266,7 @@ Expression HierarchicalSoftmaxBuilder::full_log_distribution(const Expression& r
 inline bool is_ws(char x) { return (x == ' ' || x == '\t'); }
 inline bool not_ws(char x) { return (x != ' ' && x != '\t'); }
 
-Cluster* HierarchicalSoftmaxBuilder::read_cluster_file(const std::string& cluster_file, Dict* word_dict) {
+Cluster* HierarchicalSoftmaxBuilder::read_cluster_file(const std::string& cluster_file, Dict& word_dict) {
   cerr << "Reading clusters from " << cluster_file << " ...\n";
   ifstream in(cluster_file);
   assert(in);
@@ -308,7 +308,7 @@ Cluster* HierarchicalSoftmaxBuilder::read_cluster_file(const std::string& cluste
     assert(endw > startw);
 
     string word = line.substr(startw, endw - startw);
-    unsigned widx = word_dict->convert(word);
+    unsigned widx = word_dict.convert(word);
     node->add_word(widx);
 
     if (widx2path.size() <= widx) {

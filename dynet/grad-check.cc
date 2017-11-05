@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <algorithm>
 
 #include "dynet/model.h"
 #include "dynet/dynet.h"
@@ -45,7 +46,7 @@ bool check_grad(Model& m, expr::Expression& expr, int verbosity) {
       float g = (E_right - E_left) / (2 * alpha);
       float g_act = TensorTools::AccessElement(p.g, i);
       float f = fabs(g - g_act);
-      float m = max(fabs(g), fabs(g_act));
+      float m = std::max(fabs(g), fabs(g_act));
       if (f > 0.01 && m > 0.f) f /= m;
       if (f > 0.01 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
       if(verbosity + (curr_flag ? 1 : 0) > 1) {
@@ -75,7 +76,7 @@ bool check_grad(Model& m, expr::Expression& expr, int verbosity) {
         float g = (E_right - E_left) / (2 * alpha);
         float g_act = TensorTools::AccessElement(ag, i);
         float f = fabs(g - g_act);
-        float m = max(fabs(g), fabs(g_act));
+        float m = std::max(fabs(g), fabs(g_act));
         if (f > 0.01 && m > 0.f) f /= m;
         if (f > 0.01 || std::isnan(f)) { flag = true; if(verbosity > 0) { curr_flag = true; cerr << "***[" << f << "] "; } }
         if(verbosity + (curr_flag ? 1 : 0) > 1) {

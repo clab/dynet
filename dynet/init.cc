@@ -16,6 +16,21 @@ using namespace std;
 
 namespace dynet {
 
+DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0),
+  shared_parameters(false)
+#if HAVE_CUDA
+  , ngpus_requested(false), ids_requested(false), requested_gpus(-1)
+#endif
+{
+#if HAVE_CUDA
+  gpu_mask = std::vector<int>(MAX_GPUS, 0);
+#endif
+}
+
+DynetParams::~DynetParams()
+{
+}
+
 static void remove_args(int& argc, char**& argv, int& argi, int n) {
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
@@ -49,9 +64,9 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     }
 
     // Weight decay
-    else if (arg == "--dynet-l2" || arg == "--dynet_l2") {
+    else if (arg == "--dynet-weight-decay" || arg == "--dynet_weight_decay") {
       if ((argi + 1) > argc) {
-        cerr << "[dynet] --dynet-l2 requires an argument (the weight decay per update)\n";
+        cerr << "[dynet] --dynet-weight-decay requires an argument (the weight decay per update)\n";
         abort();
       } else {
         string a2 = argv[argi + 1];
@@ -142,7 +157,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
   return params;
 }
 
-void initialize(DynetParams params) {
+void initialize(DynetParams& params) {
   if (default_device != nullptr) {
     cerr << "WARNING: Attempting to initialize dynet twice. Ignoring duplicate initialization." << endl;
     return;
@@ -172,12 +187,14 @@ void initialize(DynetParams params) {
 
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
-  devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
+  // TODO: Once multi-device support is added, we will potentially allocate both CPU
+  //       and GPU, not either-or
   int default_index = 0;
   if (gpudevices.size() > 0) {
     for (auto gpu : gpudevices)
       devices.push_back(gpu);
-    default_index++;
+  } else {
+    devices.push_back(new Device_CPU(devices.size(), params.mem_descriptor, params.shared_parameters));
   }
   default_device = devices[default_index];
 

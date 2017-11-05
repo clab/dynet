@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE( simple_sgd_direction ) {
   dynet::Model mod;
   dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
-  SimpleSGDTrainer trainer(&mod); 
+  SimpleSGDTrainer trainer(mod);
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE( momentum_sgd_direction ) {
   dynet::Model mod;
   dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
-  MomentumSGDTrainer trainer(&mod); 
+  MomentumSGDTrainer trainer(mod);
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE( adagrad_direction ) {
   dynet::Model mod;
   dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
-  AdagradTrainer trainer(&mod); 
+  AdagradTrainer trainer(mod);
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE( adadelta_direction ) {
   dynet::Model mod;
   dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
-  AdadeltaTrainer trainer(&mod); 
+  AdadeltaTrainer trainer(mod);
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE( adam_direction ) {
   dynet::Model mod;
   dynet::Parameter param = mod.add_parameters({3});
   TensorTools::SetElements(param.get()->values,param_vals);
-  AdamTrainer trainer(&mod); 
+  AdamTrainer trainer(mod);
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param);
   Expression y = input(cg, {1,3}, ones_vals);

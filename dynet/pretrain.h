@@ -14,8 +14,8 @@ void save_pretrained_embeddings(const std::string& fname,
     const LookupParameter& lp);
 
 void read_pretrained_embeddings(const std::string& fname,
-    Dict* d,
-    std::unordered_map<int, std::vector<float>>* vectors);
+    Dict& d,
+    std::unordered_map<int, std::vector<float>>& vectors);
 
 } // namespace dynet
 

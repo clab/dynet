@@ -17,25 +17,25 @@ enum { X2I, H2I, C2I, BI, X2O, H2O, C2O, BO, X2C, H2C, BC };
 DeepLSTMBuilder::DeepLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model* model) : layers(layers) {
+                         Model& model) : layers(layers) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2i = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2i = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model->add_parameters({hidden_dim});
+    Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2i = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bi = model.add_parameters({hidden_dim});
 
     // o
-    Parameter p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2o = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_c2o = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bo = model->add_parameters({hidden_dim});
+    Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2o = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_c2o = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bo = model.add_parameters({hidden_dim});
 
     // c
-    Parameter p_x2c = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2c = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bc = model->add_parameters({hidden_dim});
+    Parameter p_x2c = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2c = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bc = model.add_parameters({hidden_dim});
     layer_input_dim = hidden_dim + input_dim;  // output (hidden) from 1st layer is input to next
 
     vector<Parameter> ps = {p_x2i, p_h2i, p_c2i, p_bi, p_x2o, p_h2o, p_c2o, p_bo, p_x2c, p_h2c, p_bc};
@@ -136,11 +136,11 @@ Expression DeepLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     Expression i_wt = tanh(i_awt);
     // output
     if (has_prev_state) {
-      Expression i_nwt = cwise_multiply(i_it,i_wt);
-      Expression i_crt = cwise_multiply(i_ft,i_c_tm1);
+      Expression i_nwt = cmult(i_it,i_wt);
+      Expression i_crt = cmult(i_ft,i_c_tm1);
       ct[i] = i_crt + i_nwt;
     } else {
-      ct[i] = cwise_multiply(i_it,i_wt);
+      ct[i] = cmult(i_it,i_wt);
     }
 
     Expression i_aot;
@@ -152,7 +152,7 @@ Expression DeepLSTMBuilder::add_input_impl(int prev, const Expression& x) {
       i_aot = affine_transform({vars[BO], vars[X2O], in});
     Expression i_ot = logistic(i_aot);
     Expression ph_t = tanh(ct[i]);
-    in = ht[i] = cwise_multiply(i_ot,ph_t);
+    in = ht[i] = cmult(i_ot,ph_t);
     cc[i] = in;
   }
   ot = concatenate(cc);

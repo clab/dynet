@@ -13,6 +13,8 @@ extern float weight_decay_lambda;
  *
  */
 struct DynetParams {
+  DynetParams();
+  ~DynetParams();
   unsigned random_seed = 0; /**< The seed for random number generation */
   std::string mem_descriptor = "512"; /**< Total memory to be allocated for Dynet */
   float weight_decay = 0; /**< Weight decay rate for L2 regularization */
@@ -28,7 +30,7 @@ struct DynetParams {
 };
 
 DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters = false);
-void initialize(DynetParams params);
+void initialize(DynetParams& params);
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
 void cleanup();
 

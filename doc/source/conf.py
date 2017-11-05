@@ -19,8 +19,9 @@ import subprocess
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
-
+# sys.path.insert(0, os.path.abspath('../../examples/tutorials'))
+if not os.path.islink('tutorials_notebooks'):
+    os.symlink('../../examples/python/tutorials', 'tutorials_notebooks')
 # Run doxygen if on Readthedocs :
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
@@ -35,11 +36,15 @@ if on_rtd:
     # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
     # ones.
 extensions = [
-    'sphinx.ext.mathjax', 'breathe'
+    'sphinx.ext.mathjax', 'breathe', 'nbsphinx'
 ]
+
 
 breathe_projects = {"dynet": "../doxygen/xml/"}
 breathe_default_project = "dynet"
+
+# Don't execute notebooks because it requires installing Dynet
+nbsphinx_execute = 'never'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -78,7 +83,7 @@ release = '1.0'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.

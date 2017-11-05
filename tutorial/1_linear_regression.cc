@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   Model model;
   Parameter pW = model.add_parameters({1});
 
-  SimpleSGDTrainer trainer(&model, 0.1);
+  SimpleSGDTrainer trainer(model, 0.1);
 
   ComputationGraph cg;
   Expression W = parameter(cg, pW);

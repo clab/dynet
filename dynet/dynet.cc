@@ -85,9 +85,11 @@ void Node::backward(const std::vector<const Tensor*>& xs,
   }
 }
 
-ComputationGraph::ComputationGraph() :
+ComputationGraph::ComputationGraph():
   ee(new SimpleExecutionEngine(*this)) {
   ++n_hgs;
+  immediate_compute = false;
+  check_validity = false;
   if (n_hgs > 1) {
     cerr << "Memory allocator assumes only a single ComputationGraph at a time.\n";
     throw std::runtime_error("Attempted to create >1 CG");
@@ -136,6 +138,11 @@ void ComputationGraph::revert() {
     _revert(checkpoints.back());
     checkpoints.pop_back();
 }
+
+Dim& ComputationGraph::get_dimension(VariableIndex index) const {
+  return nodes[index]->dim; 
+}
+
 
 
 VariableIndex ComputationGraph::add_input(real s) {
@@ -272,6 +279,14 @@ void ComputationGraph::set_dim_for_new_node(const VariableIndex& i) {
     ++ai;
   }
   node->dim = node->dim_forward(xds);
+  if (immediate_compute) {
+    const Tensor& value = incremental_forward(i);
+    if (check_validity) 
+      if (!value.is_valid()) {
+        cerr << "NaN or Inf detected\n";
+        throw std::runtime_error("NaN or Inf detected");
+      }
+  }
 }
 
 const Tensor& ComputationGraph::incremental_forward(const expr::Expression& last) { return ee->incremental_forward(last.i); }
@@ -283,6 +298,14 @@ const Tensor& ComputationGraph::get_value(const expr::Expression& e) { return th
 void ComputationGraph::invalidate() { ee->invalidate(); }
 void ComputationGraph::backward(const expr::Expression& last) { ee->backward(last.i); }
 void ComputationGraph::backward(VariableIndex i) { ee->backward(i); }
+
+void ComputationGraph::set_immediate_compute(bool ic) {
+  immediate_compute = ic;
+}
+
+void ComputationGraph::set_check_validity(bool cv) {
+  check_validity = cv;
+}
 
 void ComputationGraph::print_graphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";

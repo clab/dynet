@@ -84,8 +84,8 @@ private:
 
 };
 
-std::vector<int> read_sentence(const std::string& line, Dict* sd);
-void read_sentence_pair(const std::string& line, std::vector<int>* s, Dict* sd, std::vector<int>* t, Dict* td);
+std::vector<int> read_sentence(const std::string& line, Dict& sd);
+void read_sentence_pair(const std::string& line, std::vector<int>& s, Dict& sd, std::vector<int>& t, Dict& td);
 
 } // namespace dynet
 
