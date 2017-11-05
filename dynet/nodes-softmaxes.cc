@@ -443,11 +443,7 @@ void SparsemaxLoss::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(SparsemaxLoss)
 
-}
-
 // ************* Constrained softmax *************
-
-#define MAX_SPARSEMAX_LOSS_ROWS 65536 //??????
 
 #ifndef __CUDACC__
 
@@ -480,7 +476,7 @@ void ConstrainedSoftmax::forward_dev_impl(const MyDevice & dev,
   // The second input contains the upper bound constraints u.
   if (xs[0]->d.cols() == 1 && xs[1]->d.cols() == 1) {
 #ifdef __CUDACC__
-    DYNET_NO_CUDA_IMPL_ERROR("Constrained softmax forward");
+    DYNET_NO_CUDA_IMPL_ERROR("ConstrainedSoftmax forward");
 #else
     // Total allocated memory is rows*sizeof(float) + rows*sizeof(int).
     float max;
@@ -540,7 +536,7 @@ void ConstrainedSoftmax::forward_dev_impl(const MyDevice & dev,
     *m = mass;
 #endif
   } else {
-    DYNET_RUNTIME_ERR("Constrained softmax not yet implemented for multiple columns");
+    DYNET_RUNTIME_ERR("ConstrainedSoftmax not yet implemented for multiple columns");
   }
 }
 
@@ -553,7 +549,7 @@ void ConstrainedSoftmax::backward_dev_impl(const MyDevice & dev,
                                            Tensor& dEdxi) const {
   assert(i < xs.size());
 #ifdef __CUDACC__
-  DYNET_NO_CUDA_IMPL_ERROR("Constrained softmax backward");
+  DYNET_NO_CUDA_IMPL_ERROR("ConstrainedSoftmax backward");
 #else
   const unsigned rows = xs[0]->d.rows();
   int *active = static_cast<int*>(aux_mem);
@@ -582,3 +578,5 @@ void ConstrainedSoftmax::backward_dev_impl(const MyDevice & dev,
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(ConstrainedSoftmax)
+
+}
