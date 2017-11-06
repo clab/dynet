@@ -29,7 +29,7 @@ else
   # Useful for debugging any issues with conda
   conda info -a
   source activate "$PYVER"
-  pip install pypandoc twine delocate
+  pip install pypandoc twine
 fi
 
 # CUDA
