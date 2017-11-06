@@ -6,8 +6,12 @@ import argparse
 import numpy as np
 import dynet as dy
 
+# To run this, download the four files from  http://yann.lecun.com/exdb/mnist/
+# and gunzip them into a single path. Pass this path to the program with the
+# --path option. You will also want to run with --dynet_autobatch 1.
+
 parser = argparse.ArgumentParser()
-parser.add_argument("--path", default="/usr/local/google/home/cdyer/mnist",
+parser.add_argument("--path", default=".",
                     help="Path to the MNIST data files (unzipped).")
 parser.add_argument("--minibatch_size", default=16,
                     help="Size of minibatches.")
@@ -96,7 +100,6 @@ if __name__ == "__main__":
   alpha = 0.05  # smoothing of training loss for reporting
   start = time.time()
   dev_time = 0
-  args.minibatch_size = 16
   report = args.minibatch_size * 30
   dev_report = args.minibatch_size * 600
   for epoch in xrange(50):
