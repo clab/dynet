@@ -292,6 +292,14 @@ class build(_build):
             if run_process(make_cmd) != 0:
                 raise DistutilsSetupError(" ".join(make_cmd))
 
+            if platform.system() == "Darwin":
+                for lib in DATA_FILES:
+                    new_install_name = "@loader_path/" + os.path.basename(lib)
+                    install_name_tool_cmd = ["install_name_tool", "-id", new_install_name, lib]
+                    log.info("Fixing install_name for %r..." % lib)
+                    if run_process(install_name_tool_cmd) != 0:
+                        raise DistutilsSetupError(" ".join(install_name_tool_cmd))
+
         # This will generally be called by the manual install
         elif not os.path.isdir(EIGEN3_INCLUDE_DIR):
             raise RuntimeError("Could not find Eigen in EIGEN3_INCLUDE_DIR={}. If doing manual install, please set the EIGEN3_INCLUDE_DIR variable with the absolute path to Eigen manually. If doing install via pip, please file an issue on github.com/clab/dynet".format(EIGEN3_INCLUDE_DIR))
