@@ -339,6 +339,7 @@ class build_ext(_build_ext):
 try:
     import pypandoc
     long_description = pypandoc.convert("README.md", "rst")
+    long_description = "\n".join(line for line in long_description.splitlines() if "<#" not in line)
 except:
     long_description = ""
 
