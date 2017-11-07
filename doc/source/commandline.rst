@@ -22,7 +22,7 @@ options.
    every update. This is similar to L2 regularization, but different in a
    couple ways, which are noted in detail in the "Unorthodox Design"
    section.
--  ``--dynet-autobatch NUMBER``: Turns on DyNet's automatic operation
+-  ``--dynet-autobatch BOOL``: Turns on DyNet's automatic operation (BOOL should be 0/1)
    batching capability. This makes it possible to speed up computation with
    a minimum of work. More information about this functionality can be found
    `here <http://dynet.readthedocs.io/en/latest/minibatch.html>`_.
