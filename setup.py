@@ -160,7 +160,8 @@ else:
     if platform.system() == "Darwin":
         COMPILER_ARGS.extend(["-stdlib=libc++", "-mmacosx-version-min=10.7"])
         EXTRA_LINK_ARGS.append("-Wl,-rpath," + LIBS_INSTALL_DIR)
-        DATA_FILES += [LIBS_INSTALL_DIR + "lib" + lib + ".dylib" for lib in LIBRARIES]
+        if "--skip-build" not in sys.argv:  # Include libdynet.dylib unless doing manual install
+            DATA_FILES += [LIBS_INSTALL_DIR + "lib" + lib + ".dylib" for lib in LIBRARIES]
     else:
         EXTRA_LINK_ARGS.append("-Wl,-rpath=%r" % LIBS_INSTALL_DIR + ",--no-as-needed")
 
@@ -215,9 +216,9 @@ class build(_build):
         log.info("BUILD_DIR=%r" % BUILD_DIR)
         log.info("INSTALL_PREFIX=%r" % INSTALL_PREFIX)
         log.info("PYTHON=%r" % PYTHON)
-        if CMAKE_PATH != None:
+        if CMAKE_PATH is not None:
             run_process([CMAKE_PATH, "--version"])
-        if CXX_PATH != None:
+        if CXX_PATH is not None:
             run_process([CXX_PATH, "--version"])
 
         # This will generally be called by the pip install
