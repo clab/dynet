@@ -230,5 +230,13 @@ This will generate `dynet.sln`. Simply open this and build all. **Note: multi-pr
 currently not supported in Windows, so the multi-process examples (`*-mp`) will not be included
 in the generated solution**
 
-The Windows build also supports MKL and CUDA with the latest version of Eigen. 
+The Windows build also supports MKL and CUDA with the latest version of Eigen. If you build with 
+CUDA and/or cuDNN, ensure their respective DLLs are in your PATH environment variable when you use
+dynet (whether in native C++ or Python). For example:
+
+::
+    set PATH="C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin";"c:\libs\cudnn-8.0-windows10-x64-v5.1\bin";%PATH%
+
+
+ 
 

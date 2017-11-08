@@ -241,7 +241,8 @@ using a Python distribution that already has Cython installed. The following has
 4) Open dynet.sln from this command prompt and build the "Release" version of the solution.
 5) Follow the rest of the instructions above for testing the build and installing it for other users
 
-Note, currently only the Release version works.
+Note, currently only the Release version works. Also, if you compile with CUDA and/or cuDNN, ensure
+their respective DLLs are in your PATH environment variable when you run Python.
 
 GPU/MKL Support
 ---------------
