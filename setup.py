@@ -16,7 +16,7 @@ import re
 from Cython.Distutils import build_ext as _build_ext
 from setuptools import setup
 from setuptools.extension import Extension
-from shutil import rmtree, copytree
+from shutil import rmtree, copytree, copy
 
 # urlretrieve has a different location in Python 2 and Python 3
 import urllib
@@ -160,7 +160,8 @@ else:
     if platform.system() == "Darwin":
         COMPILER_ARGS.extend(["-stdlib=libc++", "-mmacosx-version-min=10.7"])
         EXTRA_LINK_ARGS.append("-Wl,-rpath," + LIBS_INSTALL_DIR)
-        DATA_FILES += [LIBS_INSTALL_DIR + "lib" + lib + ".dylib" for lib in LIBRARIES]
+        if "--skip-build" not in sys.argv:  # Include libdynet.dylib unless doing manual install
+            DATA_FILES += [os.path.join(LIBS_INSTALL_DIR, "lib%s.dylib" % lib) for lib in LIBRARIES]
     else:
         EXTRA_LINK_ARGS.append("-Wl,-rpath=%r" % LIBS_INSTALL_DIR + ",--no-as-needed")
 
@@ -215,9 +216,9 @@ class build(_build):
         log.info("BUILD_DIR=%r" % BUILD_DIR)
         log.info("INSTALL_PREFIX=%r" % INSTALL_PREFIX)
         log.info("PYTHON=%r" % PYTHON)
-        if CMAKE_PATH != None:
+        if CMAKE_PATH is not None:
             run_process([CMAKE_PATH, "--version"])
-        if CXX_PATH != None:
+        if CXX_PATH is not None:
             run_process([CXX_PATH, "--version"])
 
         # This will generally be called by the pip install
@@ -294,6 +295,7 @@ class build(_build):
 
             if platform.system() == "Darwin":
                 for lib in DATA_FILES:
+                    copy(lib, get_python_lib())  # Copy to loader_path (for installing from source)
                     new_install_name = "@loader_path/" + os.path.basename(lib)
                     install_name_tool_cmd = ["install_name_tool", "-id", new_install_name, lib]
                     log.info("Fixing install_name for %r..." % lib)
