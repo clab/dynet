@@ -1867,6 +1867,21 @@ inline Expression concatenate_to_batch(const T& xs) { return detail::f<Concatena
 
 /**
  * \ingroup flowoperations
+ * \brief Strided select in multiple dimensions
+ * \details Select a range and/or stride of elements from an expression.
+ *
+ * \param x The input expression
+ * \param strides List of strides for each dimension, must be >= 1. Dimensions not included default to 1. Batch dimension can be included as very last dimension.
+ * \param from    List of 0-based offsets (inclusive) for each dimension, must be >= 0. Dimensions not included default to 0. Batch dimension can be included as very last dimension.
+ * \param to      List of highest 0-based index to select (exclusive) for each dimension, must be >= 0. Dimensions not included default to the corresponding dim size. Batch dimension can be included as very last dimension.
+ *
+ * \return The value of x[from[0]:to[0]:strides[0],..] (as it would be in numpy syntax)
+ */
+Expression strided_select(const Expression& x, const std::vector<int>& strides, const std::vector<int>& from = {}, const std::vector<int>& to = {});
+
+
+/**
+ * \ingroup flowoperations
  * \brief Concatenate columns
  * \details Perform a concatenation of the columns in multiple expressions.
  *          All expressions must have the same number of rows.

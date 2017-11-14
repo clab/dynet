@@ -3620,6 +3620,23 @@ cpdef Expression pick_batch_elems(Expression x, vector[unsigned] vs):
         dynet.Expression: The expression of picked batch elements. The batch elements is a tensor whose batch dimension equals to the size of list `v`.
     """
     return Expression.from_cexpr(x.cg_version, c_pick_batch_elems(x.c(), vs))
+
+cpdef Expression strided_select(Expression x, vector[int] strides, vector[int] range_from, vector[int] range_to):
+    """Strided select in multiple dimensions.
+    
+    Select a range and/or stride of elements from an expression.
+
+    Args:
+        x (dynet.Expression): Input expression
+        strides (list): List of strides for each dimension, must be >= 1. Dimensions not included default to 1. Batch dimension can be included as very last dimension.
+        range_from (list):    List of 0-based offsets (inclusive) for each dimension, must be >= 0. Dimensions not included default to 0. Batch dimension can be included as very last dimension.
+        range_to (list):      List of highest 0-based index to select (exclusive) for each dimension, must be >= 0. Dimensions not included default to the corresponding dim size. Batch dimension can be included as very last dimension.
+            
+    Returns:
+        dynet.Expression: The value of x[from[0]:to[0]:strides[0],..] (as it would be in numpy syntax)
+    """
+    return Expression.from_cexpr(x.cg_version, c_strided_select(x.c(), strides, range_from, range_to))
+
 #expr-float
 cpdef Expression noise(Expression x, float stddev):
     """Additive gaussian noise
