@@ -32,8 +32,8 @@ Dim MaxPooling2D::dim_forward(const vector<Dim>& xs) const {
     ostringstream s; s << "MaxPooling2D requires exactly one input: " << xs;
     throw std::invalid_argument(s.str());
   }
-  if (xs[0].ndims() != 3) {
-    ostringstream s; s << "Bad input dimensions in MaxPooling2D: " << xs;
+  if (xs[0].ndims() != 2 && xs[0].ndims() != 3) {
+    ostringstream s; s << "Bad input dimensions in MaxPooling2D, expected 2 or 3 dimensions: " << xs;
     throw std::invalid_argument(s.str());
   }
   if (is_valid && (xs[0].d[0] < ksize[0] || xs[0].d[1] < ksize[1])) {
@@ -42,10 +42,11 @@ Dim MaxPooling2D::dim_forward(const vector<Dim>& xs) const {
     throw std::invalid_argument(s.str());
   }
   unsigned bs = xs[0].batch_elems();
-  std::vector<long> output_shape(3);
-  output_shape[2] = static_cast<long>(xs[0].d[2]);
+  std::vector<long> output_shape(xs[0].ndims());
+  if(xs[0].ndims() == 3)
+    output_shape[2] = static_cast<long>(xs[0][2]);
   for (unsigned i = 0; i < 2; ++i) {
-    float input_dim = static_cast<float>(xs[0].d[i]);
+    float input_dim = static_cast<float>(xs[0][i]);
     float kernel_dim = static_cast<float>(ksize[i]);
     float s = static_cast<float>(stride[i]);
     if (is_valid) {
