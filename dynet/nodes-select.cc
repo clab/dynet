@@ -409,7 +409,7 @@ template<class MyDevice>
 void StridedSelect::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Eigen::array<int, 5> offsets = {0, 0, 0, 0, 0};
   Eigen::array<int, 5> extents = {(int)(xs[0]->d[0]), (int)(xs[0]->d.nd < 2 ? 1 : xs[0]->d[1]), (int)(xs[0]->d.nd < 3 ? 1 : xs[0]->d[2]), (int)(xs[0]->d.nd < 4 ? 1 : xs[0]->d[3]), (int)(xs[0]->d.bd)};
-  Eigen::array<int, 5> strides_arr({1,1,1,1,1});
+  Eigen::array<int, 5> strides_arr = {1,1,1,1,1};
   for(unsigned d=0; d<max(strides.size(), max(to.size(),from.size())); d++){
     offsets[d<xs[0]->d.nd?d:4] = (d<from.size())?from[d]:0;
     extents[d<xs[0]->d.nd?d:4] = ((d<to.size())?to[d]:(d<xs[0]->d.nd?xs[0]->d[d]:xs[0]->d.bd)) - offsets[d<xs[0]->d.nd?d:4];
@@ -436,7 +436,7 @@ void StridedSelect::backward_dev_impl(const MyDevice & dev,
                                   Tensor& dEdxi) const {
   Eigen::array<int, 5> offsets = {0, 0, 0, 0, 0};
   Eigen::array<int, 5> extents = {(int)(xs[0]->d[0]), (int)(xs[0]->d.nd < 2 ? 1 : xs[0]->d[1]), (int)(xs[0]->d.nd < 3 ? 1 : xs[0]->d[2]), (int)(xs[0]->d.nd < 4 ? 1 : xs[0]->d[3]), (int)(xs[0]->d.bd)};
-  Eigen::array<int, 5> strides_arr({1,1,1,1,1});
+  Eigen::array<int, 5> strides_arr = {1,1,1,1,1};
   for(unsigned d=0; d<max(strides.size(), max(to.size(),from.size())); d++){
     offsets[d<xs[0]->d.nd?d:4] = (d<from.size())?from[d]:0;
     extents[d<xs[0]->d.nd?d:4] = ((d<to.size())?to[d]:(d<xs[0]->d.nd?xs[0]->d[d]:xs[0]->d.bd)) - offsets[d<xs[0]->d.nd?d:4];
