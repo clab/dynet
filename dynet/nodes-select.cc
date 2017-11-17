@@ -64,7 +64,9 @@ string SelectCols::as_string(const vector<string>& arg_names) const {
 Dim SelectCols::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1 && xs[0].ndims() == 2, "Bad arguments in SelectCols: " << xs);
   unsigned ncols = pcols->size();
-  return Dim({xs[0].rows(), ncols});
+  Dim ret(xs[0]);
+  ret.d[1] = ncols;
+  return ret;
 }
 
 #endif
