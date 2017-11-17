@@ -114,6 +114,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/TextFileSaver.java"
     "${CMAKE_SWIG_OUTDIR}/Trainer.java"
     "${CMAKE_SWIG_OUTDIR}/UnsignedVector.java"
+    "${CMAKE_SWIG_OUTDIR}/UnsignedVectorVector.java"
     "${CMAKE_SWIG_OUTDIR}/VanillaLSTMBuilder.java"
 )
 

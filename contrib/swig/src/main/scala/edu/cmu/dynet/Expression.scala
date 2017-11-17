@@ -82,7 +82,6 @@ object Expression {
     makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, index), Seq(p))
   def constLookup(p: LookupParameter, pindex: UnsignedPointer) =
     makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, pindex.uintp), Seq(p, pindex))
-  // def constLookup
   def lookup(p: LookupParameter, indices: UnsignedVector) =
     makeExpr(cg => dn.lookup(cg, p.lookupParameter, indices.vector), Seq(p, indices))
   def constLookup(p: LookupParameter, indices: UnsignedVector) =
@@ -200,7 +199,14 @@ object Expression {
   def hinge(e: Expression, indices: UnsignedVector, m: Float): Expression =
     unary(e, e => dn.hinge(e, indices.vector, m))
 
+  def hinge(e: Expression, index: UnsignedPointer): Expression =
+    unary(e, e => dn.hinge(e, index.uintp, 1.0f))
+  def hinge(e: Expression, indices: UnsignedVector): Expression =
+    unary(e, e => dn.hinge(e, indices.vector, 1.0f))
+
   def hingeDim(e: Expression, indices: UnsignedVector, d: Long = 0L, m: Float = 1.0f): Expression =
+    unary(e, e => dn.hinge_dim(e, indices.vector, d, m))
+  def hingeDimBatch(e: Expression, indices: UnsignedVectorVector, d: Long = 0L, m: Float = 1.0f): Expression =
     unary(e, e => dn.hinge_dim(e, indices.vector, d, m))
 
   def sparsemax(e: Expression): Expression = unary(e, dn.sparsemax)

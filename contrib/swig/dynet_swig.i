@@ -91,6 +91,7 @@ VECTORCONSTRUCTOR(int, Integer, IntVector)
 VECTORCONSTRUCTOR(unsigned, Integer, UnsignedVector)
 VECTORCONSTRUCTOR(dynet::Expression, Expression, ExpressionVector)
 VECTORCONSTRUCTOR(dynet::Parameter, Parameter, ParameterVector)
+VECTORCONSTRUCTOR(std::vector<unsigned>, UnsignedVector, UnsignedVectorVector)
 VECTORCONSTRUCTOR(std::vector<dynet::Expression>, ExpressionVector, ExpressionVectorVector)
 VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVectorVector)
 
@@ -120,6 +121,7 @@ struct dynet::Expression;
 namespace std {
   %template(IntVector)                    vector<int>;
   %template(UnsignedVector)               vector<unsigned>;
+  %template(UnsignedVectorVector)         vector<vector<unsigned>>;
   %template(DoubleVector)                 vector<double>;
   %template(FloatVector)                  vector<float>;
   %template(LongVector)                   vector<long>;

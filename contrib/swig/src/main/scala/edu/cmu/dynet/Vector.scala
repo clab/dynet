@@ -80,3 +80,16 @@ class ExpressionVector private[dynet] (
     vector.set(idx, elem.expr)
   }
 }
+
+class UnsignedVectorVector private[dynet] (private[dynet] val vector: internal.UnsignedVectorVector)
+  extends scala.collection.mutable.IndexedSeq[UnsignedVector] {
+  def this(size: Long) { this(new internal.UnsignedVectorVector(size)) }
+  def this(values: Seq[UnsignedVector] = Seq.empty) {
+    this(new internal.UnsignedVectorVector(values.map(_.vector).asJavaCollection))
+  }
+
+  def add(v: UnsignedVector): Unit = vector.add(v.vector)
+  override def apply(idx: Int): UnsignedVector = new UnsignedVector(vector.get(idx))
+  override def length: Int = vector.size.toInt
+  override def update(idx: Int, v: UnsignedVector): Unit = vector.set(idx, v.vector)
+}
