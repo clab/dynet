@@ -82,17 +82,22 @@ object Expression {
     makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, index), Seq(p))
   def constLookup(p: LookupParameter, pindex: UnsignedPointer) =
     makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, pindex.uintp), Seq(p, pindex))
-  // def constLookup
   def lookup(p: LookupParameter, indices: UnsignedVector) =
     makeExpr(cg => dn.lookup(cg, p.lookupParameter, indices.vector), Seq(p, indices))
+  def constLookup(p: LookupParameter, indices: UnsignedVector) =
+    makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, indices.vector), Seq(p, indices))
 
-
-  def zeroes(d: Dim) = makeExpr(cg => dn.zeroes(cg, d.dim), Seq(d))
+  def zeros(d: Dim) = makeExpr(cg => dn.zeros(cg, d.dim), Seq(d))
+  def zeroes(d: Dim) = makeExpr(cg => dn.zeros(cg, d.dim), Seq(d))
+  def ones(d: Dim) = makeExpr(cg => dn.ones(cg, d.dim), Seq(d))
+  def constant(d: Dim, v: Float) = makeExpr(cg => dn.constant(cg, d.dim, v), Seq(d))
   def randomNormal(d: Dim) = makeExpr(cg => dn.random_normal(cg, d.dim), Seq(d))
   def randomBernoulli(d: Dim, p: Float, scale: Float = 1.0f) = makeExpr(
     cg => dn.random_bernoulli(cg, d.dim, p, scale), Seq(d))
   def randomUniform(d: Dim, left: Float, right: Float) = makeExpr(
     cg => dn.random_uniform(cg, d.dim, left, right), Seq(d))
+  def randomGumbel(d: Dim, mu: Float, beta: Float) = makeExpr(
+    cg => dn.random_gumbel(cg, d.dim, mu, beta), Seq(d))
 
   /* ARITHMETIC OPERATIONS */
 
@@ -140,10 +145,16 @@ object Expression {
   def sum(ev: ExpressionVector): Expression = vectory(ev, dn.sum)
   def sum(exprs: Expression*): Expression = sum(new ExpressionVector(exprs))
 
+  def sumElems(e: Expression): Expression = unary(e, dn.sum_elems)
+  def momentElems(e: Expression, r: Long) = unary(e, e => dn.moment_elems(e, r))
+  def meanElems(e: Expression): Expression = unary(e, dn.mean_elems)
+  def stdElems(e: Expression): Expression = unary(e, dn.std_elems)
+
   def average(ev: ExpressionVector): Expression = vectory(ev, dn.average)
   def average(exprs: Expression*): Expression = average(new ExpressionVector(exprs))
 
   def sqrt(e: Expression): Expression = unary(e, dn.sqrt)
+  def abs(e: Expression): Expression = unary(e, dn.abs)
   def erf(e: Expression): Expression = unary(e, dn.erf)
   def tanh(e: Expression): Expression = unary(e, dn.tanh)
   def exp(e: Expression): Expression = unary(e, dn.exp)
@@ -188,11 +199,22 @@ object Expression {
   def hinge(e: Expression, indices: UnsignedVector, m: Float): Expression =
     unary(e, e => dn.hinge(e, indices.vector, m))
 
+  def hinge(e: Expression, index: UnsignedPointer): Expression =
+    unary(e, e => dn.hinge(e, index.uintp, 1.0f))
+  def hinge(e: Expression, indices: UnsignedVector): Expression =
+    unary(e, e => dn.hinge(e, indices.vector, 1.0f))
+
+  def hingeDim(e: Expression, indices: UnsignedVector, d: Long = 0L, m: Float = 1.0f): Expression =
+    unary(e, e => dn.hinge_dim(e, indices.vector, d, m))
+  def hingeDimBatch(e: Expression, indices: UnsignedVectorVector, d: Long = 0L, m: Float = 1.0f): Expression =
+    unary(e, e => dn.hinge_dim(e, indices.vector, d, m))
+
   def sparsemax(e: Expression): Expression = unary(e, dn.sparsemax)
   def sparsemaxLoss(e: Expression, targetSupport: UnsignedVector): Expression =
     unary(e, e => dn.sparsemax_loss(e, targetSupport.vector))
 
   def squaredNorm(e: Expression): Expression = unary(e, dn.squared_norm)
+  def l2Norm(e: Expression): Expression = unary(e, dn.l2_norm)
   def squaredDistance(e1: Expression, e2: Expression): Expression = binary(e1, e2, dn.squared_distance)
   def l1Distance(x: Expression, y: Expression): Expression = binary(x, y, dn.l1_distance)
   def huberDistance(x: Expression, y: Expression, c: Float = 1.345f) = {
@@ -208,6 +230,7 @@ object Expression {
   /* FLOW / SHAPING OPERATIONS */
 
   def noBackProp(x: Expression): Expression = unary(x, dn.nobackprop)
+  def flipGradient(x: Expression): Expression = unary(x, dn.flip_gradient)
   def reshape(x: Expression, d: Dim): Expression = unary(x, x => dn.reshape(x, d.dim))
   def transpose(x: Expression): Expression = unary(x, dn.transpose)
   def selectRows(x: Expression, rows: UnsignedVector): Expression =
@@ -215,6 +238,14 @@ object Expression {
   def selectCols(x: Expression, rows: UnsignedVector): Expression =
     unary(x, x => dn.select_cols(x, rows.vector))
   def sumBatches(x: Expression): Expression = unary(x, dn.sum_batches)
+  def momentBatches(x: Expression, r: Long): Expression = unary(x, x => dn.moment_batches(x, r))
+  def stdBatches(x: Expression): Expression = unary(x, dn.std_batches)
+  def momentDim(x: Expression, v: UnsignedVector, r: Long, b: Boolean = false, n: Long = 0L): Expression =
+    unary(x, x => dn.moment_dim(x, v.vector, r, b, n))
+  def meanDim(x: Expression, v: UnsignedVector, b: Boolean = false, n: Long = 0L): Expression =
+    unary(x, x => dn.mean_dim(x, v.vector, b, n))
+  def stdDim(x: Expression, v: UnsignedVector, b: Boolean = false, n: Long = 0L): Expression =
+    unary(x, x => dn.std_dim(x, v.vector, b, n))
 
   def pick(x: Expression, v: Long, d: Long = 0l): Expression = unary(x, x => dn.pick(x, v, d))
   def pick(x: Expression, v: UnsignedVector, d: Long): Expression =
@@ -223,6 +254,12 @@ object Expression {
     unary(x, x => dn.pick(x, v.uintp, d))
   def pickrange(x: Expression, v: Long, u: Long, d: Long = 0l): Expression =
     unary(x, x => dn.pick_range(x, v, u, d))
+  def pickBatchElem(x: Expression, v: Long): Expression = unary(x, x => dn.pick_batch_elem(x, v))
+  def pickBatchElems(x: Expression, v: UnsignedVector): Expression =
+    unary(x, x => dn.pick_batch_elems(x, v.vector))
+
+  def concatenateToBatch(v: ExpressionVector): Expression = vectory(v, dn.concatenate_to_batch)
+  def concatenateToBatch(exprs: Expression*): Expression = concatenateToBatch(new ExpressionVector(exprs))
 
   def concatenateCols(v: ExpressionVector): Expression = vectory(v, dn.concatenate_cols)
   def concatenateCols(exprs: Expression*): Expression = concatenateCols(new ExpressionVector(exprs))
@@ -234,6 +271,8 @@ object Expression {
 
   def noise(x: Expression, stddev: Float): Expression = unary(x, x => dn.noise(x, stddev))
   def dropout(x: Expression, p: Float): Expression = unary(x, x => dn.dropout(x, p))
+  def dropoutDim(x: Expression, d: Long, p: Float): Expression = unary(x, x => dn.dropout_dim(x, d, p))
+  def dropoutBatch(x: Expression, p: Float): Expression = unary(x, x => dn.dropout_batch(x, p))
   def blockDropout(x: Expression, p: Float): Expression = unary(x, x => dn.block_dropout(x, p))
 
   /* CONVOLUTION OPERATIONS */
@@ -244,7 +283,7 @@ object Expression {
   def filter1DNarrow(x: Expression, f: Expression): Expression = binary(x, f, dn.filter1d_narrow)
   def kMaxPooling(x: Expression, k: Long): Expression = unary(x, x => dn.kmax_pooling(x, k))
   def foldRows(x: Expression, nRows: Long = 2l): Expression = unary(x, x => dn.fold_rows(x, nRows))
-  def sumDim(x: Expression, dims: UnsignedVector): Expression = unary(x, x => dn.sum_dim(x, dims.vector))
+  def sumDim(x: Expression, dims: UnsignedVector, b: Boolean = false): Expression = unary(x, x => dn.sum_dim(x, dims.vector, b))
   def sumCols(x: Expression): Expression = unary(x, dn.sum_cols)
   def sumRows(x: Expression): Expression = unary(x, dn.sum_rows)
   def averageCols(x: Expression): Expression = unary(x, dn.average_cols)
@@ -255,9 +294,13 @@ object Expression {
   // TODO(joelgrus): write tests for these
   def conv2d(x: Expression, f: Expression, stride: UnsignedVector, isValid: Boolean) =
     new Expression(dn.conv2d(x.expr, f.expr, stride.vector, isValid), Seq(x, f, stride))
+  def conv2d(x: Expression, f: Expression, stride: UnsignedVector) =
+    new Expression(dn.conv2d(x.expr, f.expr, stride.vector, true), Seq(x, f, stride))
 
   def conv2d(x: Expression, f: Expression, b: Expression, stride: UnsignedVector, isValid: Boolean) =
     new Expression(dn.conv2d(x.expr, f.expr, b.expr, stride.vector, isValid), Seq(x, f, b, stride))
+  def conv2d(x: Expression, f: Expression, b: Expression, stride: UnsignedVector) =
+    new Expression(dn.conv2d(x.expr, f.expr, b.expr, stride.vector, true), Seq(x, f, b, stride))
 
   /* TENSOR OPERATIONS */
 

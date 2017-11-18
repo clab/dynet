@@ -60,6 +60,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/dynet_swig.java"
     "${CMAKE_SWIG_OUTDIR}/dynet_swigJNI.java"
     "${CMAKE_SWIG_OUTDIR}/DynetParams.java"
+    # "${CMAKE_SWIG_OUTDIR}/EGTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/Expression.java"
     "${CMAKE_SWIG_OUTDIR}/ExpressionVector.java"
     "${CMAKE_SWIG_OUTDIR}/ExpressionVectorVector.java"
@@ -105,6 +106,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Node_p_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Tensor_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__VariableIndex_t.java"
+    "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_std__vectorT_unsigned_int_t_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_unsigned_int.java"
     "${CMAKE_SWIG_OUTDIR}/Tensor.java"
     "${CMAKE_SWIG_OUTDIR}/TensorTools.java"
@@ -112,6 +114,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/TextFileSaver.java"
     "${CMAKE_SWIG_OUTDIR}/Trainer.java"
     "${CMAKE_SWIG_OUTDIR}/UnsignedVector.java"
+    "${CMAKE_SWIG_OUTDIR}/UnsignedVectorVector.java"
     "${CMAKE_SWIG_OUTDIR}/VanillaLSTMBuilder.java"
 )
 
