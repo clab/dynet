@@ -9,6 +9,10 @@ env:
 branches:
   only:
     - master
+stages:
+  - test
+  - name: test_pip
+    if: repo = clab/dynet AND tag IS present
 jobs:
   include:
     - os: osx
@@ -117,6 +121,43 @@ jobs:
       compiler: gcc
       language: cpp
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual BACKEND=cuda
+    - stage: test_pip
+      os: osx
+      env: PYVER=2.7 PYNUM=2
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: osx
+      env: PYVER=3.4 PYNUM=3
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: osx
+      env: PYVER=3.5 PYNUM=3
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: osx
+      env: PYVER=3.6 PYNUM=3
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      language: python
+      python: 2.7
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      language: python
+      python: 3.4
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      language: python
+      python: 3.5
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      language: python
+      python: 3.6
+      before_script: pip install dynet
+      script: python tests/python/test.py
 
 install:
   - travis_retry .travis/install_dependencies.sh
