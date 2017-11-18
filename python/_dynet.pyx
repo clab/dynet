@@ -3001,6 +3001,22 @@ cpdef Expression selu(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_selu(x.c()))
 
+cpdef Expression silu(Expression x, float beta=1.0): 
+    """SILU / SiL / Swish
+
+    Calculate elementwise :math:`y_i = \\frac{x_i}{1+e^{-beta * x_i}}`
+        
+    Reference: `Hendrycks and Gimpel, 2016 <https://openreview.net/pdf?id=Bk0MRI5lg>`_, `Elfwing et al, 2017 <https://arxiv.org/pdf/1702.03118.pdf>`, and `Ramachandran et al., 2017 <https://arxiv.org/pdf/1710.05941>`_,
+ 
+    Args:
+        x (dynet.Expression): Input expression
+        beta (number): :math:`\\beta` parameter
+    
+    Returns:
+        dynet.Expression: :math:`\\text{silu}(x_i, \\beta)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_silu(x.c(), beta))
+
 cpdef Expression log_softmax(Expression x, list restrict=None):
     """Restricted log softmax
     
@@ -3020,18 +3036,19 @@ cpdef Expression log_softmax(Expression x, list restrict=None):
     cdef vector[unsigned] vec = restrict
     return Expression.from_cexpr(x.cg_version, c_log_softmax(x.c(), vec))
 
-cpdef Expression softmax(Expression x):
+cpdef Expression softmax(Expression x, unsigned d=0):
     """Softmax
     
     The softmax function normalizes each column to ensure that all values are between 0 and 1 and add to one by applying the :math:`\\frac{e^{x_i}}{sum_j e^{x_j}}`.
     
     Args:
         x (dynet.Expression): Input expression
+        d (int): Dimension to normalize over
     
     Returns:
         dynet.Expression: :math:`\\frac{e^{x_i}}{\sum_j e^{x_j}}`
     """
-    return Expression.from_cexpr(x.cg_version, c_softmax(x.c()))
+    return Expression.from_cexpr(x.cg_version, c_softmax(x.c(), d))
 
 cpdef Expression sparsemax(Expression x):
     """Sparsemax

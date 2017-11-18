@@ -997,6 +997,21 @@ Expression selu(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief SILU / SiL / Swish
+ * \details Calculate elementwise y_i = x_i / (1 + e^{-beta * x_i})
+ *
+ * Reference: [Hendrycks and Gimpel, 2016](https://openreview.net/pdf?id=Bk0MRI5lg),
+ * [Elfwing et al, 2017](https://arxiv.org/pdf/1702.03118.pdf), and
+ * [Ramachandran et al., 2017](https://arxiv.org/pdf/1710.05941)
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to y_i = x_i / (1 + e^{-beta * x_i})
+ */
+Expression silu(const Expression& x, float beta=1.f);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Soft Sign
  * \details Calculate elementwise the softsign function y_i = x_i/(1+|x_i|)
  *
@@ -1123,10 +1138,11 @@ Expression colwise_add(const Expression& x, const Expression& bias);
  *          e^{x[i]}/{sum_j e^{x[j]}}.
  *
  * \param x A vector or matrix
+ * \param d dimension to normalize over (default: 0)
  *
  * \return A vector or matrix after calculating the softmax
  */
-Expression softmax(const Expression& x);
+Expression softmax(const Expression& x, unsigned d=0);
 
 /**
  * \ingroup lossoperations
@@ -1872,7 +1888,7 @@ inline Expression concatenate_cols(const T& xs) { return detail::f<Concatenate>(
  *          the dimension to be concatenated (rows by default).
  *
  * \param xs The input expressions
- * \param xs The dimension along which to perform concatenation
+ * \param d The dimension along which to perform concatenation
  *
  * \return The expression with the specified dimension concatenated
  */

@@ -315,7 +315,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     # CExpression c_hinge_dim "dynet::hinge_dim" (CExpression& x, vector[vector[unsigned]] indices, unsigned d, float m) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x) except + #
     CExpression c_log_softmax "dynet::log_softmax" (CExpression& x, vector[unsigned]& restriction) except + #?
-    CExpression c_softmax "dynet::softmax" (CExpression& x) except + #
+    CExpression c_softmax "dynet::softmax" (CExpression& x, unsigned d) except + #
     CExpression c_sparsemax "dynet::sparsemax" (CExpression& x) except + #
     CExpression c_softsign "dynet::softsign" (CExpression& x) except + #
     CExpression c_pow "dynet::pow" (CExpression& x, CExpression& y) except + #
@@ -390,6 +390,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
 
     CExpression c_elu "dynet::elu" (CExpression& x, float alpha) except + #
     CExpression c_selu "dynet::selu" (CExpression& x) except + #
+    CExpression c_silu "dynet::silu" (CExpression& x, float beta) except + #
     
     # expecting a vector of CExpression
     CExpression c_average     "dynet::average" (vector[CExpression]& xs) except +

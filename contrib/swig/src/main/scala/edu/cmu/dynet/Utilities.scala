@@ -22,9 +22,10 @@ object Utilities {
     // Return the largest index where the cumulative probability is <= p.
     // Since cumulative(0) is 0f, there's always at least one element in the
     // takeWhile, so it's ok to use .last
-    cumulative.zipWithIndex
+    val i = cumulative.zipWithIndex
         .takeWhile { case (c, i) => c <= p }
         .last
         ._2
+    if(i == v.length) i - 1 else i
   }
 }
