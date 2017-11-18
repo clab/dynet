@@ -92,8 +92,11 @@ float TensorTools::access_element(const Tensor& v, const Dim& index) {
   if (v.device->type == DeviceType::CPU) {
     return (*v)(index[0], index[1]);
 #if HAVE_CUDA
-  } else if (v.device->type == DeviceType::GPU) {
-    DYNET_NO_CUDA_IMPL_ERROR("TensorTools::access_element(Tensor,Dim)")
+  if (v.device->type == DeviceType::GPU) {
+    float ret = 0.0f;
+    CUDA_CHECK(cudaMemcpy(&ret, v.v + (v.d.rows() * index[0] + index[1]), sizeof(float), cudaMemcpyDeviceToHost));
+    return ret;
+  }
 #endif
   } else { throw std::runtime_error("Bad device type"); }
   return 0;

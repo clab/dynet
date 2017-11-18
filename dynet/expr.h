@@ -1888,7 +1888,7 @@ inline Expression concatenate_cols(const T& xs) { return detail::f<Concatenate>(
  *          the dimension to be concatenated (rows by default).
  *
  * \param xs The input expressions
- * \param xs The dimension along which to perform concatenation
+ * \param d The dimension along which to perform concatenation
  *
  * \return The expression with the specified dimension concatenated
  */
