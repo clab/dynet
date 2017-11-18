@@ -19,32 +19,32 @@ jobs:
       compiler: clang
       language: cpp
       env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: osx
       compiler: clang
       language: cpp
@@ -62,7 +62,7 @@ jobs:
       language: python
       python: 2.7
       env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=i686
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: linux
       compiler: gcc
       language: python
@@ -72,36 +72,36 @@ jobs:
       compiler: gcc
       language: cpp
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: linux
       compiler: gcc
       language: python
       python: 3.4
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: linux
       compiler: gcc
       language: python
       python: 3.4
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: linux
       compiler: gcc
       language: cpp
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: linux
       compiler: gcc
       language: python
       python: 3.5
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: linux
       compiler: gcc
       language: python
       python: 3.5
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: linux
       compiler: gcc
       language: cpp
@@ -111,7 +111,7 @@ jobs:
       language: python
       python: 3.6
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
-      if: type = cron
+      if: type = cron OR tag IS present
     - os: linux
       compiler: gcc
       language: python
