@@ -14,6 +14,12 @@ include_directories("../../dynet")
 # Set java output dir
 set(CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/java/src/edu/cmu/dynet")
 
+# the exact scala version used for compilation
+set(SCALA_VERSION "2.11.11" CACHE STRING "Scala version to compile the swig wrapper for")
+
+# the binary compatibility, e.g. 2.11 or 2.12
+string(REGEX MATCH "[0-9]+\\.[0-9]+" SCALA_BIN_VERSION "${SCALA_VERSION}")
+
 # Set java package (+cuda flag, if appropriate)
 if(WITH_CUDA_BACKEND)
   set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet.internal -DSWIG_USE_CUDA)
@@ -131,7 +137,7 @@ option(INCLUDE_SCALA "INCLUDE_SCALA" ON)
 if(INCLUDE_SCALA)
 
   # make doesn't know about the dynet_scala jar, so it doesn't clean it unless we tell it about it
-  set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "dynet_swigJNI_scala.jar")
+  set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "dynet_swigJNI_scala_${SCALA_BIN_VERSION}.jar")
 
   # Find sbt
   find_program(SBT sbt)
@@ -141,7 +147,7 @@ if(INCLUDE_SCALA)
     COMMENT "Running sbt"
     OUTPUT scala_helper_uberjar
     DEPENDS dylib_into_jar
-    COMMAND ${SBT} assembly -Dbuildpath=${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${SBT} assembly -Dbuildpath=${CMAKE_CURRENT_BINARY_DIR} -Dscalaversion=${CMAKE_CURRENT_BINARY_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
   )
 
