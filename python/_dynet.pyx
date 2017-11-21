@@ -3370,19 +3370,19 @@ cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0):
     """
     ensure_freshness(y);
     return Expression.from_cexpr(x.cg_version, c_pairwise_rank_loss(x.c(), y.c(), m))
-cpdef Expression poisson_loss(Expression x, unsigned y):
+cpdef Expression poisson_loss(Expression log_lambda, unsigned x):
     """Poisson loss
     
-    The negative log probability of :code:`y` according to a Poisson distribution with parameter :code:`x`. Useful in Poisson regression where, we try to predict the parameters of a Possion distribution to maximize the probability of data :code:`y`.
+    The negative log probability of :code:`x` according to a Poisson distribution with parameter :math:`\exp` :code:`log_lambda`. Useful in Poisson regression where, we try to predict the parameters of a Possion distribution to maximize the probability of data :code:`x`.
     
     Args:
-        x (dynet.Expression): The first input expression
-        y (dynet.Expression): The second input expression
+        log_lambda (dynet.Expression): The log of the Poisson distribution's lambda
+        x (int): The target value
     
     Returns:
         dynet.Expression: The Poisson loss
     """
-    return Expression.from_cexpr(x.cg_version, c_poisson_loss(x.c(), y))
+    return Expression.from_cexpr(log_lambda.cg_version, c_poisson_loss(log_lambda.c(), x))
 cpdef Expression huber_distance(Expression x, Expression y, float c=1.345):
     """Huber distance
     
