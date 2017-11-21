@@ -42,9 +42,9 @@ function(find_mkl)
     # link to the DLL versions. For now I'm opting for this solution which seems to work with projects still
     # at their default /MD. Linux build requires the mkl_intel_lp64 to be linked first. So...:
     if(MSVC)
-      set(LIBS ${LIBS} mkl_intel_thread mkl_core mkl_intel_lp64 ${MKL_COMPILER_LIB_FILE} PARENT_SCOPE)
+      set(LIBS ${LIBS} mkl_rt ${MKL_COMPILER_LIB_FILE} PARENT_SCOPE)
     else()
-      set(LIBS ${LIBS} mkl_intel_lp64 mkl_intel_thread mkl_core ${MKL_COMPILER_LIB_FILE} PARENT_SCOPE)
+      set(LIBS ${LIBS} mkl_rt ${MKL_COMPILER_LIB_FILE} PARENT_SCOPE)
     endif()
     include_directories(${MKL_INCLUDE_DIR})
     link_directories(${MKL_CORE_LIB_DIR} ${MKL_COMPILER_LIB_DIR})
