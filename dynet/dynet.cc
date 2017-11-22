@@ -399,7 +399,13 @@ void ComputationGraph::print_graphviz() const {
     for (auto arg : node->args)
       var_names.push_back(string("v") + to_string((unsigned)arg));
     cerr << "  N" << nc << " [label=\"v" << nc << " = "
-         << node->as_string(var_names) << "\"];\n";
+         << node->as_string(var_names);
+    if (profiling_flag){
+      cerr << " (MEM: ";
+      cerr << (node->aux_storage_size() + node->dim.size()) * sizeof(real) / 1000.0;
+      cerr << " kB)";
+    }
+    cerr << "\"];\n";
     for (auto arg : node->args)
       cerr << "  N" << ((unsigned)arg) << " -> N" << nc << ";\n";
     ++nc;

@@ -18,7 +18,7 @@ using namespace std;
 
 namespace dynet {
 
-DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), autobatch_debug(0),
+DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), profiling(0),
   shared_parameters(false), ngpus_requested(false), ids_requested(false), cpu_requested(false), requested_gpus(-1)
 {
 #if HAVE_CUDA
@@ -93,8 +93,8 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
         remove_args(argc, argv, argi, 2);
       }
     }
-    else if (arg == "--dynet-autobatch-debug" || arg == "--dynet_autobatch_debug") {
-      params.autobatch_debug = 1;
+    else if (arg == "--dynet-profiling" || arg == "--dynet_profiling") {
+      params.profiling = 1;
         remove_args(argc, argv, argi, 1);
     }
 
@@ -200,9 +200,9 @@ void initialize(DynetParams& params) {
     cerr << "[dynet] using autobatching" << endl;
   autobatch_flag = params.autobatch;
   
-  if(params.autobatch_debug)
-    cerr << "[dynet] using autobatching debugging" << endl;
-  autobatch_debug_flag = params.autobatch_debug;
+  if(params.profiling)
+    cerr << "[dynet] using profiling level " << params.profiling << endl;
+  profiling_flag = params.profiling;
 
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";

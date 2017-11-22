@@ -1143,7 +1143,7 @@ struct DynetParams {
   std::string mem_descriptor = "512"; /**< Total memory to be allocated for Dynet */
   float weight_decay = 0; /**< Weight decay rate for L2 regularization */
   int autobatch = 0; /**< Whether to autobatch or not */
-  int autobatch_debug = 0; /**< Whether to show autobatch debug info or not */
+  int profiling = 0; /**< Whether to show profiling info or not */
   bool shared_parameters = false; /**< TO DOCUMENT */
 
 #ifdef SWIG_USE_CUDA

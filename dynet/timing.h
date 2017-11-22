@@ -7,6 +7,10 @@
 #include <iomanip>
 #include <map>
 
+// for sorting timer output
+template<typename A, typename B> std::pair<B,A> flip_pair(const std::pair<A,B> &p) { return std::pair<B,A>(p.second, p.first); }
+template<typename A, typename B> std::multimap<B,A> flip_map(const std::map<A,B> &src) { std::multimap<B,A> dst; std::transform(src.begin(), src.end(), std::inserter(dst, dst.begin()),flip_pair<A,B>);return dst;}
+
 namespace dynet {
 
 struct Timer {
@@ -37,9 +41,19 @@ public:
       std::cout << "Timing Info:" << std::endl; show();
     }
   }
-  void start(std::string name) { Timing t; timers[name] = t; }
-  void stop(std::string name) { cumtimes[name] += (timers[name]).stop(); }
-  void show() { for (auto &item : cumtimes) { std::cout << std::setprecision(4) << std::setw(11) << item.second << '\t' << item.first << std::endl; } }
+  void start(std::string name) {
+    Timing t;
+    timers[name] = t;
+  }
+  void stop(std::string name) {
+    cumtimes[name] += (timers[name]).stop();
+  }
+  void show() {
+    std::multimap<double, std::string> cumtimes_dst = flip_map(cumtimes);
+    for (auto &item : cumtimes_dst) {
+      std::cout << std::setprecision(4) << std::setw(11) << item.first << '\t' << item.second << std::endl;
+    }
+  }
   std::map<std::string, double> cumtimes;
   std::map<std::string, Timing> timers;
 };
