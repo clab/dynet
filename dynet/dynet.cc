@@ -419,16 +419,21 @@ void ComputationGraph::print_graphviz() const {
 
   if(profiling_flag>1){
     cerr << "\nAggregated nodes, sorted by memory consumption:\n";
-    std::map<string,unsigned> nodes_map;
+    std::map<string,unsigned> nodes_map, count_map;
     double total_memory = 0;
     for (auto node : nodes) {
       unsigned mem = (node->aux_storage_size() + 2*node->dim.size()) * sizeof(real);
-      nodes_map[node->as_dummy_string()] = mem;
+      if(nodes_map.count(node->as_dummy_string()) == 0){
+        nodes_map[node->as_dummy_string()] = 0;
+        count_map[node->as_dummy_string()] = 0;
+      }
+      nodes_map[node->as_dummy_string()] += mem;
+      count_map[node->as_dummy_string()] += 1;
       total_memory += mem;
     }
     std::multimap<unsigned,string> nodes_map_dst = flip_map(nodes_map);
     for (auto &item : nodes_map_dst) {
-      std::cerr << std::setprecision(4) << std::setw(11) << (item.first/1024.0) << " KiB\t" << (100.0*(double)item.first/total_memory) << "%\t" << item.second << std::endl;
+      std::cerr << std::setprecision(4) << std::setw(11) << (item.first/1024.0) << " KiB\t" << (100.0*(double)item.first/total_memory) << "%\t" << "called " << count_map[item.second] << "x\t" << item.second << std::endl;
     }
     std::cerr << std::setprecision(4) << std::setw(11) << (total_memory/1024.0) << " KiB\t100%\t(total)" << std::endl;
   }
