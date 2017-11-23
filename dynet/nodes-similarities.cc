@@ -1,6 +1,6 @@
 #include "dynet/nodes-similarities.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
 
 using namespace std;

@@ -5,6 +5,7 @@
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet-helper.h"
 #include "dynet/expr.h"
+#include "dynet/devices.h"
 
 using namespace std;
 
@@ -150,6 +151,22 @@ void ComputationGraph::clear() {
   nodes.clear();
 
   ee->invalidate();
+}
+
+VariableIndex ComputationGraph::add_function_node(Node *node) {
+  VariableIndex new_node_index((VariableIndex)nodes.size());
+  nodes.push_back(node);
+  if (node->device == nullptr) {
+    if (node->arity() > 0) {
+      node->device = nodes[node->args[0]]->device;
+    } else {
+      node->device = dynet::default_device;
+    }
+  }
+  if (node->device->type == DeviceType::GPU && !node->has_cuda_implemented)
+    DYNET_NO_CUDA_IMPL_ERROR(node->as_dummy_string())
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
 }
 
 CGCheckpoint ComputationGraph::_get_checkpoint() {

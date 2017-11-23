@@ -8,7 +8,7 @@
 #include <array>
 
 #include "dynet/functors.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "third_party/eigen_spatial_convolutions.h"
 #include "third_party/eigen_backward_spatial_convolutions.h"
 

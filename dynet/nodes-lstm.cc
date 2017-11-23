@@ -3,7 +3,7 @@
 
 #include "dynet/functors.h"
 #include "dynet/simd-functors.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 using namespace std;
 

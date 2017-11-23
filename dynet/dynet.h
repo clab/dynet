@@ -14,11 +14,11 @@
 #include <vector>
 
 #include "dynet/aligned-mem-pool.h"
-#include "dynet/devices.h"
 #include "dynet/init.h"
 #include "dynet/model.h"
 #include "dynet/sig.h"
 #include "dynet/tensor.h"
+#include "dynet/device-structs.h"
 
 namespace dynet {
 
@@ -754,23 +754,6 @@ struct Node {
                             depending on your computation backend*/
   bool has_cuda_implemented = true;
 };
-
-
-inline VariableIndex ComputationGraph::add_function_node(Node *node) {
-  VariableIndex new_node_index((VariableIndex)nodes.size());
-  nodes.push_back(node);
-  if (node->device == nullptr) {
-    if (node->arity() > 0) {
-      node->device = nodes[node->args[0]]->device;
-    } else {
-      node->device = dynet::default_device;
-    }
-  }
-  if (node->device->type == DeviceType::GPU && !node->has_cuda_implemented)
-    DYNET_NO_CUDA_IMPL_ERROR(node->as_dummy_string())
-  set_dim_for_new_node(new_node_index);
-  return new_node_index;
-}
 
 template <class Function>
 inline VariableIndex ComputationGraph::add_function(

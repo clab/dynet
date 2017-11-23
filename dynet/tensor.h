@@ -15,7 +15,7 @@
 #include "dynet/dim.h"
 #include "dynet/except.h"
 #include "dynet/aligned-mem-pool.h"
-#include "dynet/devices.h"
+#include "dynet/device-structs.h"
 
 #if HAVE_CUDA
 #include <cuda.h>
@@ -182,22 +182,7 @@ struct Tensor {
    * \details This is very slow: use sparingly (it's linear in the number of elements). This raises a `std::runtime_error` exception if the Tensor is on GPU because it's not implemented yet
    * \return Whether the tensor contains any invalid value
    */
-  inline bool is_valid() const {
-    // TODO : replace this with a custom exception
-    if (device->type == DeviceType::CPU) {
-      const size_t s = d.size();
-      for (unsigned i = 0; i < s; ++i)
-        if (std::isnan(v[i]) || std::isinf(v[i])) return false;
-      return true;
-    } else {
-#if HAVE_CUDA
-      if (device->type == DeviceType::GPU) {
-        DYNET_NO_CUDA_IMPL_ERROR("is_valid()");
-      }
-#endif
-    }
-    return false;
-  }
+  bool is_valid() const;
 
   /**
    * \brief Get a Tensor object representing a single batch.

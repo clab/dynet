@@ -4,6 +4,7 @@
 #include "dynet/tensor.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/model.h"
+#include "dynet/devices.h"
 
 #define LOAD_INIT_FUNC() initialize_lookups()
 

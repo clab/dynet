@@ -1,6 +1,7 @@
 #include "dynet/tensor.h"
 #include "dynet/globals.h"
 #include "dynet/except.h"
+#include "dynet/devices.h"
 
 #include <random>
 #include <vector>
@@ -18,6 +19,23 @@ namespace dynet {
 // ---- CPU only operations
 
 #ifndef __CUDACC__
+
+bool Tensor::is_valid() const {
+  // TODO : replace this with a custom exception
+  if (device->type == DeviceType::CPU) {
+    const size_t s = d.size();
+    for (unsigned i = 0; i < s; ++i)
+      if (std::isnan(v[i]) || std::isinf(v[i])) return false;
+    return true;
+  } else {
+#if HAVE_CUDA
+    if (device->type == DeviceType::GPU) {
+      DYNET_NO_CUDA_IMPL_ERROR("is_valid()");
+    }
+#endif
+  }
+  return false;
+}
 
 ostream& operator<<(ostream& os, const Tensor& t) {
   if (t.device->type == DeviceType::CPU) {

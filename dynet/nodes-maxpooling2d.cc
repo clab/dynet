@@ -7,7 +7,7 @@
 #include <array>
 
 #include "dynet/functors.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "third_party/eigen_pooling.h"
 
 #if HAVE_CUDA

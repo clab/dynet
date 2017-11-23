@@ -1,6 +1,6 @@
 #include "dynet/nodes-arith-const.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
 #include "dynet/simd-functors.h"
 

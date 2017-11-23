@@ -1,5 +1,5 @@
 #include "dynet/nodes-linalg.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/except.h"
 
 using namespace std;

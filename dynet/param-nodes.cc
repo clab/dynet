@@ -4,7 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/weight-decay.h"
 
 #ifdef HAVE_CUDA

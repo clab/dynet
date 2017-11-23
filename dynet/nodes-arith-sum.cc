@@ -1,6 +1,6 @@
 #include "dynet/nodes-arith-sum.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 using namespace std;
 

@@ -1,4 +1,5 @@
 #include "dynet/training.h"
+#include "dynet/devices.h"
 
 // #include "dynet/gpu-ops.h"
 #include "dynet/param-nodes.h"
@@ -406,6 +407,14 @@ void AdamTrainer::restart() {
 #endif
 
 // --- EGTrainer
+EGTrainer::EGTrainer(ParameterCollection& mod, real learning_rate, real mom, real ne)
+  : Trainer(mod, learning_rate), momentum(mom), isCyclical(false) {
+  zeg.d = meg.d = {1};
+  zeg.device = meg.device = default_device;
+  default_device->allocate_tensor(DeviceMempool::PS, zeg);
+  default_device->allocate_tensor(DeviceMempool::PS, meg);
+}
+
 template <class MyDevice>
 void EGTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
   // Add momentum

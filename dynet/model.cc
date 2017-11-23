@@ -5,6 +5,7 @@
 #include "dynet/param-init.h"
 #include "dynet/io.h"
 #include "dynet/except.h"
+#include "dynet/devices.h"
 
 #include <iostream>
 #include <fstream>

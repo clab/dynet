@@ -4,7 +4,7 @@
 #include "dynet/tensor.h"
 #include "dynet/devices.h"
 #include "dynet/dynet.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-def-macros.h"
 
 #ifdef __CUDACC__
 
