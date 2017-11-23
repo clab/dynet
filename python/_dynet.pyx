@@ -71,12 +71,12 @@ cdef class DynetParams: # {{{
         """Set parameters from config object:
         
         Attributes of conf object:
-            mem, seed, autobatch, autobatch_debug, weight_decay, shared_params, requested_gpus, gpu_mask
+            mem, seed, autobatch, profiling, weight_decay, shared_params, requested_gpus, gpu_mask
         """
         self.cparams.mem_descriptor = str(conf["mem"]).encode()
         self.cparams.random_seed=conf["seed"]
         self.cparams.autobatch = conf["autobatch"]
-        self.cparams.autobatch_debug = conf["autobatch_debug"]
+        self.cparams.profiling = conf["profiling"]
         self.cparams.weight_decay = conf["weight_decay"]
         self.cparams.shared_parameters = conf["shared_params"]
         if conf["requested_gpus"] >= 1:
@@ -160,16 +160,13 @@ cdef class DynetParams: # {{{
         else:
             self.cparams.autobatch = 0
 
-    cpdef set_autobatch_debug(self, bool autobatch_debug):
+    cpdef set_profiling(self, int profiling):
         """Activate autobatching debug
         
         Args:
-            autobatch(bool): Set to :code:`True` to activate autobatching debug
+            profiling(int): Set to a value > 0 to activate profiling
         """
-        if autobatch_debug:
-            self.cparams.autobatch_debug = 1
-        else:
-            self.cparams.autobatch_debug = 0
+        self.cparams.profiling = profiling
 
     cpdef set_weight_decay(self, float weight_decay):
         """Set weight decay parameter

@@ -11,7 +11,7 @@ cdef extern from "dynet/init.h" namespace "dynet":
         string mem_descriptor
         float weight_decay
         int autobatch
-        int autobatch_debug
+        int profiling
         bool shared_parameters
         bool ngpus_requested
         bool ids_requested
