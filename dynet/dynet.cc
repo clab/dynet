@@ -419,8 +419,8 @@ void ComputationGraph::print_graphviz() const {
 
   if(profiling_flag>1){
     cerr << "\nNodes sorted by memory consumption:\n";
-    std::map<string,int> nodes_map;
-    unsigned total_memory = 0;
+    std::map<string,unsigned> nodes_map;
+    double total_memory = 0;
     for (auto node : nodes) {
       vector<string> var_names;
       for (auto arg : node->args)
@@ -429,10 +429,11 @@ void ComputationGraph::print_graphviz() const {
       nodes_map[node->as_string(var_names)] = mem;
       total_memory += mem;
     }
-    std::multimap<int,string> nodes_map_dst = flip_map(nodes_map);
+    std::multimap<unsigned,string> nodes_map_dst = flip_map(nodes_map);
     for (auto &item : nodes_map_dst) {
-      std::cerr << std::setprecision(4) << std::setw(11) << (item.first/1024.0) << " KiB\t" << (100.0*item.first/total_memory) << "%\t" << item.second << std::endl;
+      std::cerr << std::setprecision(4) << std::setw(11) << (item.first/1024.0) << " KiB\t" << (100.0*(double)item.first/total_memory) << "%\t" << item.second << std::endl;
     }
+    std::cerr << std::setprecision(4) << std::setw(11) << (total_memory/1024.0) << " KiB\t100%\t(total)" << std::endl;
   }
 }
 
