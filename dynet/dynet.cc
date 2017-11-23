@@ -391,6 +391,9 @@ void ComputationGraph::set_check_validity(bool cv) {
   check_validity = cv;
 }
 
+// for sorting
+template<typename A, typename B> std::pair<B,A> flip_pair(const std::pair<A,B> &p) { return std::pair<B,A>(p.second, p.first); }
+template<typename A, typename B> std::multimap<B,A> flip_map(const std::map<A,B> &src) { std::multimap<B,A> dst; std::transform(src.begin(), src.end(), std::inserter(dst, dst.begin()),flip_pair<A,B>);return dst;}
 void ComputationGraph::print_graphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";
   unsigned nc = 0;
@@ -411,6 +414,22 @@ void ComputationGraph::print_graphviz() const {
     ++nc;
   }
   cerr << "}\n";
+
+  if(profiling_flag>1){
+    cerr << "\nNodes sorted by memory consumption:\n";
+    // print nodes, sorted by memory consumption
+    std::map<string,int> nodes_map;
+    for (auto node : nodes) {
+      vector<string> var_names;
+      for (auto arg : node->args)
+        var_names.push_back(string("v") + to_string((unsigned)arg));
+      nodes_map[node->as_string(var_names)] = (node->aux_storage_size() + 2*node->dim.size()) * sizeof(real);
+    }
+    std::multimap<int,string> nodes_map_dst = flip_map(nodes_map);
+    for (auto &item : nodes_map_dst) {
+      std::cerr << (item.first/1000.0) << " kB\t" << item.second << std::endl;
+    }
+  }
 }
 
 }  // namespace dynet

@@ -38,7 +38,8 @@ class NamedTimer {
 public:
   ~NamedTimer() { 
     if (timers.size()>0) {
-      std::cout << "Timing Info:" << std::endl; show();
+      std::cout << "Timing Info:" << std::endl;
+      show();
     }
   }
   void start(std::string name) {

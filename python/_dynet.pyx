@@ -164,7 +164,7 @@ cdef class DynetParams: # {{{
         """Activate autobatching debug
         
         Args:
-            autobatch(int): Set to a value > 0 to activate profiling
+            profiling(int): Set to a value > 0 to activate profiling
         """
         self.cparams.profiling = profiling
 
