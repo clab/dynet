@@ -66,7 +66,23 @@ Dim RandomNormal::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void RandomNormal::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomNormal::forward");
-  TensorTools::randomize_normal(fx);
+//  TensorTools::randomize_normal(fx);
+
+  Eigen::internal::NormalRandomGenerator<float> gen(true);
+  fx.tvec().device(*dev.edevice) = fx.tvec().random(gen);
+
+//  fx.tvec().device(*dev.edevice) = fx.tvec().random();
+//  Eigen::Tensor<bool, 1> lt(dim.size());
+//  lt = fx.tvec() > fx.tvec().constant(0.5);
+//  fx.tvec().device(*dev.edevice) = lt.cast<float>();
+
+//    fx.tvec().device(*dev.edevice) = fx.tvec().random();
+//    fx.tvec().device(*dev.edevice) = (fx.tvec() > fx.tvec().constant(0.5)).cast<float>();
+
+//  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+//  Tensor tensor_b(dim, nullptr, fx.device, fx.mem_pool);
+//  noise.v = static_cast<float*>(scratch_allocator->allocate(noise.d.size() * sizeof(float)));
+
 }
 
 template<class MyDevice>
@@ -99,7 +115,9 @@ Dim RandomBernoulli::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void RandomBernoulli::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomBernoulli::forward");
-  TensorTools::randomize_bernoulli(fx, p, scale);
+//  TensorTools::randomize_bernoulli(fx, p, scale);
+  fx.tvec().device(*dev.edevice) = fx.tvec().random();
+  fx.tvec().device(*dev.edevice) = (fx.tvec() > fx.tvec().constant(1.0-p)).cast<float>() * scale;
 }
 
 template<class MyDevice>
