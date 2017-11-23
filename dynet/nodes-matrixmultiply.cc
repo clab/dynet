@@ -51,7 +51,7 @@ template<class MyDevice>
 void MatrixMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in MatrixMultiply::forward");
 #ifdef __CUDACC__
-  // fx = 0mat(fx) + xs[0] * xs[1]
+  // fx = mat(fx0) + xs[0] * xs[1]
   dynet::MatrixMultiply(dev, *xs[0], *xs[1], fx, dev.kSCALAR_ZERO);
 #else
   DYNET_ARG_CHECK(fx.d.bd == max(xs[0]->d.bd, xs[1]->d.bd), "Failed dimension check in MatrixMultiply::forward");
@@ -103,7 +103,7 @@ void MatrixMultiply::backward_dev_impl(const MyDevice & dev,
     if(xs[0]->d.bd == 1) {
       // colbatch_matrix(dEdxi).noalias() += (mat(*xs[0])).transpose() * colbatch_matrix(dEdf);
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
-            dEdxi.d.rows(), dEdxi.d.cols()mat(dEdxi).d.batch_elems(), xs[0]->d.rows(),
+            dEdxi.d.rows(), dEdxi.d.cols()*dEdxi.d.batch_elems(), xs[0]->d.rows(),
             dev.kSCALAR_ONE,
             xs[0]->v, xs[0]->d.rows(),
             dEdf.v, dEdf.d.rows(),
