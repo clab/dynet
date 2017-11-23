@@ -48,7 +48,7 @@ cdef extern from "dynet/tensor.h" namespace "dynet":
     float c_as_scalar "dynet::as_scalar" (CTensor& t)
     vector[float] c_as_vector "dynet::as_vector" (CTensor& t)
 
-cdef extern from "dynet/tensor.h" namespace "dynet":
+cdef extern from "dynet/index-tensor.h" namespace "dynet":
     cdef cppclass CIndexTensor "dynet::IndexTensor": 
         CDim d
         pass

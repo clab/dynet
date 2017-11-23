@@ -1,6 +1,14 @@
 #ifndef DYNET_INDEX_TENSOR_H
 #define DYNET_INDEX_TENSOR_H
 
+#include "dynet/tensor.h"
+
+#ifndef __CUDACC__
+#include <Eigen/Eigen>
+#endif
+
+#include <unsupported/Eigen/CXX11/Tensor>
+
 namespace dynet {
 
 /**
