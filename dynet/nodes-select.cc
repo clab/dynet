@@ -1,3 +1,4 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-select.h"
 
 #include "dynet/nodes-impl-macros.h"
@@ -33,7 +34,7 @@ void SelectRows::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   for (unsigned i = 0; i < rm.size(); ++i) {
     DYNET_ARG_CHECK(rm[i] < xs[0]->d.rows(),
                             "Out-of-bounds index " << rm[i] << " in SelectRows over expression of dimensions " << xs[0]->d);
-    fx.t<4>().chip<0>(i).device(*dev.edevice) = xs[0]->t<4>().chip<0>(rm[i]);
+    t<4>(fx).chip<0>(i).device(*dev.edevice) = t<4>(*xs[0]).chip<0>(rm[i]);
   }
 }
 
@@ -47,7 +48,7 @@ void SelectRows::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectRows::backward");
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<4>().chip<0>(rm[i]).device(*dev.edevice) += dEdf.t<4>().chip<0>(i);
+    t<4>(dEdxi).chip<0>(rm[i]).device(*dev.edevice) += t<4>(dEdf).chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
@@ -78,7 +79,7 @@ void SelectCols::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   for (unsigned i = 0; i < rm.size(); ++i) {
     DYNET_ARG_CHECK(rm[i] < xs[0]->d.cols(),
                             "Out-of-bounds index " << rm[i] << " in SelectCols over expression of dimensions " << xs[0]->d);
-    fx.t<2>().chip<1>(i).device(*dev.edevice) = xs[0]->t<2>().chip<1>(rm[i]);
+    t<2>(fx).chip<1>(i).device(*dev.edevice) = t<2>(*xs[0]).chip<1>(rm[i]);
   }
 }
 
@@ -92,7 +93,7 @@ void SelectCols::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectCols::backward");
   auto& rm = *pcols;
   for (unsigned i = 0; i < rm.size(); ++i)
-    dEdxi.t<2>().chip<1>(rm[i]).device(*dev.edevice) += dEdf.t<2>().chip<1>(i);
+    t<2>(dEdxi).chip<1>(rm[i]).device(*dev.edevice) += t<2>(dEdf).chip<1>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectCols)
 
@@ -103,7 +104,7 @@ DYNET_NODE_INST_DEV_IMPL(SelectCols)
 string PickElement::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "pick(" << arg_names[0] << ',';
-  if(pval) { 
+  if(pval) {
     s << *pval;
   } else {
     DYNET_ASSERT(pvals, "Have neither index nor index vector in PickElement");
@@ -125,7 +126,7 @@ Dim PickElement::dim_forward(const vector<Dim>& xs) const {
                           "Tried to PickElement on dimension " << dimension << " bigger than input " << xs[0]);
   DYNET_ARG_CHECK(xs[0].nd < 4,
                           "PickElement not currently supported for tensors of 4 or more dimensions.");
-  
+
   Dim ret(xs[0]);
   if (pvals){
     DYNET_ARG_CHECK(xs[0].bd == 1 || xs[0].bd == pvals->size(),
@@ -145,23 +146,23 @@ Dim PickElement::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void PickElement::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if(pval) {
-    DYNET_ARG_CHECK(*pval < xs[0]->d[dimension], 
+    DYNET_ARG_CHECK(*pval < xs[0]->d[dimension],
                             "PickElement::forward_impl requested element " << *pval << " from a dimension of length " << xs[0]->d[dimension]);
     // TODO: This limit of up to 4 is somewhat arbitrary. We need to decide how to handle
     //       things with "maximum tensor size".
-    fx.tb<3>().device(*dev.edevice) = xs[0]->tb<4>().chip(*pval, dimension); 
+    tb<3>(fx).device(*dev.edevice) = tb<4>(*xs[0]).chip(*pval, dimension);
   } else {
     DYNET_ASSERT(pvals != nullptr, "Neither single nor vector of elements available in PickElement::forward");
     DYNET_ARG_CHECK(pvals->size() == fx.d.batch_elems(),
                             "In PickElement::forward, number of elements in the passed-in index vector (" <<  pvals->size() << ")"
                             " did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
     for(unsigned b = 0; b < pvals->size(); ++b) {
-      DYNET_ARG_CHECK((*pvals)[b] < xs[0]->d[dimension], 
+      DYNET_ARG_CHECK((*pvals)[b] < xs[0]->d[dimension],
                               "PickElement::forward_impl requested element " << (*pvals)[b] << " from a dimension of length " << xs[0]->d[dimension]);
       if(xs[0]->d.bd == 1){
-        fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->t<3>().chip((*pvals)[b], dimension); 
+        tb<2>(fx).chip<2>(b).device(*dev.edevice) = t<3>(*xs[0]).chip((*pvals)[b], dimension);
       }else{
-        fx.tb<2>().chip<2>(b).device(*dev.edevice) = xs[0]->tb<3>().chip<3>(b).chip((*pvals)[b], dimension); 
+        tb<2>(fx).chip<2>(b).device(*dev.edevice) = tb<3>(*xs[0]).chip<3>(b).chip((*pvals)[b], dimension);
       }
     }
   }
@@ -177,14 +178,14 @@ void PickElement::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in PickElement::backward");
   if(pval) {
-    dEdxi.tb<3>().chip(*pval, dimension).device(*dev.edevice) += dEdf.tb<2>();
+    tb<3>(dEdxi).chip(*pval, dimension).device(*dev.edevice) += tb<2>(dEdf);
   } else {
     DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickElement::forward");
     for(unsigned b = 0; b < pvals->size(); ++b){
       if(xs[0]->d.bd == 1){
-        dEdxi.t<3>().chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
+        t<3>(dEdxi).chip((*pvals)[b], dimension).device(*dev.edevice) += tb<2>(dEdf).chip<2>(b);
       }else{
-        dEdxi.tb<3>().chip<3>(b).chip((*pvals)[b], dimension).device(*dev.edevice) += dEdf.tb<2>().chip<2>(b);
+        tb<3>(dEdxi).chip<3>(b).chip((*pvals)[b], dimension).device(*dev.edevice) += tb<2>(dEdf).chip<2>(b);
       }
     }
   }
@@ -229,13 +230,13 @@ template<class MyDevice>
 void PickRange::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Eigen::DSizes<ptrdiff_t, 5> indices(0,0,0,0,0);
   indices[dim] = start;
-  Eigen::DSizes<ptrdiff_t, 5> sizes(static_cast<ptrdiff_t>(fx.d[0]), 
+  Eigen::DSizes<ptrdiff_t, 5> sizes(static_cast<ptrdiff_t>(fx.d[0]),
                                     static_cast<ptrdiff_t>(fx.d[1]),
                                     static_cast<ptrdiff_t>(fx.d[2]),
                                     static_cast<ptrdiff_t>(fx.d[3]),
                                     static_cast<ptrdiff_t>(fx.d.bd));
   sizes[dim] = end-start;
-  fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().slice(indices, sizes);
+  tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]).slice(indices, sizes);
 }
 
 // derivative is 0 in all dimensions except the slice range
@@ -248,13 +249,13 @@ void PickRange::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   Eigen::DSizes<ptrdiff_t, 5> indices(0,0,0,0,0);
   indices[dim] = start;
-  Eigen::DSizes<ptrdiff_t, 5> sizes(static_cast<ptrdiff_t>(fx.d[0]), 
+  Eigen::DSizes<ptrdiff_t, 5> sizes(static_cast<ptrdiff_t>(fx.d[0]),
                                     static_cast<ptrdiff_t>(fx.d[1]),
                                     static_cast<ptrdiff_t>(fx.d[2]),
                                     static_cast<ptrdiff_t>(fx.d[3]),
                                     static_cast<ptrdiff_t>(fx.d.bd));
   sizes[dim] = end-start;
-  dEdxi.tb<4>().slice(indices, sizes).device(*dev.edevice) += dEdf.tb<4>();
+  tb<4>(dEdxi).slice(indices, sizes).device(*dev.edevice) += tb<4>(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(PickRange)
 
@@ -302,16 +303,16 @@ void PickBatchElements::forward_dev_impl(const MyDevice & dev, const vector<cons
   if (pval) {
     DYNET_ARG_CHECK(*pval < xs[0]->d.bd,
                     "PickBatchElements::forward_impl requested element " << *pval << " from a batch size of " << xs[0]->d.bd);
-    fx.tvec().device(*dev.edevice) = xs[0]->tbvec().chip<1>(*pval);
+    tvec(fx).device(*dev.edevice) = tbvec(*xs[0]).chip<1>(*pval);
   } else {
     DYNET_ASSERT(pvals != nullptr, "Neither single nor vector of elements available in PickBatchElements::forward");
-    DYNET_ARG_CHECK(pvals->size() == fx.d.batch_elems(), 
+    DYNET_ARG_CHECK(pvals->size() == fx.d.batch_elems(),
                             "In PickBatchElements::forward, number of elements in the passed-in index vector (" << pvals->size() << ") "
                             "did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
     for (unsigned b = 0; b < pvals->size(); ++b) {
       DYNET_ARG_CHECK((*pvals)[b] < xs[0]->d.bd,
                               "PickBatchElements::forward_impl requested element " << (*pvals)[b] << " from a batch size of " << xs[0]->d.bd);
-      fx.tbvec().chip<1>(b).device(*dev.edevice) = xs[0]->tbvec().chip<1>((*pvals)[b]);
+      tbvec(fx).chip<1>(b).device(*dev.edevice) = tbvec(*xs[0]).chip<1>((*pvals)[b]);
     }
   }
 }
@@ -325,11 +326,11 @@ void PickBatchElements::backward_dev_impl(const MyDevice & dev,
                                   Tensor& dEdxi) const {
   DYNET_ASSERT(i == 0, "Failed dimension check in PickBatchElements::backward");
   if (pval) {
-    dEdxi.tbvec().chip<1>(*pval).device(*dev.edevice) += dEdf.tvec();
+    tbvec(dEdxi).chip<1>(*pval).device(*dev.edevice) += tvec(dEdf);
   } else {
     DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickBatchElements::backward");
     for (unsigned b = 0; b < pvals->size(); ++b)
-      dEdxi.tbvec().chip<1>((*pvals)[b]).device(*dev.edevice) += dEdf.tbvec().chip<1>(b);
+      tbvec(dEdxi).chip<1>((*pvals)[b]).device(*dev.edevice) += tbvec(dEdf).chip<1>(b);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PickBatchElements)

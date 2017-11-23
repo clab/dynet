@@ -1,3 +1,4 @@
+#include "dynet/tensor-eigen.h"
 #include <vector>
 #include <string>
 

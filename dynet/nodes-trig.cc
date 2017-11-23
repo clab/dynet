@@ -1,3 +1,4 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-trig.h"
 
 #include "dynet/nodes-impl-macros.h"
@@ -26,7 +27,7 @@ Dim Tanh::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Tanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().tanh();
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).tanh();
 }
 
 template<class MyDevice>
@@ -36,7 +37,7 @@ void Tanh::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
+  tvec(dEdxi).device(*dev.edevice) += tvec(fx).binaryExpr(tvec(dEdf), scalar_tanh_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Tanh)
 

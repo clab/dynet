@@ -1,3 +1,4 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-const.h"
 
 #include "dynet/nodes-impl-macros.h"
