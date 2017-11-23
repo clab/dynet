@@ -14,6 +14,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
+#include <cassert>
 
 using namespace std;
 using namespace dynet;

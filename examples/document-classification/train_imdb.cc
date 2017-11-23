@@ -29,6 +29,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <cassert>
 
 using namespace std;
 using namespace dynet;

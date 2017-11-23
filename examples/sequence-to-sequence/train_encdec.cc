@@ -8,6 +8,8 @@
 #include "dynet/io.h"
 #include "cl-args.h"
 
+#include <cassert>
+
 using namespace std;
 using namespace dynet;
 

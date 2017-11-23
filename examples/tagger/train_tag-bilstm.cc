@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cassert>
 
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"

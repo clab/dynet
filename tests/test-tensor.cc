@@ -4,6 +4,7 @@
 #include <dynet/dynet.h>
 #include <dynet/expr.h>
 #include <dynet/grad-check.h>
+#include <dynet/index-tensor.h>
 #include <boost/test/unit_test.hpp>
 #include "test.h"
 #include <stdexcept>
