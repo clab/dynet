@@ -51,8 +51,12 @@ public:
   }
   void show() {
     std::multimap<double, std::string> cumtimes_dst = flip_map(cumtimes);
+    double total_time = 0.0;
     for (auto &item : cumtimes_dst) {
-      std::cout << std::setprecision(4) << std::setw(11) << item.first << '\t' << item.second << std::endl;
+      total_time += item.first;
+    }
+    for (auto &item : cumtimes_dst) {
+      std::cout << std::setprecision(4) << std::setw(11) << item.first << '\t' << (100.0*item.first/total_time) << "%\t" << item.second << std::endl;
     }
   }
   std::map<std::string, double> cumtimes;
