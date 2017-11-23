@@ -402,7 +402,7 @@ void ComputationGraph::print_graphviz() const {
          << node->as_string(var_names);
     if (profiling_flag){
       cerr << " (MEM: ";
-      cerr << (node->aux_storage_size() + node->dim.size()) * sizeof(real) / 1000.0;
+      cerr << (node->aux_storage_size() + 2*node->dim.size()) * sizeof(real) / 1000.0;
       cerr << " kB)";
     }
     cerr << "\"];\n";
