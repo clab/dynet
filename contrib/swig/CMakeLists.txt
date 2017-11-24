@@ -147,7 +147,7 @@ if(INCLUDE_SCALA)
     COMMENT "Running sbt"
     OUTPUT scala_helper_uberjar
     DEPENDS dylib_into_jar
-    COMMAND ${SBT} assembly -Dbuildpath=${CMAKE_CURRENT_BINARY_DIR} -Dscalaversion=${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${SBT} assembly -Dbuildpath=${CMAKE_CURRENT_BINARY_DIR} -Dscalaversion=${SCALA_VERSION}
     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
   )
 
