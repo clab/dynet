@@ -976,7 +976,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
                        unsigned hidden_dim,
                        ParameterCollection& model,
                        bool ln_lstm = false,
-                       bool forget_bias = false);
+                       bool forget_bias = true);
 
   Expression back() const override;
   std::vector<Expression> final_h() const override;
