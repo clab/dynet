@@ -4580,12 +4580,12 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
         hidden_dim (int): Dimension of the recurrent units
         model (dynet.ParameterCollection): ParameterCollection to hold the parameters
         ln_lstm (bool): Whether to use layer normalization
-        forget_bias (bool): Whether to use forget gate bias
+        forget_bias (float): value to use as forget gate bias(default 1.0)
 
     """
     cdef CVanillaLSTMBuilder* thisvanillaptr
     cdef tuple _spec
-    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False, forget_bias=True):
+    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False, forget_bias=1.0):
         self._spec = (layers, input_dim, hidden_dim, ln_lstm, forget_bias)
         if layers > 0:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm, forget_bias)
