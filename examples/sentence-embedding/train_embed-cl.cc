@@ -1,5 +1,3 @@
-#include "dynet/nodes.h"
-#include "dynet/dynet.h"
 #include "dynet/training.h"
 #include "dynet/timing.h"
 #include "dynet/dict.h"
