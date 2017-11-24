@@ -485,7 +485,12 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     i_aot = pick_range(tmp, hid * 2, hid * 3);
     i_agt = pick_range(tmp, hid * 3, hid * 4);
     Expression i_it = logistic(i_ait);
-    Expression i_ft = logistic(i_aft + forget_bias);
+    if (forget_bias > 0.0)
+        tmp = logistic(i_aft + forget_bias);
+    else
+        tmp= logistic(i_aft);
+
+    Expression i_ft = tmp;
     Expression i_ot = logistic(i_aot);
     Expression i_gt = tanh(i_agt);
 
