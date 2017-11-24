@@ -162,7 +162,7 @@ namespace dynet {
         mask_x.v = static_cast<float*>(scratch_allocator->allocate(mask_x.d.size() * sizeof(float)));
 #ifdef __CUDACC__
         Eigen::array<int, 2> bcast = {1, (int)batch_size};
-        tbvec(mask_x).device(*dev.edevice) = xs[num_inputs+4]->tbvec().broadcast(bcast);
+        tbvec(mask_x).device(*dev.edevice) = tbvec(*xs[num_inputs+4]).broadcast(bcast);
 #else
         float *curr_ptr = mask_x.v, *end_ptr = curr_ptr + mask_x.d.size(), *in_ptr = xs[num_inputs+4]->v;
         do {
@@ -183,7 +183,7 @@ namespace dynet {
         mask_h.v = static_cast<float*>(scratch_allocator->allocate(mask_h.d.size() * sizeof(float)));
 #ifdef __CUDACC__
         Eigen::array<int, 2> bcast = {1, (int)batch_size};
-        tbvec(mask_h).device(*dev.edevice) = xs[num_inputs+5]->tbvec().broadcast(bcast);
+        tbvec(mask_h).device(*dev.edevice) = tbvec(*xs[num_inputs+5]).broadcast(bcast);
 #else
         float *curr_ptr = mask_h.v, *end_ptr = curr_ptr + mask_h.d.size(), *in_ptr = xs[num_inputs+5]->v;
         do {
@@ -298,7 +298,7 @@ namespace dynet {
         mask_x.v = static_cast<float*>(scratch_allocator->allocate(mask_x.d.size() * sizeof(float)));
 #ifdef __CUDACC__
         Eigen::array<int, 2> bcast = {1, (int)batch_size};
-        tbvec(mask_x).device(*dev.edevice) = xs[num_inputs+4]->tbvec().broadcast(bcast);
+        tbvec(mask_x).device(*dev.edevice) = tbvec(*xs[num_inputs+4]).broadcast(bcast);
 #else
         float *curr_ptr = mask_x.v, *end_ptr = curr_ptr + mask_x.d.size(), *in_ptr = xs[num_inputs+4]->v;
         do {
@@ -313,7 +313,7 @@ namespace dynet {
         mask_h.v = static_cast<float*>(scratch_allocator->allocate(mask_h.d.size() * sizeof(float)));
 #ifdef __CUDACC__
         Eigen::array<int, 2> bcast = {1, (int)batch_size};
-        tbvec(mask_h).device(*dev.edevice) = xs[num_inputs+5]->tbvec().broadcast(bcast);
+        tbvec(mask_h).device(*dev.edevice) = tbvec(*xs[num_inputs+5]).broadcast(bcast);
 #else
         float *curr_ptr = mask_h.v, *end_ptr = curr_ptr + mask_h.d.size(), *in_ptr = xs[num_inputs+5]->v;
         do {
