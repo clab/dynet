@@ -6,6 +6,7 @@
 #include <chrono>
 #include <iomanip>
 #include <map>
+#include <iterator>
 
 namespace dynet {
 
