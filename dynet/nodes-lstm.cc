@@ -200,17 +200,21 @@ namespace dynet {
     if(weightnoise_std > 0.f){
       Tensor Wx_noisy(Dim({hidden_dim*4, input_dim},1), nullptr, fx.device, fx.mem_pool);
       Wx_noisy.v = static_cast<float*>(scratch_allocator->allocate(Wx_noisy.d.size() * sizeof(float)));
-      TensorTools::randomize_normal(Wx_noisy, 0, weightnoise_std);
+      std::uniform_int_distribution<> seed_dist(1, 2147483647);
+      Eigen::internal::NormalRandomGenerator<float> normal_rg1(seed_dist(*rndeng));
+      Wx_noisy.tvec().device(*dev.edevice) = Wx_noisy.tvec().random(normal_rg1) * weightnoise_std;
       Wx_noisy.tvec().device(*dev.edevice) += Wx->tvec();
 
       Tensor Wh_noisy(Dim({hidden_dim*4, hidden_dim},1), nullptr, fx.device, fx.mem_pool);
       Wh_noisy.v = static_cast<float*>(scratch_allocator->allocate(Wh_noisy.d.size() * sizeof(float)));
-      TensorTools::randomize_normal(Wh_noisy, 0, weightnoise_std);
+      Eigen::internal::NormalRandomGenerator<float> normal_rg2(seed_dist(*rndeng));
+      Wh_noisy.tvec().device(*dev.edevice) = Wh_noisy.tvec().random(normal_rg2) * weightnoise_std;
       Wh_noisy.tvec().device(*dev.edevice) += Wh->tvec();
 
       Tensor b_noisy(Dim({hidden_dim*4, 1},1), nullptr, fx.device, fx.mem_pool);
       b_noisy.v = static_cast<float*>(scratch_allocator->allocate(b_noisy.d.size() * sizeof(float)));
-      TensorTools::randomize_normal(b_noisy, 0, weightnoise_std);
+      Eigen::internal::NormalRandomGenerator<float> normal_rg3(seed_dist(*rndeng));
+      b_noisy.tvec().device(*dev.edevice) = b_noisy.tvec().random(normal_rg3) * weightnoise_std;
       b_noisy.tvec().device(*dev.edevice) += b->tvec();
 
     } else {
