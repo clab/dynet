@@ -198,12 +198,14 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
    * \param model ParameterCollection holding the parameters
    * \param ln_lstm Whether to use layer normalization
+   * \param forget_bias Whether to use bias to forget gate(default = True)
    */
   explicit VanillaLSTMBuilder(unsigned layers,
                               unsigned input_dim,
                               unsigned hidden_dim,
                               ParameterCollection& model,
-                              bool ln_lstm = false);
+                              bool ln_lstm = false,
+                              bool forget_bias = true);
 
   Expression back() const override { return (cur == -1 ? h0.back() : h[cur].back()); }
   std::vector<Expression> final_h() const override { return (h.size() == 0 ? h0 : h.back()); }
@@ -266,7 +268,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    */
   void set_dropout_masks(unsigned batch_size = 1);
   /**
-   * \brief Get parameters in VanillaLSTMBuilder 
+   * \brief Get parameters in VanillaLSTMBuilder
    * \return list of points to ParameterStorage objects
    */
   ParameterCollection & get_parameter_collection() override;
@@ -304,6 +306,7 @@ public:
   unsigned input_dim, hid;
   float dropout_rate_h;
   bool ln_lstm;
+  bool forget_bias;
   bool dropout_masks_valid;
 
 private:
