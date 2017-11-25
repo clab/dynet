@@ -71,12 +71,12 @@ cdef class DynetParams: # {{{
         """Set parameters from config object:
         
         Attributes of conf object:
-            mem, seed, autobatch, autobatch_debug, weight_decay, shared_params, requested_gpus, gpu_mask
+            mem, seed, autobatch, profiling, weight_decay, shared_params, requested_gpus, gpu_mask
         """
         self.cparams.mem_descriptor = str(conf["mem"]).encode()
         self.cparams.random_seed=conf["seed"]
         self.cparams.autobatch = conf["autobatch"]
-        self.cparams.autobatch_debug = conf["autobatch_debug"]
+        self.cparams.profiling = conf["profiling"]
         self.cparams.weight_decay = conf["weight_decay"]
         self.cparams.shared_parameters = conf["shared_params"]
         if conf["requested_gpus"] >= 1:
@@ -160,16 +160,13 @@ cdef class DynetParams: # {{{
         else:
             self.cparams.autobatch = 0
 
-    cpdef set_autobatch_debug(self, bool autobatch_debug):
+    cpdef set_profiling(self, int profiling):
         """Activate autobatching debug
         
         Args:
-            autobatch(bool): Set to :code:`True` to activate autobatching debug
+            profiling(int): Set to a value > 0 to activate profiling
         """
-        if autobatch_debug:
-            self.cparams.autobatch_debug = 1
-        else:
-            self.cparams.autobatch_debug = 0
+        self.cparams.profiling = profiling
 
     cpdef set_weight_decay(self, float weight_decay):
         """Set weight decay parameter
@@ -3370,19 +3367,19 @@ cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0):
     """
     ensure_freshness(y);
     return Expression.from_cexpr(x.cg_version, c_pairwise_rank_loss(x.c(), y.c(), m))
-cpdef Expression poisson_loss(Expression x, unsigned y):
+cpdef Expression poisson_loss(Expression log_lambda, unsigned x):
     """Poisson loss
     
-    The negative log probability of :code:`y` according to a Poisson distribution with parameter :code:`x`. Useful in Poisson regression where, we try to predict the parameters of a Possion distribution to maximize the probability of data :code:`y`.
+    The negative log probability of :code:`x` according to a Poisson distribution with parameter :math:`\exp` :code:`log_lambda`. Useful in Poisson regression where, we try to predict the parameters of a Possion distribution to maximize the probability of data :code:`x`.
     
     Args:
-        x (dynet.Expression): The first input expression
-        y (dynet.Expression): The second input expression
+        log_lambda (dynet.Expression): The log of the Poisson distribution's lambda
+        x (int): The target value
     
     Returns:
         dynet.Expression: The Poisson loss
     """
-    return Expression.from_cexpr(x.cg_version, c_poisson_loss(x.c(), y))
+    return Expression.from_cexpr(log_lambda.cg_version, c_poisson_loss(log_lambda.c(), x))
 cpdef Expression huber_distance(Expression x, Expression y, float c=1.345):
     """Huber distance
     

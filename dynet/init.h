@@ -8,7 +8,7 @@ namespace dynet {
 
 extern float weight_decay_lambda;
 extern int autobatch_flag;
-extern int autobatch_debug_flag;
+extern int profiling_flag;
 
 /**
  * \brief Represents general parameters for dynet
@@ -21,7 +21,7 @@ struct DynetParams {
   std::string mem_descriptor; /**< Total memory to be allocated for Dynet */
   float weight_decay; /**< Weight decay rate for L2 regularization */
   int autobatch; /**< Whether to autobatch or not */
-  int autobatch_debug; /**< Whether to show autobatch debug info or not */
+  int profiling; /**< Whether to show autobatch debug info or not */
   bool shared_parameters; /**< TO DOCUMENT */
   bool ngpus_requested; /**< GPUs requested by number */
   bool ids_requested; /**< GPUs requested by ids */

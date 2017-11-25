@@ -116,6 +116,10 @@ the same as with the CPU backend case.
 
     -L/path/to/dynet/build/dynet -ldynet
 
+If you know the CUDA architecture supported by your GPU (e.g. by referencing
+`this page <http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/>`__)
+you can speed compilation significantly by adding ``-DCUDA_ARCH=XXX`` where
+``XXX`` is your architecture number.
 
 cuDNN support
 ~~~~~~~~~~~~~

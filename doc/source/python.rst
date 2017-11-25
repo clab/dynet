@@ -260,9 +260,14 @@ The installation process is pretty much the same, while adding the
 
     cmake .. -DEIGEN3_INCLUDE_DIR=$PATH_TO_EIGEN -DPYTHON=$PATH_TO_PYTHON -DBACKEND=cuda
 
-(if CUDA is installed in a non-standard location and ``cmake`` cannot
+
+If you know the CUDA architecture supported by your GPU (e.g. by referencing
+`this page <http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/>`__)
+you can speed compilation significantly by adding ``-DCUDA_ARCH=XXX`` where
+``XXX`` is your architecture number.
+If CUDA is installed in a non-standard location and ``cmake`` cannot
 find it, you can specify also
-``-DCUDA_TOOLKIT_ROOT_DIR=/path/to/cuda``.)
+``-DCUDA_TOOLKIT_ROOT_DIR=/path/to/cuda``.
 
 Now, build the Python modules (as above, we assume Cython is installed):
 
