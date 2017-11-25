@@ -6,6 +6,8 @@
 #include <chrono>
 #include <iomanip>
 #include <map>
+#include <algorithm>
+#include <iterator>
 
 // for sorting timer output
 template<typename A, typename B> std::pair<B,A> flip_pair(const std::pair<A,B> &p) { return std::pair<B,A>(p.second, p.first); }
