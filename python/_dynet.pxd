@@ -11,7 +11,7 @@ cdef extern from "dynet/init.h" namespace "dynet":
         string mem_descriptor
         float weight_decay
         int autobatch
-        int autobatch_debug
+        int profiling
         bool shared_parameters
         bool ngpus_requested
         bool ids_requested
@@ -467,7 +467,7 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
 
     cdef cppclass CVanillaLSTMBuilder "dynet::VanillaLSTMBuilder" (CRNNBuilder):
         CVanillaLSTMBuilder()
-        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm)
+        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm, float forget_bias)
         void set_dropout(float d, float d_r)
         void set_dropout_masks(unsigned batch_size)
 

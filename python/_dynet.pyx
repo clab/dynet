@@ -71,12 +71,12 @@ cdef class DynetParams: # {{{
         """Set parameters from config object:
         
         Attributes of conf object:
-            mem, seed, autobatch, autobatch_debug, weight_decay, shared_params, requested_gpus, gpu_mask
+            mem, seed, autobatch, profiling, weight_decay, shared_params, requested_gpus, gpu_mask
         """
         self.cparams.mem_descriptor = str(conf["mem"]).encode()
         self.cparams.random_seed=conf["seed"]
         self.cparams.autobatch = conf["autobatch"]
-        self.cparams.autobatch_debug = conf["autobatch_debug"]
+        self.cparams.profiling = conf["profiling"]
         self.cparams.weight_decay = conf["weight_decay"]
         self.cparams.shared_parameters = conf["shared_params"]
         if conf["requested_gpus"] >= 1:
@@ -160,16 +160,13 @@ cdef class DynetParams: # {{{
         else:
             self.cparams.autobatch = 0
 
-    cpdef set_autobatch_debug(self, bool autobatch_debug):
+    cpdef set_profiling(self, int profiling):
         """Activate autobatching debug
         
         Args:
-            autobatch(bool): Set to :code:`True` to activate autobatching debug
+            profiling(int): Set to a value > 0 to activate profiling
         """
-        if autobatch_debug:
-            self.cparams.autobatch_debug = 1
-        else:
-            self.cparams.autobatch_debug = 0
+        self.cparams.profiling = profiling
 
     cpdef set_weight_decay(self, float weight_decay):
         """Set weight decay parameter
@@ -4583,14 +4580,14 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
         hidden_dim (int): Dimension of the recurrent units
         model (dynet.ParameterCollection): ParameterCollection to hold the parameters
         ln_lstm (bool): Whether to use layer normalization
-
+        forget_bias (float): value to use as forget gate bias(default 1.0)
     """
     cdef CVanillaLSTMBuilder* thisvanillaptr
     cdef tuple _spec
-    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False):
-        self._spec = (layers, input_dim, hidden_dim, ln_lstm)
+    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False, forget_bias=1.0):
+        self._spec = (layers, input_dim, hidden_dim, ln_lstm, forget_bias)
         if layers > 0:
-            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm)
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm, forget_bias)
         else:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
@@ -4600,8 +4597,8 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
 
     @classmethod
     def from_spec(cls, spec, model):
-        layers, input_dim, hidden_dim, ln_lstm = spec
-        return VanillaLSTMBuilder(layers, input_dim, hidden_dim, model, ln_lstm)
+        layers, input_dim, hidden_dim, ln_lstm, forget_bias = spec
+        return VanillaLSTMBuilder(layers, input_dim, hidden_dim, model, ln_lstm, forget_bias)
 
 # TODO rename to parameters()?
     cpdef get_parameters(self):
