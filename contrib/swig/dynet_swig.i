@@ -975,7 +975,8 @@ struct VanillaLSTMBuilder : public RNNBuilder {
                        unsigned input_dim,
                        unsigned hidden_dim,
                        ParameterCollection& model,
-                       bool ln_lstm = false);
+                       bool ln_lstm = false,
+                       float forget_bias = 1.f);
 
   Expression back() const override;
   std::vector<Expression> final_h() const override;
@@ -1021,6 +1022,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   unsigned input_dim, hid;
   float dropout_rate_h;
   bool ln_lstm;
+  float forget_bias;
   bool dropout_masks_valid;
 };
 
