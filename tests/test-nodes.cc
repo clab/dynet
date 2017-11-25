@@ -1814,6 +1814,93 @@ BOOST_AUTO_TEST_CASE( pickneglogsoftmax_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression strided_select(const Expression& x, vector<unsigned>& indices);
+BOOST_AUTO_TEST_CASE( strided_select_gradient_noop ) {
+  dynet::ComputationGraph cg;
+  const vector<int> strides = {};
+  Expression x1 = parameter(cg, param_square1);
+  Expression y = strided_select(x1, strides);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+  BOOST_CHECK(x1.dim().size() == y.dim().size());
+}
+
+// Expression strided_select(const Expression& x, vector<unsigned>& indices);
+BOOST_AUTO_TEST_CASE( strided_select_gradient ) {
+  dynet::ComputationGraph cg;
+  for(int stride=1;stride<4;stride++){
+    const vector<int> strides = {stride,stride,stride};
+    Expression x1 = parameter(cg, param_cube1);
+    Expression y3 = strided_select(x1, strides);
+    Expression z = sum_elems(y3);
+    BOOST_CHECK(check_grad(mod, z, 0));
+  }
+}
+// Expression strided_select(const Expression& x, vector<unsigned>& indices);
+BOOST_AUTO_TEST_CASE( strided_select_gradient2 ) {
+  dynet::ComputationGraph cg;
+  for(int from=0;from<2;from++){
+    for(int to=from+1;to<4;to++){
+      for(int stride=1;stride<4;stride++){
+        const vector<int> strides = {stride,stride,stride};
+        const vector<int> to_range = {to,to,to};
+        const vector<int> from_range = {from,from,from};
+        Expression x1 = parameter(cg, param_cube1);
+        Expression y = strided_select(x1, strides, from_range, to_range);
+        Expression z = sum_elems(y);
+        BOOST_CHECK(check_grad(mod, z, 0));
+      }
+    }
+  }
+}
+// Expression strided_select(const Expression& x, vector<unsigned>& indices);
+BOOST_AUTO_TEST_CASE( strided_select_gradient3 ) {
+  dynet::ComputationGraph cg;
+  for(int from=0;from<2;from++){
+    for(int stride=1;stride<4;stride++){
+      const vector<int> strides = {stride,stride,stride};
+      const vector<int> from_range = {from,from,from};
+      Expression x1 = parameter(cg, param_cube1);
+      Expression y2 = strided_select(x1, strides, from_range);
+      Expression z = sum_elems(y2);
+      BOOST_CHECK(check_grad(mod, z, 0));
+    }
+  }
+}
+// Expression strided_select(const Expression& x, vector<unsigned>& indices);
+BOOST_AUTO_TEST_CASE( strided_select_gradient4 ) {
+  dynet::ComputationGraph cg;
+  for(int from=0;from<2;from++){
+    for(int to=from+1;to<4;to++){
+      for(int stride=1;stride<4;stride++){
+        const vector<int> strides = {stride,1,stride,stride};
+        const vector<int> from_range = {from,0,from,from};
+        const vector<int> to_range = {to,1,to,to};
+        Expression x1 = reshape(parameter(cg, param_cube1), Dim({3,1,3},3));
+        Expression y = strided_select(x1, strides, from_range, to_range);
+        Expression z = sum_batches(sum_elems(y));
+        BOOST_CHECK(check_grad(mod, z, 0));
+      }
+    }
+  }
+}
+// Expression strided_select(const Expression& x, vector<unsigned>& indices);
+BOOST_AUTO_TEST_CASE( strided_select_gradient5 ) {
+  dynet::ComputationGraph cg;
+  for(int from=0;from<2;from++){
+    for(int to=from+1;to<4;to++){
+      for(int stride=1;stride<4;stride++){
+        const vector<int> strides = {stride,stride};
+        const vector<int> from_range = {from,from};
+        const vector<int> to_range = {to,to};
+        Expression x1 = reshape(parameter(cg, param_cube1), Dim({3,3,3,1},1));
+        Expression y = strided_select(x1, strides, from_range, to_range);
+        Expression z = sum_batches(sum_elems(y));
+        BOOST_CHECK(check_grad(mod, z, 0));
+      }
+    }
+  }
+}
 
 // Expression sum_elems(x);
 BOOST_AUTO_TEST_CASE( sum_elems_gradient ) {
