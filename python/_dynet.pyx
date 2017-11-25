@@ -4580,7 +4580,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
         hidden_dim (int): Dimension of the recurrent units
         model (dynet.ParameterCollection): ParameterCollection to hold the parameters
         ln_lstm (bool): Whether to use layer normalization
-	forget_bias (float): value to use as forget gate bias(default 1.0)
+        forget_bias (float): value to use as forget gate bias(default 1.0)
     """
     cdef CVanillaLSTMBuilder* thisvanillaptr
     cdef tuple _spec
