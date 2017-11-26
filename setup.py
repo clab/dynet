@@ -5,6 +5,7 @@ import zipfile
 import sys
 from distutils.command.build import build as _build
 from distutils.command.build_py import build_py as _build_py
+from distutils.command.install_data import install_data as _install_data
 from distutils.errors import DistutilsSetupError
 from distutils.spawn import find_executable
 from distutils.sysconfig import get_python_lib
@@ -293,12 +294,11 @@ class build(_build):
             if run_process(make_cmd) != 0:
                 raise DistutilsSetupError(" ".join(make_cmd))
 
-            if platform.system() == "Darwin":
-                for lib in DATA_FILES:
-                    copy(lib, get_python_lib())  # Copy to loader_path (for installing from source)
-                    new_install_name = "@loader_path/" + os.path.basename(lib)
-                    install_name_tool_cmd = ["install_name_tool", "-id", new_install_name, lib]
-                    log.info("Fixing install_name for %r..." % lib)
+            if platform.system() == "Darwin":  # macOS
+                for filename in DATA_FILES:
+                    new_install_name = "@loader_path/" + os.path.basename(filename)
+                    install_name_tool_cmd = ["install_name_tool", "-id", new_install_name, filename]
+                    log.info("fixing install_name for %s to %r" % (filename, new_install_name))
                     if run_process(install_name_tool_cmd) != 0:
                         raise DistutilsSetupError(" ".join(install_name_tool_cmd))
 
@@ -315,6 +315,17 @@ class build_py(_build_py):
         os.chdir(os.path.join(BUILD_DIR, "python"))
         log.info("Building Python files...")
         _build_py.run(self)
+
+
+class install_data(_install_data):
+    def run(self):
+        self.data_files = [(p, f) if self.is_wheel(p) else
+                           (get_python_lib(), f) if platform.system() == "Darwin" else
+                           (p, []) for p, f in self.data_files]
+        _install_data.run(self)
+
+    def is_wheel(self, path):
+        return os.path.basename(os.path.abspath(os.path.join(self.install_dir, path))) == "wheel"
 
 
 class build_ext(_build_ext):
@@ -382,8 +393,8 @@ setup(
     url="https://github.com/clab/dynet",
     download_url="https://github.com/clab/dynet/releases",
     license="Apache 2.0",
-    cmdclass={"build": build, "build_py": build_py, "build_ext": build_ext},
+    cmdclass={"build": build, "build_py": build_py, "install_data": install_data, "build_ext": build_ext},
     ext_modules=TARGET,
     py_modules=["dynet", "dynet_viz", "dynet_config"],
-    data_files=[("../..", DATA_FILES)],
+    data_files=[(os.path.join("..", ".."), DATA_FILES)],
 )
