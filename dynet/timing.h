@@ -6,6 +6,12 @@
 #include <chrono>
 #include <iomanip>
 #include <map>
+#include <algorithm>
+#include <iterator>
+
+// for sorting timer output
+template<typename A, typename B> std::pair<B,A> flip_pair(const std::pair<A,B> &p) { return std::pair<B,A>(p.second, p.first); }
+template<typename A, typename B> std::multimap<B,A> flip_map(const std::map<A,B> &src) { std::multimap<B,A> dst; std::transform(src.begin(), src.end(), std::inserter(dst, dst.begin()),flip_pair<A,B>);return dst;}
 
 namespace dynet {
 
@@ -34,12 +40,28 @@ class NamedTimer {
 public:
   ~NamedTimer() { 
     if (timers.size()>0) {
-      std::cout << "Timing Info:" << std::endl; show();
+      std::cout << "Timing Info:" << std::endl;
+      show();
     }
   }
-  void start(std::string name) { Timing t; timers[name] = t; }
-  void stop(std::string name) { cumtimes[name] += (timers[name]).stop(); }
-  void show() { for (auto &item : cumtimes) { std::cout << std::setprecision(4) << std::setw(11) << item.second << '\t' << item.first << std::endl; } }
+  void start(std::string name) {
+    Timing t;
+    timers[name] = t;
+  }
+  void stop(std::string name) {
+    cumtimes[name] += (timers[name]).stop();
+  }
+  void show() {
+    std::multimap<double, std::string> cumtimes_dst = flip_map(cumtimes);
+    double total_time = 0.0;
+    for (auto &item : cumtimes_dst) {
+      total_time += item.first;
+    }
+    for (auto &item : cumtimes_dst) {
+      std::cout << std::setprecision(4) << std::setw(11) << item.first << '\t' << (100.0*item.first/total_time) << "%\t" << item.second << std::endl;
+    }
+    std::cout << std::setprecision(4) << std::setw(11) << total_time << "\t100%\t(total time)" << std::endl;
+  }
   std::map<std::string, double> cumtimes;
   std::map<std::string, Timing> timers;
 };

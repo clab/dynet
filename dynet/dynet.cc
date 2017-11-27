@@ -1,3 +1,5 @@
+#include <iomanip>
+
 #include "dynet/dynet.h"
 
 #include "dynet/exec.h"
@@ -391,6 +393,9 @@ void ComputationGraph::set_check_validity(bool cv) {
   check_validity = cv;
 }
 
+// for sorting
+template<typename A, typename B> std::pair<B,A> flip_pair(const std::pair<A,B> &p) { return std::pair<B,A>(p.second, p.first); }
+template<typename A, typename B> std::multimap<B,A> flip_map(const std::map<A,B> &src) { std::multimap<B,A> dst; std::transform(src.begin(), src.end(), std::inserter(dst, dst.begin()),flip_pair<A,B>);return dst;}
 void ComputationGraph::print_graphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";
   unsigned nc = 0;
@@ -399,12 +404,39 @@ void ComputationGraph::print_graphviz() const {
     for (auto arg : node->args)
       var_names.push_back(string("v") + to_string((unsigned)arg));
     cerr << "  N" << nc << " [label=\"v" << nc << " = "
-         << node->as_string(var_names) << "\"];\n";
+         << node->as_string(var_names);
+    if (profiling_flag){
+      cerr << " (MEM: ";
+      cerr << std::setprecision(4) << std::setw(11) << (node->aux_storage_size() + 2*node->dim.size()) * sizeof(real) / 1024.0;
+      cerr << " KiB)";
+    }
+    cerr << "\"];\n";
     for (auto arg : node->args)
       cerr << "  N" << ((unsigned)arg) << " -> N" << nc << ";\n";
     ++nc;
   }
   cerr << "}\n";
+
+  if(profiling_flag>1){
+    cerr << "\nAggregated nodes, sorted by memory consumption:\n";
+    std::map<string,unsigned> nodes_map, count_map;
+    double total_memory = 0;
+    for (auto node : nodes) {
+      unsigned mem = (node->aux_storage_size() + 2*node->dim.size()) * sizeof(real);
+      if(nodes_map.count(node->as_dummy_string()) == 0){
+        nodes_map[node->as_dummy_string()] = 0;
+        count_map[node->as_dummy_string()] = 0;
+      }
+      nodes_map[node->as_dummy_string()] += mem;
+      count_map[node->as_dummy_string()] += 1;
+      total_memory += mem;
+    }
+    std::multimap<unsigned,string> nodes_map_dst = flip_map(nodes_map);
+    for (auto &item : nodes_map_dst) {
+      std::cerr << std::setprecision(4) << std::setw(11) << (item.first/1024.0) << " KiB\t" << (100.0*(double)item.first/total_memory) << "%\t" << "called " << count_map[item.second] << "x\t" << item.second << std::endl;
+    }
+    std::cerr << std::setprecision(4) << std::setw(11) << (total_memory/1024.0) << " KiB\t100%\t(total)" << std::endl;
+  }
 }
 
 }  // namespace dynet

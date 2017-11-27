@@ -11,7 +11,7 @@ cdef extern from "dynet/init.h" namespace "dynet":
         string mem_descriptor
         float weight_decay
         int autobatch
-        int autobatch_debug
+        int profiling
         bool shared_parameters
         bool ngpus_requested
         bool ids_requested
@@ -380,6 +380,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
 
     CExpression c_pick_batch_elems "dynet::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
     CExpression c_pick_batch_elem "dynet::pick_batch_elem" (CExpression& x, unsigned v) except + #
+    CExpression c_strided_select "dynet::strided_select" (CExpression& x, vector[int] strides, vector[int] range_from, vector[int] range_to) except +
+
     CExpression c_pickneglogsoftmax "dynet::pickneglogsoftmax" (CExpression& x, unsigned v) except + #
     CExpression c_pickneglogsoftmax "dynet::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) except + #
 
@@ -467,7 +469,7 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
 
     cdef cppclass CVanillaLSTMBuilder "dynet::VanillaLSTMBuilder" (CRNNBuilder):
         CVanillaLSTMBuilder()
-        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm)
+        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm, float forget_bias)
         void set_dropout(float d, float d_r)
         void set_dropout_masks(unsigned batch_size)
 

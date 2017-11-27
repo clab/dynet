@@ -71,12 +71,12 @@ cdef class DynetParams: # {{{
         """Set parameters from config object:
         
         Attributes of conf object:
-            mem, seed, autobatch, autobatch_debug, weight_decay, shared_params, requested_gpus, gpu_mask
+            mem, seed, autobatch, profiling, weight_decay, shared_params, requested_gpus, gpu_mask
         """
         self.cparams.mem_descriptor = str(conf["mem"]).encode()
         self.cparams.random_seed=conf["seed"]
         self.cparams.autobatch = conf["autobatch"]
-        self.cparams.autobatch_debug = conf["autobatch_debug"]
+        self.cparams.profiling = conf["profiling"]
         self.cparams.weight_decay = conf["weight_decay"]
         self.cparams.shared_parameters = conf["shared_params"]
         if conf["requested_gpus"] >= 1:
@@ -160,16 +160,13 @@ cdef class DynetParams: # {{{
         else:
             self.cparams.autobatch = 0
 
-    cpdef set_autobatch_debug(self, bool autobatch_debug):
+    cpdef set_profiling(self, int profiling):
         """Activate autobatching debug
         
         Args:
-            autobatch(bool): Set to :code:`True` to activate autobatching debug
+            profiling(int): Set to a value > 0 to activate profiling
         """
-        if autobatch_debug:
-            self.cparams.autobatch_debug = 1
-        else:
-            self.cparams.autobatch_debug = 0
+        self.cparams.profiling = profiling
 
     cpdef set_weight_decay(self, float weight_decay):
         """Set weight decay parameter
@@ -3370,19 +3367,19 @@ cpdef Expression pairwise_rank_loss(Expression x, Expression y, float m=1.0):
     """
     ensure_freshness(y);
     return Expression.from_cexpr(x.cg_version, c_pairwise_rank_loss(x.c(), y.c(), m))
-cpdef Expression poisson_loss(Expression x, unsigned y):
+cpdef Expression poisson_loss(Expression log_lambda, unsigned x):
     """Poisson loss
     
-    The negative log probability of :code:`y` according to a Poisson distribution with parameter :code:`x`. Useful in Poisson regression where, we try to predict the parameters of a Possion distribution to maximize the probability of data :code:`y`.
+    The negative log probability of :code:`x` according to a Poisson distribution with parameter :math:`\exp` :code:`log_lambda`. Useful in Poisson regression where, we try to predict the parameters of a Possion distribution to maximize the probability of data :code:`x`.
     
     Args:
-        x (dynet.Expression): The first input expression
-        y (dynet.Expression): The second input expression
+        log_lambda (dynet.Expression): The log of the Poisson distribution's lambda
+        x (int): The target value
     
     Returns:
         dynet.Expression: The Poisson loss
     """
-    return Expression.from_cexpr(x.cg_version, c_poisson_loss(x.c(), y))
+    return Expression.from_cexpr(log_lambda.cg_version, c_poisson_loss(log_lambda.c(), x))
 cpdef Expression huber_distance(Expression x, Expression y, float c=1.345):
     """Huber distance
     
@@ -3620,6 +3617,23 @@ cpdef Expression pick_batch_elems(Expression x, vector[unsigned] vs):
         dynet.Expression: The expression of picked batch elements. The batch elements is a tensor whose batch dimension equals to the size of list `v`.
     """
     return Expression.from_cexpr(x.cg_version, c_pick_batch_elems(x.c(), vs))
+
+cpdef Expression strided_select(Expression x, vector[int] strides, vector[int] range_from, vector[int] range_to):
+    """Strided select in multiple dimensions.
+    
+    Select a range and/or stride of elements from an expression.
+
+    Args:
+        x (dynet.Expression): Input expression
+        strides (list): List of strides for each dimension, must be >= 1. Dimensions not included default to 1. Batch dimension can be included as very last dimension.
+        range_from (list):    List of 0-based offsets (inclusive) for each dimension, must be >= 0. Dimensions not included default to 0. Batch dimension can be included as very last dimension.
+        range_to (list):      List of highest 0-based index to select (exclusive) for each dimension, must be >= 0. Dimensions not included default to the corresponding dim size. Batch dimension can be included as very last dimension.
+            
+    Returns:
+        dynet.Expression: The value of x[from[0]:to[0]:strides[0],..] (as it would be in numpy syntax)
+    """
+    return Expression.from_cexpr(x.cg_version, c_strided_select(x.c(), strides, range_from, range_to))
+
 #expr-float
 cpdef Expression noise(Expression x, float stddev):
     """Additive gaussian noise
@@ -4583,14 +4597,14 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
         hidden_dim (int): Dimension of the recurrent units
         model (dynet.ParameterCollection): ParameterCollection to hold the parameters
         ln_lstm (bool): Whether to use layer normalization
-
+        forget_bias (float): value to use as forget gate bias(default 1.0)
     """
     cdef CVanillaLSTMBuilder* thisvanillaptr
     cdef tuple _spec
-    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False):
-        self._spec = (layers, input_dim, hidden_dim, ln_lstm)
+    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False, forget_bias=1.0):
+        self._spec = (layers, input_dim, hidden_dim, ln_lstm, forget_bias)
         if layers > 0:
-            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm)
+            self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm, forget_bias)
         else:
             self.thisvanillaptr = self.thisptr = new CVanillaLSTMBuilder()
         self.cg_version = -1
@@ -4600,8 +4614,8 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
 
     @classmethod
     def from_spec(cls, spec, model):
-        layers, input_dim, hidden_dim, ln_lstm = spec
-        return VanillaLSTMBuilder(layers, input_dim, hidden_dim, model, ln_lstm)
+        layers, input_dim, hidden_dim, ln_lstm, forget_bias = spec
+        return VanillaLSTMBuilder(layers, input_dim, hidden_dim, model, ln_lstm, forget_bias)
 
 # TODO rename to parameters()?
     cpdef get_parameters(self):
