@@ -80,7 +80,7 @@ void DropoutDim::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   std::uniform_int_distribution<> seed_dist(1, 2147483647);
   Eigen::internal::UniformRandomGenerator<float> uni_rg(seed_dist(*rndeng));
   m.tvec().device(*dev.edevice) = m.tvec().random(uni_rg);
-  m.tvec().device(*dev.edevice) = (m.tvec() < m.tvec().constant((1.f-p))).cast<float>() * 1.f / (1.f-p);
+  m.tvec().device(*dev.edevice) = (m.tvec() < m.tvec().constant((1.f-p))).cast<float>() / (1.f-p);
 
   Eigen::array<ptrdiff_t, 4> bcast = {1, 1, 1, 1}; bcast[dimension] = xs[0]->d[dimension];
   fx.tb<3>().device(*dev.edevice) = xs[0]->tb<3>() * m.tb<3>().broadcast(bcast);
