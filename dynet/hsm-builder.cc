@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "dynet/param-init.h"
+#include "dynet/rand.h"
 
 using namespace std;
 

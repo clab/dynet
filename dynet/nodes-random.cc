@@ -1,3 +1,4 @@
+#include "dynet/rand.h"
 #include "dynet/nodes-random.h"
 
 #include "dynet/nodes-macros.h"
@@ -25,8 +26,7 @@ Dim GaussianNoise::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void GaussianNoise::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  std::uniform_int_distribution<> seed_dist(1, 2147483647);
-  Eigen::internal::NormalRandomGenerator<float> normal_rg(seed_dist(*rndeng));
+  Eigen::internal::NormalRandomGenerator<float> normal_rg(draw_random_seed());
   fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[0]->tvec().random(normal_rg) * stddev;
 }
 
@@ -60,8 +60,7 @@ Dim RandomNormal::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void RandomNormal::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomNormal::forward");
-  std::uniform_int_distribution<> seed_dist(1, 2147483647);
-  Eigen::internal::NormalRandomGenerator<float> normal_rg(seed_dist(*rndeng));
+  Eigen::internal::NormalRandomGenerator<float> normal_rg(draw_random_seed());
   fx.tvec().device(*dev.edevice) = fx.tvec().random(normal_rg);
 }
 
@@ -95,8 +94,7 @@ Dim RandomBernoulli::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void RandomBernoulli::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomBernoulli::forward");
-  std::uniform_int_distribution<> seed_dist(1, 2147483647);
-  Eigen::internal::UniformRandomGenerator<float> uni_rg(seed_dist(*rndeng));
+  Eigen::internal::UniformRandomGenerator<float> uni_rg(draw_random_seed());
   fx.tvec().device(*dev.edevice) = fx.tvec().random(uni_rg);
   fx.tvec().device(*dev.edevice) = (fx.tvec() < fx.tvec().constant(p)).cast<float>() * scale;
 }
@@ -131,8 +129,7 @@ Dim RandomUniform::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void RandomUniform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomUniform::forward");
-  std::uniform_int_distribution<> seed_dist(1, 2147483647);
-  Eigen::internal::UniformRandomGenerator<float> uni_rg(seed_dist(*rndeng));
+  Eigen::internal::UniformRandomGenerator<float> uni_rg(draw_random_seed());
   fx.tvec().device(*dev.edevice) = (fx.tvec().random(uni_rg) * (right-left)) + left;
 }
 
@@ -167,8 +164,7 @@ template<class MyDevice>
 void RandomGumbel::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomGumbel::forward");
   DYNET_ARG_CHECK(mu == 0.0 && beta == 1.0, "RandomGumbel only supports Gumbel(0,1) at the moment (pull requests welcome)");
-  std::uniform_int_distribution<> seed_dist(1, 2147483647);
-  Eigen::internal::UniformRandomGenerator<float> uni_rg(seed_dist(*rndeng));
+  Eigen::internal::UniformRandomGenerator<float> uni_rg(draw_random_seed());
   fx.tvec().device(*dev.edevice) = fx.tvec().random(uni_rg);
   float eps = 1e-20;
   fx.tvec().device(*dev.edevice) = -(-fx.tvec().cwiseMax(eps).log()).cwiseMax(eps).log();

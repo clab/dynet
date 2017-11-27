@@ -5,6 +5,7 @@
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 #include "dynet/io.h"
+#include "dynet/rand.h"
 
 #include <iostream>
 #include <fstream>

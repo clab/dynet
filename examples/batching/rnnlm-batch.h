@@ -19,6 +19,7 @@
 #include "dynet/lstm.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
+#include "dynet/rand.h"
 
 #include <iostream>
 #include <fstream>

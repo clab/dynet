@@ -729,28 +729,6 @@ struct TensorTools {
 
 };
 
-/**
- * \ingroup tensor
- * \brief This is a helper function to sample uniformly in \f$[0,1]\f$
- * \return \f$x\sim\mathcal U([0,1])\f$
- */
-real rand01();
-/**
- * \ingroup tensor
- * \brief This is a helper function to sample uniformly in \f$\{0,\dots,n-1\}\f$
- *
- * \param n Upper bound (excluded)
- * \return \f$x\sim\mathcal U(\{0,\dots,n-1\})\f$
- */
-int rand0n(int n);
-/**
- * \ingroup tensor
- * \brief This is a helper function to sample from a normalized gaussian distribution
- *
- * \return \f$x\sim\mathcal N(0,1)\f$
- */
-real rand_normal();
-
 } // namespace dynet
 
 #endif

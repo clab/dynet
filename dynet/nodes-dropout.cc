@@ -1,3 +1,4 @@
+#include "dynet/rand.h"
 #include "dynet/nodes-dropout.h"
 
 #include "dynet/nodes-macros.h"
@@ -30,8 +31,7 @@ size_t Dropout::aux_storage_size() const {
 template<class MyDevice>
 void Dropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  std::uniform_int_distribution<> seed_dist(1, 2147483647);
-  Eigen::internal::UniformRandomGenerator<float> uni_rg(seed_dist(*rndeng));
+  Eigen::internal::UniformRandomGenerator<float> uni_rg(draw_random_seed());
   m.tvec().device(*dev.edevice) = m.tvec().random(uni_rg);
   m.tvec().device(*dev.edevice) = (m.tvec() < m.tvec().constant((1.f-p))).cast<float>() * 1.f / (1.f-p);
   fx.tvec().device(*dev.edevice) = xs[0]->tvec() * m.tvec();
@@ -77,8 +77,7 @@ void DropoutDim::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   Dim mask_dim(dim);
   mask_dim.d[dimension]=1;
   Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  std::uniform_int_distribution<> seed_dist(1, 2147483647);
-  Eigen::internal::UniformRandomGenerator<float> uni_rg(seed_dist(*rndeng));
+  Eigen::internal::UniformRandomGenerator<float> uni_rg(draw_random_seed());
   m.tvec().device(*dev.edevice) = m.tvec().random(uni_rg);
   m.tvec().device(*dev.edevice) = (m.tvec() < m.tvec().constant((1.f-p))).cast<float>() / (1.f-p);
 
@@ -126,8 +125,7 @@ template<class MyDevice>
 void DropoutBatch::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Dim mask_dim({1},xs[0]->d.batch_elems());
   Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  std::uniform_int_distribution<> seed_dist(1, 2147483647);
-  Eigen::internal::UniformRandomGenerator<float> uni_rg(seed_dist(*rndeng));
+  Eigen::internal::UniformRandomGenerator<float> uni_rg(draw_random_seed());
   m.tvec().device(*dev.edevice) = m.tvec().random(uni_rg);
   m.tvec().device(*dev.edevice) = (m.tvec() < m.tvec().constant((1.f-p))).cast<float>() * 1.f / (1.f-p);
   Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
