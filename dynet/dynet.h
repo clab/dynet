@@ -732,6 +732,15 @@ struct Node {
   // default when there is no input
   Device* device;
 
+  // for inplace operations (currently only READ-inplacing)
+  /**< Type for the inplace operations: NOPE(non-inplace), READ(no changes to the memory), WRITE(unrecoverable changes possibly) */
+  enum class INPLACE_TYPE { NOPE, READ, WRITE };
+  INPLACE_TYPE forward_inplace_state{INPLACE_TYPE::NOPE};
+  INPLACE_TYPE backward_inplace_state{INPLACE_TYPE::NOPE};
+  inline bool forward_inplaced() const { return forward_inplace_state != INPLACE_TYPE::NOPE; }
+  inline bool backward_inplaced() const { return backward_inplace_state != INPLACE_TYPE::NOPE; }
+  inline bool inplaced() const { return forward_inplaced() || backward_inplaced(); }
+
  protected:
   Node() : args(), device(nullptr) {}
   explicit Node(const std::initializer_list<VariableIndex>& a)
