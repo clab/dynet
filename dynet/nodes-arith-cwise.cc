@@ -178,27 +178,22 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseMultiply::forward (cmult)");
   Eigen::array<int, 5> bcast_left = {1,1,1,1,1};
   Eigen::array<int, 5> bcast_right = {1,1,1,1,1};
-  bool same_dims = true;
   for(unsigned int i = 0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
     if(i>=xs[0]->d.nd || xs[0]->d[i]==1){
       bcast_left[i] = dim[i];
-      same_dims = false;
     }
     if(i>=xs[1]->d.nd || xs[1]->d[i]==1){
       bcast_right[i] = dim[i];
-      same_dims = false;
     }
   }
   if(xs[0]->d.bd == 1){
     bcast_left[4] = dim.bd;
-    same_dims = false;
   }
   else if(xs[1]->d.bd == 1){
     bcast_right[4] = dim.bd;
-    same_dims = false;
   }
   unsigned bcast_sum = 0; for(int i=0; i<5; i++) bcast_sum += bcast_left[i] + bcast_right[i];
-  same_dims = bcast_sum == 10;
+  bool same_dims = bcast_sum == 10;
   if(same_dims){
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() * xs[1]->tb<4>();
   } else {
@@ -221,11 +216,8 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
       n_red++;
     }
   }
-  bool same_dims = n_red==0 && xs[0]->d.bd == xs[1]->d.bd && xs[0]->d.nd == xs[1]->d.nd;
-  for(unsigned int j = 0; j < min(xs[0]->d.nd, xs[1]->d.nd); j++) if(xs[0]->d[j] != xs[1]->d[j]) same_dims = false;
   DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseMultiply::backward (cmult)");
-  if(same_dims)     dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() * xs[1-i]->tb<4>();
-  else if(n_red==0) backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
+  if(n_red==0) backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
   else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
   else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
   else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
@@ -261,7 +253,12 @@ void CwiseMultiply::backward_helper(const MyDevice & dev,
   }
   if(xs[1-i]->d.bd == 1) bcast_other[4] = dim.bd;
 
-  dEdxi.tb<4>().device(*dev.edevice) += (dEdf.tb<4>() * xs[1-i]->tb<4>().broadcast(bcast_other)).sum(red_axis).reshape(morph);
+  unsigned bcast_sum = 0; for(int i=0; i<5; i++) bcast_sum += bcast_other[i] + morph[i];
+  bool same_dims = bcast_sum == 10 && ReductionOrder==0;
+  if(same_dims)
+    dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() * xs[1-i]->tb<4>();
+  else
+    dEdxi.tb<4>().device(*dev.edevice) += (dEdf.tb<4>() * xs[1-i]->tb<4>().broadcast(bcast_other)).sum(red_axis).reshape(morph);
 }
 
 // ************* CwiseQuotient *************
