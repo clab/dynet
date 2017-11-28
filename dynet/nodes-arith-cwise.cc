@@ -197,6 +197,8 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
     bcast_right[4] = dim.bd;
     same_dims = false;
   }
+  unsigned bcast_sum = 0; for(int i=0; i<5; i++) bcast_sum += bcast_left[i] + bcast_right[i];
+  same_dims = bcast_sum == 10;
   if(same_dims){
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() * xs[1]->tb<4>();
   } else {
@@ -297,11 +299,11 @@ void CwiseQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Te
   if(xs[0]->d.size() == xs[1]->d.size()){
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() / xs[1]->tb<4>();
   } else {
-  Eigen::array<int, 5> bcast = {1,1,1,1,1};
-  for(unsigned int di = 0; di<xs[0]->d.nd; di++){
-    if(xs[1]->d[di]==1) bcast[di] = xs[0]->d[di];
-  }
-  if(xs[1]->d.bd == 1) bcast[4] = xs[0]->d.bd;
+    Eigen::array<int, 5> bcast = {1,1,1,1,1};
+    for(unsigned int di = 0; di<xs[0]->d.nd; di++){
+      if(xs[1]->d[di]==1) bcast[di] = xs[0]->d[di];
+    }
+    if(xs[1]->d.bd == 1) bcast[4] = xs[0]->d.bd;
     fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() / xs[1]->tb<4>().broadcast(bcast);
   }
 }
