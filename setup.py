@@ -276,7 +276,7 @@ class build(_build):
                 "-DEIGEN3_INCLUDE_DIR=%r" % EIGEN3_INCLUDE_DIR,
                 "-DPYTHON=%r" % PYTHON,
             ]
-            for env_var in ("BACKEND",):
+            for env_var in ("BACKEND", "CUDNN_ROOT"):
                 value = ENV.get(env_var)
                 if value is not None:
                     cmake_cmd.append("-D" + env_var + "=%r" % value)
