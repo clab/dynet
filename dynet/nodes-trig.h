@@ -11,10 +11,19 @@ struct Tanh : public Node {
   explicit Tanh(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::tanh); return sm.get_idx(s); }
-  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }  
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
-} // namespace dynet
+// y = acosh x_1
+struct Acosh : public Node {
+  explicit Acosh(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::acosh); return sm.get_idx(s); }
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+}  // namespace dynet
 
 #endif

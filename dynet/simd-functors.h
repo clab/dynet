@@ -99,6 +99,51 @@ struct functor_traits<dynet::scalar_logistic_sigmoid_op<Scalar> > {
 } }
 
 namespace dynet {
+template<typename Scalar> struct scalar_acosh_forward_op {
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_acosh_forward_op)
+  DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
+#ifndef __CUDACC__
+    using std::acosh;
+#endif
+    return acosh(x);
+  }
+  template <typename Packet>
+  DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
+#ifndef __CUDACC__
+    using std::acosh;
+#endif
+    return acosh(x);
+  }
+};
+}
+
+namespace dynet {
+template<typename Scalar> struct scalar_acosh_backward_op {
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_acosh_backward_op)
+  DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x, const Scalar& d) const {
+    return d / sqrt(x * x - 1);
+  }
+  template <typename Packet>
+  DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x, const Packet& d) const {
+    using namespace Eigen::internal;
+    const Packet one = pset1<Packet>(1);
+    return pmul(prsqrt(psub(pmul(x, x), one)), d);
+  }
+};
+}
+
+namespace Eigen { namespace internal {
+template<typename Scalar>
+struct functor_traits<dynet::scalar_acosh_backward_op<Scalar> > {
+  enum {
+    Cost = NumTraits<Scalar>::AddCost * 2 + NumTraits<Scalar>::MulCost * 10,
+    PacketAccess = packet_traits<Scalar>::HasSub && packet_traits<Scalar>::HasMul &&
+                   packet_traits<Scalar>::HasNegate && packet_traits<Scalar>::HasRsqrt
+  };
+};
+} }
+
+namespace dynet {
 template<typename Scalar> struct scalar_erf_backward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_erf_backward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x, const Scalar& d) const {

@@ -752,6 +752,15 @@ BOOST_AUTO_TEST_CASE( tanh_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression acosh(const Expression& x);
+BOOST_AUTO_TEST_CASE( acosh_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param3);
+  Expression y = acosh(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression exp(const Expression& x);
 BOOST_AUTO_TEST_CASE( exp_gradient ) {
   dynet::ComputationGraph cg;

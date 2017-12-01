@@ -871,6 +871,17 @@ Expression tanh(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Inverse hyperbolic cosine
+ * \details Elementwise calculation of the inverse hyperbolic cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to acosh(x_i)
+ */
+Expression acosh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Natural exponent
  * \details Calculate elementwise y_i = e^{x_i}
  *

@@ -2822,6 +2822,18 @@ cpdef Expression tanh(Expression x):
         dynet.Expression: :math:`\\tanh(x)`
     """
     return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
+cpdef Expression acosh(Expression x):
+    """Inverse hyperbolic cosine
+
+    Elementwise calculation of the inverse hyperbolic cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cosh^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_acosh(x.c()))
 cpdef Expression exp(Expression x): 
     """Natural exponent
     
