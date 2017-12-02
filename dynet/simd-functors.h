@@ -118,6 +118,78 @@ template<typename Scalar> struct scalar_acosh_forward_op {
 }
 
 namespace dynet {
+template<typename Scalar> struct scalar_sin_backward_op {
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_sin_backward_op)
+  DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x, const Scalar& d) const {
+    return cos(x) * d;
+  }
+  template <typename Packet>
+  DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x, const Packet& d) const {
+    using namespace Eigen::internal;
+    return pmul(pcos(x), d);
+  }
+};
+}
+
+namespace Eigen { namespace internal {
+template<typename Scalar>
+struct functor_traits<dynet::scalar_sin_backward_op<Scalar> > {
+  enum {
+    Cost = NumTraits<Scalar>::MulCost * 6,
+    PacketAccess = packet_traits<Scalar>::HasMul && packet_traits<Scalar>::HasCos
+  };
+};
+} }
+
+namespace dynet {
+template<typename Scalar> struct scalar_cos_backward_op {
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_cos_backward_op)
+  DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x, const Scalar& d) const {
+    return -sin(x) * d;
+  }
+  template <typename Packet>
+  DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x, const Packet& d) const {
+    using namespace Eigen::internal;
+    return pnegate(pmul(psin(x), d));
+  }
+};
+}
+
+namespace Eigen { namespace internal {
+template<typename Scalar>
+struct functor_traits<dynet::scalar_cos_backward_op<Scalar> > {
+  enum {
+    Cost = NumTraits<Scalar>::MulCost * 6,
+    PacketAccess = packet_traits<Scalar>::HasMul && packet_traits<Scalar>::HasSin &&
+        packet_traits<Scalar>::HasNegate
+  };
+};
+} }
+
+namespace dynet {
+template<typename Scalar> struct scalar_tan_backward_op {
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_tan_backward_op)
+  DYNET_DEVICE_FUNC EIGEN_STRONG_INLINE const Scalar operator() (const Scalar& t, const Scalar& d) const { return (1 + t * t) * d; }
+  template<typename Packet>
+  DYNET_DEVICE_FUNC EIGEN_STRONG_INLINE const Packet packetOp(const Packet& t, const Packet& d) const {
+    using namespace Eigen::internal;
+    const Packet one = pset1<Packet>(1);
+    return pmul(padd(one, pmul(t, t)), d);
+  }
+};
+}
+
+namespace Eigen { namespace internal {
+template<typename Scalar>
+struct functor_traits<dynet::scalar_tan_backward_op<Scalar> > {
+  enum {
+    Cost = NumTraits<Scalar>::AddCost + 2 * NumTraits<Scalar>::MulCost,
+    PacketAccess = packet_traits<Scalar>::HasAdd && packet_traits<Scalar>::HasMul
+  };
+};
+}}
+
+namespace dynet {
 template<typename Scalar> struct scalar_acosh_backward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_acosh_backward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x, const Scalar& d) const {

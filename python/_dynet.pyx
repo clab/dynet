@@ -2810,6 +2810,42 @@ cpdef Expression maxpooling2d(Expression x, vector[unsigned] ksize, vector[unsig
     return Expression.from_cexpr(x.cg_version, c_maxpooling2d(x.c(), ksize, stride, is_valid))
 
 # unary-exp
+cpdef Expression sin(Expression x):
+    """Sine
+
+    Elementwise calculation of the sine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\sin(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_sin(x.c()))
+cpdef Expression cos(Expression x):
+    """Cosine
+
+    Elementwise calculation of the cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cos(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_cos(x.c()))
+cpdef Expression tan(Expression x):
+    """Tangent
+
+    Elementwise calculation of the tangent
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\tan(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_tan(x.c()))
 cpdef Expression tanh(Expression x): 
     """Hyperbolic tangent
     

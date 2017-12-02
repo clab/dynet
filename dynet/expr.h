@@ -860,6 +860,39 @@ Expression erf(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Sine
+ * \details Elementwise calculation of the sine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to sin(x_i)
+ */
+Expression sin(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Cosine
+ * \details Elementwise calculation of the cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to cos(x_i)
+ */
+Expression cos(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Tangent
+ * \details Elementwise calculation of the tangent
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to tan(x_i)
+ */
+Expression tan(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Hyperbolic tangent
  * \details Elementwise calculation of the hyperbolic tangent
  *

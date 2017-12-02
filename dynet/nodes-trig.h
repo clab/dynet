@@ -6,6 +6,33 @@
 
 namespace dynet {
 
+// y = sin x_1
+struct Sin : public Node {
+  explicit Sin(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::sin); return sm.get_idx(s); }
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// y = cos x_1
+struct Cos : public Node {
+  explicit Cos(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::cos); return sm.get_idx(s); }
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+// y = tan x_1
+struct Tan : public Node {
+  explicit Tan(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::tan); return sm.get_idx(s); }
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
 // y = tanh x_1
 struct Tanh : public Node {
   explicit Tanh(const std::initializer_list<VariableIndex>& a) : Node(a) {}

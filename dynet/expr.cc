@@ -60,6 +60,9 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
 Expression sqrt(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sqrt>({x.i})); }
 Expression abs(const Expression& x) { return Expression(x.pg, x.pg->add_function<Abs>({x.i})); }
 Expression erf(const Expression& x) { return Expression(x.pg, x.pg->add_function<Erf>({x.i})); }
+Expression sin(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sin>({x.i})); }
+Expression cos(const Expression& x) { return Expression(x.pg, x.pg->add_function<Cos>({x.i})); }
+Expression tan(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tan>({x.i})); }
 Expression tanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tanh>({x.i})); }
 Expression acosh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Acosh>({x.i})); }
 Expression lgamma(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogGamma>({x.i})); }

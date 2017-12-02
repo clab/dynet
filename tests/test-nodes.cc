@@ -743,6 +743,33 @@ BOOST_AUTO_TEST_CASE( erf_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression sin(const Expression& x);
+BOOST_AUTO_TEST_CASE( sin_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = sin(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cos(const Expression& x);
+BOOST_AUTO_TEST_CASE( cos_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = cos(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression sin(const Expression& x);
+BOOST_AUTO_TEST_CASE( tan_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = tan(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression tanh(const Expression& x);
 BOOST_AUTO_TEST_CASE( tanh_gradient ) {
   dynet::ComputationGraph cg;
