@@ -784,6 +784,11 @@ cdef class LookupParameters: # {{{
         rotated_shape = tuple([shape[-1]] + list(shape[:-1]))
         return rotated_shape
 
+    def __len__(self):
+        """Returns the number of items embedded"""
+        shape = c_dim_as_shape(self.thisptr.get_storage().all_dim)
+        return shape[-1]
+
     def __getitem__(self, int i):
         """
         Same as :code:`dynet.lookup`
