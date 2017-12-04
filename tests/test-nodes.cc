@@ -34,6 +34,7 @@ struct NodeTest {
     std::vector<float> param2_vals = {2.2f, 3.4f, -1.2f};
     std::vector<float> param3_vals = {1.1f, 2.2f, 3.3f};
     std::vector<float> param4_vals = {1.1f, 2.2f, 3.3f, -1.2f, 2.1f, 3.4f};
+    std::vector<float> param5_vals = {-0.2f, 0.0f, 0.1f};
     std::vector<float> param_scalar1_vals = {2.2f};
     std::vector<float> param_scalar2_vals = {1.1f};
     std::vector<float> param_kernel1_vals = {1.1f, 2.2f, -1.0f, 1.2f, -3.4f, -0.2f};
@@ -58,6 +59,8 @@ struct NodeTest {
     TensorTools::set_elements(param3.get_storage().values, param3_vals);
     param4 = mod.add_parameters({6});
     TensorTools::set_elements(param4.get_storage().values, param4_vals);
+    param5 = mod.add_parameters({3});
+    TensorTools::set_elements(param5.get_storage().values, param5_vals);
     param_scalar1 = mod.add_parameters({1});
     TensorTools::set_elements(param_scalar1.get_storage().values, param_scalar1_vals);
     param_scalar2 = mod.add_parameters({1});
@@ -93,7 +96,7 @@ struct NodeTest {
   std::vector<float> ones3_vals, ones2_vals, first_one_vals, batch_vals;
   std::vector<char*> av;
   dynet::ParameterCollection mod, mod2;
-  dynet::Parameter param1, param2, param3, param4, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1, param_cube2;
+  dynet::Parameter param1, param2, param3, param4, param5, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1, param_cube2;
   dynet::LookupParameter lookup1, lookup2, lookup3;
 };
 
@@ -761,11 +764,56 @@ BOOST_AUTO_TEST_CASE( cos_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
-// Expression sin(const Expression& x);
+// Expression tan(const Expression& x);
 BOOST_AUTO_TEST_CASE( tan_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param1);
   Expression y = tan(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression asin(const Expression& x);
+BOOST_AUTO_TEST_CASE( asin_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param5);
+  Expression y = asin(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression acos(const Expression& x);
+BOOST_AUTO_TEST_CASE( acos_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param5);
+  Expression y = acos(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression atan(const Expression& x);
+BOOST_AUTO_TEST_CASE( atan_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param5);
+  Expression y = atan(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression sinh(const Expression& x);
+BOOST_AUTO_TEST_CASE( sinh_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = sinh(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression cosh(const Expression& x);
+BOOST_AUTO_TEST_CASE( cosh_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param1);
+  Expression y = cosh(x1);
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
@@ -779,11 +827,29 @@ BOOST_AUTO_TEST_CASE( tanh_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression asinh(const Expression& x);
+BOOST_AUTO_TEST_CASE( asinh_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param3);
+  Expression y = asinh(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression acosh(const Expression& x);
 BOOST_AUTO_TEST_CASE( acosh_gradient ) {
   dynet::ComputationGraph cg;
   Expression x1 = parameter(cg, param3);
   Expression y = acosh(x1);
+  Expression z = sum_elems(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression atanh(const Expression& x);
+BOOST_AUTO_TEST_CASE( atanh_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x1 = parameter(cg, param5);
+  Expression y = atanh(x1);
   Expression z = sum_elems(y);
   BOOST_CHECK(check_grad(mod, z, 0));
 }

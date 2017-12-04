@@ -63,8 +63,15 @@ Expression erf(const Expression& x) { return Expression(x.pg, x.pg->add_function
 Expression sin(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sin>({x.i})); }
 Expression cos(const Expression& x) { return Expression(x.pg, x.pg->add_function<Cos>({x.i})); }
 Expression tan(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tan>({x.i})); }
+Expression asin(const Expression& x) { return Expression(x.pg, x.pg->add_function<Asin>({x.i})); }
+Expression acos(const Expression& x) { return Expression(x.pg, x.pg->add_function<Acos>({x.i})); }
+Expression atan(const Expression& x) { return Expression(x.pg, x.pg->add_function<Atan>({x.i})); }
+Expression sinh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sinh>({x.i})); }
+Expression cosh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Cosh>({x.i})); }
 Expression tanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tanh>({x.i})); }
+Expression asinh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Asinh>({x.i})); }
 Expression acosh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Acosh>({x.i})); }
+Expression atanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Atanh>({x.i})); }
 Expression lgamma(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogGamma>({x.i})); }
 Expression log(const Expression& x) { return Expression(x.pg, x.pg->add_function<Log>({x.i})); }
 Expression exp(const Expression& x) { return Expression(x.pg, x.pg->add_function<Exp>({x.i})); }
