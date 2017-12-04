@@ -246,7 +246,7 @@ struct FLogisticSigmoid {
     if (x >= 0){
       float exp_minus_x = expf(-x);
       return 1.f / (1.f + exp_minus_x);
-    else{
+    }else{
       float exp_x = expf(x);
       return exp_x / (1.f + exp_x);
     }
