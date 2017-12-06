@@ -274,7 +274,7 @@ struct Dim {
     if (nd == 0) {
       d[0] = n;
     } else {
-      for (int k = nd; k > i; --k) {
+      for (int k = nd; k > (int)i; --k) {
         d[k] = d[k-1];
       }
     }

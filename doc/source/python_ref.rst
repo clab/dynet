@@ -175,8 +175,6 @@ Arithmetic operations
 
 .. autofunction:: dynet.l2_norm
 
-.. autofunction:: dynet.tanh
-
 .. autofunction:: dynet.exp
 
 .. autofunction:: dynet.square
@@ -192,6 +190,30 @@ Arithmetic operations
 .. autofunction:: dynet.log
 
 .. autofunction:: dynet.lgamma
+
+.. autofunction:: dynet.sin
+
+.. autofunction:: dynet.cos
+
+.. autofunction:: dynet.tan
+
+.. autofunction:: dynet.asin
+
+.. autofunction:: dynet.acos
+
+.. autofunction:: dynet.atan
+
+.. autofunction:: dynet.sinh
+
+.. autofunction:: dynet.cosh
+
+.. autofunction:: dynet.tanh
+
+.. autofunction:: dynet.asinh
+
+.. autofunction:: dynet.acosh
+
+.. autofunction:: dynet.atanh
 
 .. autofunction:: dynet.logistic
 

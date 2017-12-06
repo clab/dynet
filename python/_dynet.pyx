@@ -784,6 +784,11 @@ cdef class LookupParameters: # {{{
         rotated_shape = tuple([shape[-1]] + list(shape[:-1]))
         return rotated_shape
 
+    def __len__(self):
+        """Returns the number of items embedded"""
+        shape = c_dim_as_shape(self.thisptr.get_storage().all_dim)
+        return shape[-1]
+
     def __getitem__(self, int i):
         """
         Same as :code:`dynet.lookup`
@@ -2810,7 +2815,103 @@ cpdef Expression maxpooling2d(Expression x, vector[unsigned] ksize, vector[unsig
     return Expression.from_cexpr(x.cg_version, c_maxpooling2d(x.c(), ksize, stride, is_valid))
 
 # unary-exp
-cpdef Expression tanh(Expression x): 
+cpdef Expression sin(Expression x):
+    """Sine
+
+    Elementwise calculation of the sine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\sin(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_sin(x.c()))
+cpdef Expression cos(Expression x):
+    """Cosine
+
+    Elementwise calculation of the cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cos(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_cos(x.c()))
+cpdef Expression tan(Expression x):
+    """Tangent
+
+    Elementwise calculation of the tangent
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\tan(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_tan(x.c()))
+cpdef Expression asin(Expression x):
+    """Inverse sine
+
+    Elementwise calculation of the inverse sine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\sin^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_asin(x.c()))
+cpdef Expression acos(Expression x):
+    """Inverse cosine
+
+    Elementwise calculation of the inverse cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cos^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_acos(x.c()))
+cpdef Expression atan(Expression x):
+    """Tangent
+
+    Elementwise calculation of the inverse tangent
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\tan^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_atan(x.c()))
+cpdef Expression sinh(Expression x):
+    """Hyperbolic sine
+
+    Elementwise calculation of the hyperbolic sine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\sinh(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_sinh(x.c()))
+cpdef Expression cosh(Expression x):
+    """Hyperbolic cosine
+
+    Elementwise calculation of the hyperbolic cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cosh(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_cosh(x.c()))
+cpdef Expression tanh(Expression x):
     """Hyperbolic tangent
     
     Elementwise calculation of the hyperbolic tangent
@@ -2822,7 +2923,43 @@ cpdef Expression tanh(Expression x):
         dynet.Expression: :math:`\\tanh(x)`
     """
     return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
-cpdef Expression exp(Expression x): 
+cpdef Expression asinh(Expression x):
+    """Inverse hyperbolic sine
+
+    Elementwise calculation of the inverse hyperbolic sine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\sinh^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_asinh(x.c()))
+cpdef Expression acosh(Expression x):
+    """Inverse hyperbolic cosine
+
+    Elementwise calculation of the inverse hyperbolic cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cosh^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_acosh(x.c()))
+cpdef Expression atanh(Expression x):
+    """Inverse hyperbolic tangent
+
+    Elementwise calculation of the inverse hyperbolic tangent
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\tanh^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_atanh(x.c()))
+cpdef Expression exp(Expression x):
     """Natural exponent
     
     Calculate elementwise :math:`y_i = e^{x_i}`
@@ -2834,7 +2971,7 @@ cpdef Expression exp(Expression x):
         dynet.Expression: :math:`e^{x}`
     """
     return Expression.from_cexpr(x.cg_version, c_exp(x.c()))
-cpdef Expression square(Expression x): 
+cpdef Expression square(Expression x):
     """Square
     
     Calculate elementwise :math:`y_i = x_i^2`

@@ -48,7 +48,13 @@ DyNet is installed):
 
     git+https://github.com/clab/dynet#egg=dynet
 
-In case installation using `pip` fails, if you copy-and-paste the entire log that you
+You can also manually set the directory of the cuDNN library as follows:
+
+.. code:: bash
+
+    CUDNN_ROOT=/path/to/cudnn BACKEND=cuda pip install git+https://github.com/clab/dynet#egg=dynet
+
+If installation using `pip` fails, if you copy-and-paste the entire log that you
 get after running the `pip` command into a `github issue <https://github.com/clab/dynet/issues>`_,
 we will help you debug. You can also try to install DyNet manually as listed below.
 

@@ -298,7 +298,18 @@ cdef extern from "dynet/expr.h" namespace "dynet":
 
     CExpression c_colwise_add "dynet::colwise_add" (CExpression& x, CExpression& bias) except + #
 
+    CExpression c_sin "dynet::sin" (CExpression& x) except + #
+    CExpression c_cos "dynet::cos" (CExpression& x) except + #
+    CExpression c_tan "dynet::tan" (CExpression& x) except + #
+    CExpression c_asin "dynet::asin" (CExpression& x) except + #
+    CExpression c_acos "dynet::acos" (CExpression& x) except + #
+    CExpression c_atan "dynet::atan" (CExpression& x) except + #
+    CExpression c_sinh "dynet::sinh" (CExpression& x) except + #
+    CExpression c_cosh "dynet::cosh" (CExpression& x) except + #
     CExpression c_tanh "dynet::tanh" (CExpression& x) except + #
+    CExpression c_asinh "dynet::asinh" (CExpression& x) except + #
+    CExpression c_acosh "dynet::acosh" (CExpression& x) except + #
+    CExpression c_atanh "dynet::atanh" (CExpression& x) except + #
     CExpression c_exp "dynet::exp" (CExpression& x) except + #
     CExpression c_square "dynet::square" (CExpression& x) except + #
     CExpression c_sqrt "dynet::sqrt" (CExpression& x) except + #
