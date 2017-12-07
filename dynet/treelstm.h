@@ -17,6 +17,7 @@ public:
   std::vector<Expression> get_h(RNNPointer i) const override { throw std::runtime_error("get_h() not a valid function for TreeLSTMBuilder"); }
   std::vector<Expression> get_s(RNNPointer i) const override { throw std::runtime_error("get_s() not a valid function for TreeLSTMBuilder"); }
   Expression set_s_impl(int prev, const std::vector<Expression>& s_new) override { throw std::runtime_error("set_s_impl() not a valid function for TreeLSTMBuilder"); }
+  Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override { throw std::runtime_error("set_h() not a valid function for TreeLSTMBuilder"); }
  protected:
   virtual void new_graph_impl(ComputationGraph& cg, bool update) override = 0;
   virtual void start_new_sequence_impl(const std::vector<Expression>& h0) override = 0;
@@ -96,7 +97,6 @@ struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
  protected:
   void new_graph_impl(ComputationGraph& cg, bool update) override;
   void start_new_sequence_impl(const std::vector<Expression>& h0) override;
-  Expression set_h_impl(int prev, const std::vector<Expression>& h_new) override;
 
  public:
   LSTMBuilder fwd_node_builder;

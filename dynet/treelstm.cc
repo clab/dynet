@@ -363,5 +363,3 @@ Expression BidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children,
 
   return embedding;
 }
-
-Expression BidirectionalTreeLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) { throw std::runtime_error("set_h() not a valid function for BidirectionalTreeLSTMBuilder"); }
