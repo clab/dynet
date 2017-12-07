@@ -1569,6 +1569,7 @@ cdef class Tensor: #{{{
 
 #{{{ Expressions
 cdef ensure_freshness(Expression a):
+    assert a, 'Expression is empty.'
     if a.cg_version != _cg.version(): raise ValueError("Attempt to use a stale expression.")
 
 cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_add(a.c(), b.c()))
@@ -4011,6 +4012,7 @@ cpdef Expression esum(list xs):
     cvec = vector[CExpression]()
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for esum.'
         ensure_freshness(x)
         cvec.push_back(x.c())
     #print(cvec.size(), file=sys.stderr)
@@ -4032,6 +4034,7 @@ cpdef Expression logsumexp(list xs):
     cvec = vector[CExpression]()
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for logsumexp.'
         ensure_freshness(x)
         cvec.push_back(x.c())
     #print(cvec.size(), file=sys.stderr)
@@ -4067,6 +4070,7 @@ cpdef Expression average(list xs):
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs: 
+        assert x, 'Empty element for average.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_average(cvec))
@@ -4088,6 +4092,7 @@ cpdef Expression emax(list xs):
     c = xs[0]
     ensure_freshness(c) 
     for x in xs: 
+        assert x, 'Empty element for emax.'
         ensure_freshness(x) 
         c = Expression.from_cexpr(x.cg_version, c_bmax(x.c(),c.c()))
     return c
@@ -4104,10 +4109,11 @@ cpdef Expression concatenate_cols(list xs):
     Returns:
         dynet.Expression: The expression with the columns concatenated
     """
-    assert xs, 'List is empty, nothing to concatenate.'
+    assert xs, 'List is empty, nothing to concatenate_cols.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for concatenate_cols.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat_cols(cvec))
@@ -4129,6 +4135,7 @@ cpdef Expression concatenate(list xs, unsigned d=0):
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for concatenate.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat(cvec, d))
@@ -4144,10 +4151,11 @@ cpdef Expression concatenate_to_batch(list xs):
     Returns:
         dynet.Expression: The expression with the batch dimensions concatenated
     """
-    assert xs, 'List is empty, nothing to concatenate.'
+    assert xs, 'List is empty, nothing to concatenate_to_batch.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for concatenate_to_batch.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat_to_batch(cvec))
@@ -4167,6 +4175,7 @@ cpdef Expression affine_transform(list exprs):
     cdef Expression e
     cdef vector[CExpression] ves
     for e in exprs:
+        assert e, 'Empty element for affine_transform.'
         ensure_freshness(e) 
         ves.push_back(e.c())
     return Expression.from_cexpr(e.cg_version, c_affine_transform(ves))
