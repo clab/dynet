@@ -92,8 +92,8 @@ template<typename Scalar>
 struct functor_traits<dynet::scalar_logistic_sigmoid_op<Scalar> > {
   enum {
     Cost = NumTraits<Scalar>::AddCost * 2 + NumTraits<Scalar>::MulCost * 6,
-    PacketAccess = packet_traits<Scalar>::HasAdd && packet_traits<Scalar>::HasDiv &&
-                   packet_traits<Scalar>::HasNegate && packet_traits<Scalar>::HasExp
+    PacketAccess = packet_traits<Scalar>::HasAdd && packet_traits<Scalar>::HasMul &&
+                   packet_traits<Scalar>::HasTanh
   };
 };
 } }
@@ -383,25 +383,6 @@ struct functor_traits<dynet::scalar_logistic_sigmoid_backward_op<Scalar> > {
   enum {
     Cost = NumTraits<Scalar>::AddCost + NumTraits<Scalar>::MulCost * 2,
     PacketAccess = packet_traits<Scalar>::HasSub && packet_traits<Scalar>::HasMul
-  };
-};
-} }
-
-namespace dynet {
-template<typename Scalar> struct scalar_tanh_op {
-  EIGEN_EMPTY_STRUCT_CTOR(scalar_tanh_op)
-  DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& a) const { using std::tanh; return tanh(a); }
-  template <typename Packet>
-  DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& a) const { return Eigen::internal::ptanh(a); }
-};
-}
-
-namespace Eigen { namespace internal {
-template<typename Scalar>
-struct functor_traits<dynet::scalar_tanh_op<Scalar> > {
-  enum {
-    Cost = 5 * NumTraits<Scalar>::MulCost,
-    PacketAccess = packet_traits<Scalar>::HasTanh
   };
 };
 } }
