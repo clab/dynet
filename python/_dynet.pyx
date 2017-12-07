@@ -2607,6 +2607,34 @@ cpdef Expression dot_product(Expression x, Expression y):
     """
     ensure_freshness(y); 
     return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
+cpdef Expression circ_conv(Expression u, Expression v):
+    """Circular convolution
+
+    Calculate the circular convolution :math:`[u * v]_k=\sum_i u_iv_{(k-i) \mod d}`
+
+    Args:
+        u (dynet.Expression): The first input expression
+        v (dynet.Expression): The second input expression
+
+    Returns:
+        dynet.Expression: :math:`u * v`
+    """
+    ensure_freshness(v);
+    return Expression.from_cexpr(u.cg_version, c_circ_conv(u.c(), v.c()))
+cpdef Expression circ_corr(Expression u, Expression v):
+    """Circular correlation
+
+    Calculate the circular correlation :math:`[u \star v]_k=\sum_i u_iv_{(i + k) \mod d}`
+
+    Args:
+        u (dynet.Expression): The first input expression
+        v (dynet.Expression): The second input expression
+
+    Returns:
+        dynet.Expression: :math:`u \star v`
+    """
+    ensure_freshness(v);
+    return Expression.from_cexpr(u.cg_version, c_circ_corr(u.c(), v.c()))
 cpdef Expression squared_norm(Expression x):
     """Squared norm
     

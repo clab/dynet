@@ -373,6 +373,10 @@ Convolution/Pooling operations
 
 .. autofunction:: dynet.kmax_pooling
 
+.. autofunction:: dynet.circ_conv
+
+.. autofunction:: dynet.circ_corr
+
 Tensor operations
 ^^^^^^^^^^^^^^^^^
 
