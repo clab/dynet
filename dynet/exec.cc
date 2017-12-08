@@ -786,7 +786,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
       if (profiling_flag) {
         VariableIndex nid = my_batch.ids[0];
         Node* node = cg.nodes[nid];
-        current_batch_name = node->as_dummy_string();
+        current_batch_name = "fwd " + node->as_dummy_string();
         timer.start(current_batch_name);
       }
       if (my_batch.ids.size() == 1) { // execute a single node
@@ -979,11 +979,17 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
   vector<bool> in_computation(num_batches, false);
   in_computation.back() = true;
   vector<const Tensor*> xs;
+  string current_batch_name;
   for (int i = num_batches - 1; i >= 0; --i) {
     if (!in_computation[i]) continue;
     const auto & my_batch = batches[i];
+    VariableIndex nid = my_batch.ids[0];
+    if (profiling_flag) {
+      Node* node = cg.nodes[nid];
+      current_batch_name = "BWD " + node->as_dummy_string();
+      timer.start(current_batch_name);
+    }
     if (my_batch.ids.size() == 1) { // execute a single node
-      VariableIndex nid = my_batch.ids[0];
       const Node* node = cg.nodes[nid];
       xs.resize(node->arity());
       unsigned ai = 0;
@@ -1057,6 +1063,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
         ++ai;
       }
     }
+    if(profiling_flag) { timer.stop(current_batch_name); }
   }
 
   // accumulate gradients into parameters
