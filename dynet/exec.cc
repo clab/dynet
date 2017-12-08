@@ -309,12 +309,14 @@ void BatchedExecutionEngine::combine_tensors(
       locs[i].ptr = my_src;
       locs[i + TRG].ptr = dest;
       locs[i + LEN].n = sz;
+      // cerr << "s=" << my_src << ",d=" << dest << ",z=" << sz << " ";
       if (max_length < sz) max_length = sz;
       i++;
 #endif
     } else { throw std::runtime_error("Bad device type"); }
     dest += sz; // pointer arith
   }
+  // cerr << endl;
   if (tout.device->type == DeviceType::GPU) {
 #if HAVE_CUDA
     size_t req_sz = batch_ids.size() * 3 * sizeof(CopyArgs);

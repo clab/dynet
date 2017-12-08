@@ -14,8 +14,8 @@ using namespace dynet;
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
 
-  size_t SEQ_LENGTH =40;
-  size_t BATCH_SIZE=50;
+  size_t SEQ_LENGTH =3;
+  size_t BATCH_SIZE=2;
   unsigned int HIDDEN=200;
   unsigned int NVOCAB=1000;
   unsigned int NCLASSES=300;

@@ -97,8 +97,12 @@ __global__ void ker_parallel_memcpy(int num_seqs, float **src, float **trg,
 
   int seq_id = id % num_seqs;
   int i = id / num_seqs;
-  if (i < len[seq_id])
+  if (i < len[seq_id]) {
+    // printf("Y i%d d%d t%d q%d i%d n%lu\n", blockIdx.x, blockDim.x, threadIdx.x, seq_id, i, len[seq_id]);
     trg[seq_id][i] = src[seq_id][i];
+  } else {
+    // printf("N i%d d%d t%d q%d i%d n%lu\n", blockIdx.x, blockDim.x, threadIdx.x, seq_id, i, len[seq_id]);
+  }
 
   __syncthreads();
 }
@@ -108,6 +112,7 @@ void parallel_memcpy(int num_seqs, int max_len, float **src, float **trg,
   if(num_seqs > 0) {
     auto tb = SizeToBlockThreadPair(num_seqs * max_len);
     for (int pos = 0; pos < num_seqs; pos += tb.second) {
+      // std::cerr << "running seqs " << min(tb.second, num_seqs - pos) << ", tb1=" << tb.first << ", tb2=" << tb.second << std::endl;
       ker_parallel_memcpy<<<tb.first, tb.second>>>(
 		      min(tb.second, num_seqs - pos),
 		      src + pos,
