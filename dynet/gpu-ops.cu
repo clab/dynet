@@ -98,10 +98,10 @@ __global__ void ker_parallel_memcpy(int num_seqs, float **src, float **trg,
   int seq_id = id % num_seqs;
   int i = id / num_seqs;
   if (i < len[seq_id]) {
-    // printf("Y i%d d%d t%d q%d i%d n%lu\n", blockIdx.x, blockDim.x, threadIdx.x, seq_id, i, len[seq_id]);
-    trg[seq_id][i] = src[seq_id][i];
+    printf("Y i%d d%d t%d q%d i%d n%lu\n", blockIdx.x, blockDim.x, threadIdx.x, seq_id, i, len[seq_id]);
+    // trg[seq_id][i] = src[seq_id][i];
   } else {
-    // printf("N i%d d%d t%d q%d i%d n%lu\n", blockIdx.x, blockDim.x, threadIdx.x, seq_id, i, len[seq_id]);
+    printf("N i%d d%d t%d q%d i%d n%lu\n", blockIdx.x, blockDim.x, threadIdx.x, seq_id, i, len[seq_id]);
   }
 
   __syncthreads();
