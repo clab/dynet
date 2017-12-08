@@ -183,6 +183,7 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
     if(xs[0]->d.bd == xs[1]->d.bd) {
       fx.tvec().device(*dev.edevice) = xs[0]->tvec() * xs[1]->tvec();
     } else if(xs[0]->d.bd == 1) {
+      // TODO: Mkae alternative code path for CPU
       Eigen::array<int, 2> bcast = {1,(int)xs[1]->d.bd};
       fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec();
     } else {
@@ -227,19 +228,34 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in CwiseMultiply::backward (cmult)");
+  // Find out whether we're broadcasting and if so how much
   int n_red = xs[i]->d.bd!=fx.d.bd?1:0;
-  for(unsigned int j = 0; j < fx.d.nd; j++){
-    unsigned dim_j = (j<xs[i]->d.nd ? xs[i]->d[j] : 1);
-    if(dim_j != fx.d[j]){
-      n_red++;
-    }
+  bool must_red = false;
+  for(unsigned int j = 0; j < fx.d.nd; j++) {
+    n_red += xs[i]->d[j] != fx.d[j] ? 1 : 0;
+    must_red = must_red || xs[0]->d[j] !=  xs[1]->d[j];
   }
-  DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseMultiply::backward (cmult)");
-  if(n_red==0) backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
-  else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
-  else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
-  else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
-  else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
+  // If dimensions are the same, just add over the whole vector
+  if(!must_red) {
+    if(xs[0]->d.bd == xs[1]->d.bd) {
+      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1-i]->tvec();
+    } else if(xs[1-i]->d.bd == 1) {
+      // TODO: Make alternative code path for CPU?
+      Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+      dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1-i]->tbvec().broadcast(bcast);
+    } else {
+      Eigen::array<int, 1> red_axis; red_axis[0] = 1;
+      dEdxi.tvec().device(*dev.edevice) += (dEdf.tbvec() * xs[1-i]->tbvec()).sum(red_axis);
+    }
+  // Otherwise work with broadcasting, etc.
+  } else {
+    DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseMultiply::backward (cmult)");
+    if(n_red==0) backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==3) backward_helper<MyDevice, 3>(dev, xs, fx, dEdf, i, dEdxi);
+    else if(n_red==4) backward_helper<MyDevice, 4>(dev, xs, fx, dEdf, i, dEdxi);
+  }
 }
 DYNET_NODE_INST_DEV_IMPL(CwiseMultiply)
 

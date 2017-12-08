@@ -346,7 +346,7 @@ BOOST_AUTO_TEST_CASE( logsumexp_dim_gradient ) {
   for (int d = 1; d >= 0; d--)
     exps.push_back(logsumexp_dim(x, d));
   Expression z = sum_elems(sum(exps));
-  BOOST_CHECK(check_grad(mod, z, 1));
+  BOOST_CHECK(check_grad(mod, z, 0));
 }
 
 // Expression operator+(const Expression& x, real y);
