@@ -1205,6 +1205,30 @@ Expression dot_product(const Expression& x, const Expression& y);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Circular convolution
+ * \details Calculate the circular convolution
+ *
+ * \param x The input expression
+ * \param y The input expression
+ *
+ * \return An expression equal to the circular convolution
+ */
+Expression circ_conv(const Expression& u, const Expression& v);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Circular correlation
+ * \details Calculate the circular correlation
+ *
+ * \param x The input expression
+ * \param y The input expression
+ *
+ * \return An expression equal to the circular correlation
+ */
+Expression circ_corr(const Expression& u, const Expression& v);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Componentwise multiply
  * \details Multiply two expressions component-wise, broadcasting dimensions if necessary as follows:
  *          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
