@@ -1569,7 +1569,6 @@ cdef class Tensor: #{{{
 
 #{{{ Expressions
 cdef ensure_freshness(Expression a):
-    assert a, 'Expression is empty.'
     if a.cg_version != _cg.version(): raise ValueError("Attempt to use a stale expression.")
 
 cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_add(a.c(), b.c()))
