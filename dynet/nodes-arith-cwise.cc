@@ -176,28 +176,46 @@ std::vector<int> CwiseMultiply::autobatch_concat(const ComputationGraph & cg) co
 template<class MyDevice>
 void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseMultiply::forward (cmult)");
-  Eigen::array<int, 5> bcast_left = {1,1,1,1,1};
-  Eigen::array<int, 5> bcast_right = {1,1,1,1,1};
-  for(unsigned int i = 0; i < max(xs[0]->d.nd, xs[1]->d.nd); i++){
-    if(i>=xs[0]->d.nd || xs[0]->d[i]==1){
-      bcast_left[i] = dim[i];
+  size_t i;
+  for(i = 0; i < fx.d.nd && xs[0]->d[i] == xs[1]->d[i]; ++i);
+  // No broadcasting over dims, just batches
+  if(i == fx.d.nd) {
+    if(xs[0]->d.bd == xs[1]->d.bd) {
+      fx.tvec().device(*dev.edevice) = xs[0]->tvec() * xs[1]->tvec();
+    } else if(xs[0]->d.bd == 1) {
+      Eigen::array<int, 2> bcast = {1,(int)xs[1]->d.bd};
+      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec();
+    } else {
+      Eigen::array<int, 2> bcast = {1,(int)xs[0]->d.bd};
+      fx.tbvec().device(*dev.edevice) = xs[0]->tbvec() * xs[1]->tbvec().broadcast(bcast);
     }
-    if(i>=xs[1]->d.nd || xs[1]->d[i]==1){
-      bcast_right[i] = dim[i];
-    }
-  }
-  if(xs[0]->d.bd == 1){
-    bcast_left[4] = dim.bd;
-  }
-  else if(xs[1]->d.bd == 1){
-    bcast_right[4] = dim.bd;
-  }
-  unsigned bcast_sum = 0; for(int i=0; i<5; i++) bcast_sum += bcast_left[i] + bcast_right[i];
-  bool same_dims = bcast_sum == 10;
-  if(same_dims){
-    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() * xs[1]->tb<4>();
+  // Broadcasting over dims as well
   } else {
-    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) * xs[1]->tb<4>().broadcast(bcast_right);
+    Eigen::array<int, 5> bcast_left = {1,1,1,1,1}, bcast_right = {1,1,1,1,1};
+    bool has_left = false, has_right = false;
+    for(; i < fx.d.nd; ++i){
+      if(xs[0]->d[i] > xs[1]->d[i]) {
+        has_right = true;
+        bcast_right[i] = xs[0]->d[i];
+      } else if (xs[0]->d[i] < xs[1]->d[i]) {
+        has_left = true;
+        bcast_left[i] = xs[1]->d[i];
+      }
+    }
+    if(xs[0]->d.bd > xs[1]->d.bd) {
+      has_right = true;
+      bcast_right[4] =  xs[0]->d.bd;
+    } else if(xs[0]->d.bd < xs[1]->d.bd) {
+      has_left = true;
+      bcast_left[4] =  xs[1]->d.bd;
+    }
+    if(has_right && has_left) {
+      fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) * xs[1]->tb<4>().broadcast(bcast_right);
+    } else if(has_right) {
+      fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() * xs[1]->tb<4>().broadcast(bcast_right);
+    } else {
+      fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) * xs[1]->tb<4>();
+    }
   }
 }
 

@@ -686,7 +686,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
     }
 
     // 2.5 print some debug info
-    if (profiling_flag) {
+    if (profiling_flag > 1) {
       cout << "Forward Call" << endl;
       for(VariableIndex bid = num_batches_evaluated; bid < batch_id; ++bid) {
         auto & batch_ids = batches[bid].ids;

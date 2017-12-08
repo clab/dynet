@@ -155,7 +155,7 @@ void FoldRows::backward_dev_impl(const MyDevice & dev,
   unsigned orows = fx.d.rows();
   for (unsigned i = 0; i < orows; ++i)
     for (unsigned j = 0; j < nrows; ++j)
-      dEdxi.tb<2>().chip<0>(i * nrows + j) += dEdf.tb<2>().chip<0>(i);
+      dEdxi.tb<2>().chip<0>(i * nrows + j).device(*dev.edevice) += dEdf.tb<2>().chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(FoldRows)
 
