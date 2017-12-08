@@ -322,10 +322,10 @@ void BatchedExecutionEngine::combine_tensors(
     float** srcs = static_cast<float**>(basemem);
     float** trgs = static_cast<float**>(basemem) + TRG;
     std::size_t* lens = static_cast<std::size_t*>(basemem) + LEN;
-    CUDA_CHECK(cudaMemcpyAsync(basemem,
-                               &(locs)[0],
-                               locs.size() * sizeof(CopyArgs),
-                               cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(basemem,
+                          &(locs)[0],
+                          locs.size() * sizeof(CopyArgs),
+                          cudaMemcpyHostToDevice));
     gpu::parallel_memcpy(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
   } else if (tout.device->type == DeviceType::CPU) {
@@ -373,10 +373,10 @@ void BatchedExecutionEngine::accumulate_tensors(
     float** srcs = static_cast<float**>(basemem);
     float** trgs = static_cast<float**>(basemem) + TRG;
     std::size_t* lens = static_cast<std::size_t*>(basemem) + LEN;
-    CUDA_CHECK(cudaMemcpyAsync(basemem,
-                               &(locs)[0],
-                               locs.size() * sizeof(CopyArgs),
-                               cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(basemem,
+                          &(locs)[0],
+                          locs.size() * sizeof(CopyArgs),
+                          cudaMemcpyHostToDevice));
     gpu::parallel_accumulate(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
   }
