@@ -20,6 +20,15 @@
     if (err != cudaSuccess) {                              \
       std::cerr << "CUDA failure in " << #stmt << std::endl\
                 << cudaGetErrorString(err) << std::endl;   \
+      if (err == cudaErrorMemoryAllocation) {              \
+        size_t free_bytes, total_bytes;                    \
+        cudaMemGetInfo(&free_bytes, &total_bytes);         \
+        std::cerr << "CUDA is unable to allocate enough "  \
+                  << "GPU memory, at current stage only "  \
+                  << free_bytes/1024/1024 << " MB out of " \
+                  << total_bytes/1024/1024 << " MB is free"\
+                  << std::endl;                            \
+      }                                                    \
       throw dynet::cuda_exception(#stmt);                  \
     }                                                      \
   } while(0)
@@ -38,7 +47,7 @@
     cudnnStatus_t stat = (stmt);                           \
     if (stat != CUDNN_STATUS_SUCCESS){                     \
       std::cerr << "CUDNN failure in " << #stmt            \
-                << std::endl << cudnnGetErrorString(stat)       \
+                << std::endl << cudnnGetErrorString(stat)  \
                 << std::endl;                              \
       throw dynet::cuda_exception(#stmt);                  \
     }                                                      \
@@ -59,7 +68,7 @@ inline std::pair<int, int> SizeToBlockThreadPair(int n) {
   logn = 0;
   if (n > 2) {
     int localN = n - 1;
-    while (localN >>= 1) 
+    while (localN >>= 1)
       logn++;
   }
 #else
