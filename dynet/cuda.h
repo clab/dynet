@@ -27,6 +27,8 @@
                   << "GPU memory, at current stage only "  \
                   << free_bytes/1024/1024 << " MB out of " \
                   << total_bytes/1024/1024 << " MB is free"\
+                  << ". Note due to hardware limitations " \
+                  << "not all free memories can be alloc." \
                   << std::endl;                            \
       }                                                    \
       throw dynet::cuda_exception(#stmt);                  \
