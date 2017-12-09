@@ -33,6 +33,16 @@ Dim CwiseSum::dim_forward(const vector<Dim>& xs) const {
   return d;
 }
 
+int CwiseSum::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  // TODO: This does not handle the case where dimensions differ
+  Sig s(nt::csum);
+  return cg.nodes[args[0]]->dim == cg.nodes[args[1]]->dim ? sm.get_idx(s) : 0;
+}
+
+std::vector<int> CwiseSum::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>(2, 1);
+}
+
 #endif
 
 
