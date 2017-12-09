@@ -443,4 +443,140 @@ void SparsemaxLoss::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(SparsemaxLoss)
 
+// ************* Constrained softmax *************
+
+#ifndef __CUDACC__
+
+string ConstrainedSoftmax::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "constrained_softmax(" << arg_names[0] << ")";
+  return s.str();
+}
+
+Dim ConstrainedSoftmax::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2 && LooksLikeVector(xs[0]) &&
+                  LooksLikeVector(xs[1]),
+                  "Bad input dimensions in ConstrainedSoftmax: " << xs);
+  return xs[0];
+}
+
+size_t ConstrainedSoftmax::aux_storage_size() const {
+  // Need some extra allocation for the forward step.
+  const unsigned rows = dim.size();
+  return rows * sizeof(float) + rows * sizeof(int);
+}
+
+#endif
+
+template<class MyDevice>
+void ConstrainedSoftmax::forward_dev_impl(const MyDevice & dev,
+                                          const vector<const Tensor*>& xs,
+                                          Tensor& fx) const {
+  // The first input contains the log-potentials z.
+  // The second input contains the upper bound constraints u.
+  if (xs[0]->d.cols() == 1 && xs[1]->d.cols() == 1) {
+#ifdef __CUDACC__
+    DYNET_NO_CUDA_IMPL_ERROR("ConstrainedSoftmax forward");
+#else
+    // Total allocated memory is rows*sizeof(float) + rows*sizeof(int).
+    float max;
+    const unsigned rows = xs[0]->d.rows();
+    for (unsigned k = 0; k < rows; ++k) {
+      if (k == 0 || xs[0]->v[k] > max) max =  xs[0]->v[k];
+    }
+    float *q = static_cast<float*>(aux_mem);
+    for (unsigned k = 0; k < rows; ++k) {
+      q[k] = exp(xs[0]->v[k] - max);
+    }
+    float *u = xs[1]->v;
+    float mass = 0.0;
+    int *indices = reinterpret_cast<int*>(static_cast<char*>(aux_mem) +
+                                          rows*sizeof(float));
+    for (unsigned k = 0; k < rows; ++k) {
+      indices[k] = k;
+    }
+    unsigned num_active = rows;
+    auto p = *fx;
+    fx.tvec() = xs[0]->tvec(); // Initialize the vector with the right size.
+    bool found = true;
+    while (found) {
+      float sum = 0.0;
+      for (unsigned k = 0; k < num_active; ++k) {
+        sum += q[indices[k]];
+      }
+      for (unsigned k = 0; k < num_active; ++k) {
+        int i = indices[k];
+        p(i, 0) = q[i] * (1.0 - mass) / sum;
+      }
+      found = false;
+      unsigned j = 0;
+      for (unsigned k = 0; k < num_active; ++k) {
+        int i = indices[k];
+        if (p(i, 0) > u[i]) {
+          p(i, 0) = u[i];
+          mass += u[i];
+          found = true;
+        } else {
+          indices[j] = i;
+          ++j;
+        }
+      }
+      num_active = j;
+    }
+    // Write a 0/1 at each position to indicate if the variable is active.
+    int *cc = static_cast<int*>(aux_mem);
+    for (unsigned k = 0; k < rows; ++k) {
+      cc[k] = 0;
+    }
+    for (unsigned k = 0; k < num_active; ++k) {
+      cc[indices[k]] = 1;
+    }
+    float *m = reinterpret_cast<float*>(static_cast<char*>(aux_mem) +
+                                        rows*sizeof(int));
+    *m = mass;
+#endif
+  } else {
+    DYNET_RUNTIME_ERR("ConstrainedSoftmax not yet implemented for multiple columns");
+  }
+}
+
+template<class MyDevice>
+void ConstrainedSoftmax::backward_dev_impl(const MyDevice & dev,
+                                           const vector<const Tensor*>& xs,
+                                           const Tensor& fx,
+                                           const Tensor& dEdf,
+                                           unsigned i,
+                                           Tensor& dEdxi) const {
+  assert(i < xs.size());
+#ifdef __CUDACC__
+  DYNET_NO_CUDA_IMPL_ERROR("ConstrainedSoftmax backward");
+#else
+  const unsigned rows = xs[0]->d.rows();
+  int *active = static_cast<int*>(aux_mem);
+  float mass =  reinterpret_cast<float*>(static_cast<char*>(aux_mem) +
+                                         rows*sizeof(int))[0];
+  float dhat = 0;
+  auto& d = *dEdf;
+  auto& p = *fx;
+  for (unsigned k = 0; k < rows; ++k) {
+    if (active[k]) dhat += p(k, 0) * d(k, 0);
+  }
+  dhat /= (1 - mass);
+  for (unsigned k = 0; k < rows; ++k) {
+    if (active[k]) {
+      if (i == 0) {
+        // Gradient wrt log-potentials z.
+        (*dEdxi)(k, 0) +=  p(k, 0) * (d(k, 0) - dhat);
+      }
+    } else {
+      if (i == 1) {
+        // Gradient wrt upper bound constraints u.
+        (*dEdxi)(k, 0) +=  d(k, 0) - dhat;
+      }
+    }
+  }
+#endif
+}
+DYNET_NODE_INST_DEV_IMPL(ConstrainedSoftmax)
+
 }

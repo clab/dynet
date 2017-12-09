@@ -3238,6 +3238,23 @@ cpdef Expression softsign(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
 
+cpdef Expression constrained_softmax(Expression x, Expression y):
+    """Constrained softmax function
+
+    The constrained softmax function (Martins and Kreutzer, 2017) is similar to softmax, but defines upper bounds for the resulting probabilities. **Note:** This function is not yet implemented on GPU.
+    
+    Args:
+        x (dynet.Expression): Input expression (scores)
+        y (dynet.Expression): Input expression (upper bounds)
+    
+    Returns:
+        dynet.Expression: The constrained softmax of the scores, satisfying the upper bound constraints
+
+    """
+    ensure_freshness(y);
+    return Expression.from_cexpr(x.cg_version,
+                                 c_constrained_softmax(x.c(), y.c()))
+
 cpdef Expression pow(Expression x, Expression y):
     """Power function
     

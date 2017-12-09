@@ -329,6 +329,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_softmax "dynet::softmax" (CExpression& x, unsigned d) except + #
     CExpression c_sparsemax "dynet::sparsemax" (CExpression& x) except + #
     CExpression c_softsign "dynet::softsign" (CExpression& x) except + #
+    CExpression c_constrained_softmax "dynet::constrained_softmax" (CExpression& x, CExpression &y) except + #
     CExpression c_pow "dynet::pow" (CExpression& x, CExpression& y) except + #
     CExpression c_bmin "dynet::min" (CExpression& x, CExpression& y) except + #
     CExpression c_bmax "dynet::max" (CExpression& x, CExpression& y) except + #
