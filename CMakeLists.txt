@@ -37,15 +37,7 @@ function(find_mkl)
     get_filename_component(MKL_COMPILER_LIB_FILE ${MKL_COMPILER_LIB} NAME)
     message(STATUS "Found MKL\n   * include: ${MKL_INCLUDE_DIR},\n   * core library dir: ${MKL_CORE_LIB_DIR},\n   * compiler library: ${MKL_COMPILER_LIB}")
 
-    # Due to a conflict with /MT and /MD, MSVC needs mkl_intel_lp64 linked last, or we can change individual
-    # projects to use /MT (mkl_intel_lp64 linked with /MT, default MSVC projects use /MD), or we can instead
-    # link to the DLL versions. For now I'm opting for this solution which seems to work with projects still
-    # at their default /MD. Linux build requires the mkl_intel_lp64 to be linked first. So...:
-    if(MSVC)
-      set(LIBS ${LIBS} mkl_intel_thread mkl_core mkl_intel_lp64 ${MKL_COMPILER_LIB_FILE} PARENT_SCOPE)
-    else()
-      set(LIBS ${LIBS} mkl_intel_lp64 mkl_intel_thread mkl_core ${MKL_COMPILER_LIB_FILE} PARENT_SCOPE)
-    endif()
+    set(LIBS ${LIBS} mkl_rt ${MKL_COMPILER_LIB_FILE} PARENT_SCOPE)
     include_directories(${MKL_INCLUDE_DIR})
     link_directories(${MKL_CORE_LIB_DIR} ${MKL_COMPILER_LIB_DIR})
     set(MKL_LINK_DIRS ${MKL_CORE_LIB_DIR} ${MKL_COMPILER_LIB_DIR} PARENT_SCOPE) # Keeping this for python build
@@ -164,7 +156,7 @@ if (WITH_CUDA_BACKEND)
   MESSAGE("CUDA_LIBRARIES: ${CUDA_LIBRARIES}")
   list(REMOVE_ITEM CUDA_LIBRARIES -lpthread)
   set(LIBS ${LIBS} ${CUDA_LIBRARIES})
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_HAS_CUDA_FP16 -DEIGEN_USE_GPU")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_GPU")
   find_cudnn()
   if(CUDNN_FOUND)
     include_directories(SYSTEM ${CUDNN_INCLUDE_DIRS})

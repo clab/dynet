@@ -9,38 +9,69 @@ env:
 branches:
   only:
     - master
+<<<<<<< HEAD
+=======
+stages:
+  - test
+  - name: test_pip
+    if: repo = clab/dynet AND tag IS present
+>>>>>>> upstream/master
 jobs:
   include:
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=manual
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: osx
       compiler: clang
       language: cpp
@@ -58,7 +89,11 @@ jobs:
       language: python
       python: 2.7
       env: PYVER=2.7 PYNUM=2 PYTHON_INSTALL=pip BUILD_ARCH=i686
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: linux
       compiler: gcc
       language: python
@@ -68,36 +103,60 @@ jobs:
       compiler: gcc
       language: cpp
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: linux
       compiler: gcc
       language: python
       python: 3.4
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: linux
       compiler: gcc
       language: python
       python: 3.4
       env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: linux
       compiler: gcc
       language: cpp
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: linux
       compiler: gcc
       language: python
       python: 3.5
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: linux
       compiler: gcc
       language: python
       python: 3.5
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: linux
       compiler: gcc
       language: cpp
@@ -107,7 +166,11 @@ jobs:
       language: python
       python: 3.6
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+<<<<<<< HEAD
       if: type = cron
+=======
+      if: type = cron OR tag IS present
+>>>>>>> upstream/master
     - os: linux
       compiler: gcc
       language: python
@@ -117,6 +180,46 @@ jobs:
       compiler: gcc
       language: cpp
       env: PYVER=3.6 PYNUM=3 PYTHON_INSTALL=manual BACKEND=cuda
+<<<<<<< HEAD
+=======
+    - stage: test_pip
+      os: osx
+      env: PYVER=2.7 PYNUM=2
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: osx
+      env: PYVER=3.4 PYNUM=3
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: osx
+      env: PYVER=3.5 PYNUM=3
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: osx
+      env: PYVER=3.6 PYNUM=3
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      language: python
+      python: 2.7
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      language: python
+      python: 3.4
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      language: python
+      python: 3.5
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      language: python
+      python: 3.6
+      before_script: pip install dynet
+      script: python tests/python/test.py
+>>>>>>> upstream/master
 
 install:
   - travis_retry .travis/install_dependencies.sh
@@ -140,4 +243,8 @@ deploy:
   on:
     repo: clab/dynet
     tags: true
+<<<<<<< HEAD
     condition: "$PYTHON_INSTALL = pip && $TRAVIS_OS_NAME = linux"
+=======
+    condition: "$PYTHON_INSTALL = pip"
+>>>>>>> upstream/master

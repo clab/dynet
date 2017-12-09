@@ -61,6 +61,18 @@ struct MaxPooling1D : public Node {
   mutable std::vector<unsigned> ind;
 };
 
+struct CircularConvolution : public Node {
+  CircularConvolution(const std::initializer_list<VariableIndex>& a)
+      : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
+struct CircularCorrelation : public Node {
+  CircularCorrelation(const std::initializer_list<VariableIndex>& a)
+      : Node(a) {}
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
 }  // namespace dynet
 
 #endif

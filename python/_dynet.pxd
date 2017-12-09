@@ -11,7 +11,7 @@ cdef extern from "dynet/init.h" namespace "dynet":
         string mem_descriptor
         float weight_decay
         int autobatch
-        int autobatch_debug
+        int profiling
         bool shared_parameters
         bool ngpus_requested
         bool ids_requested
@@ -208,6 +208,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         void update_epoch(float r)
         void status()
 
+
     cdef cppclass CSimpleSGDTrainer "dynet::SimpleSGDTrainer" (CTrainer):
         CSimpleSGDTrainer(CModel& m, float learning_rate) # TODO removed lam, update docs.
 
@@ -297,7 +298,18 @@ cdef extern from "dynet/expr.h" namespace "dynet":
 
     CExpression c_colwise_add "dynet::colwise_add" (CExpression& x, CExpression& bias) except + #
 
+    CExpression c_sin "dynet::sin" (CExpression& x) except + #
+    CExpression c_cos "dynet::cos" (CExpression& x) except + #
+    CExpression c_tan "dynet::tan" (CExpression& x) except + #
+    CExpression c_asin "dynet::asin" (CExpression& x) except + #
+    CExpression c_acos "dynet::acos" (CExpression& x) except + #
+    CExpression c_atan "dynet::atan" (CExpression& x) except + #
+    CExpression c_sinh "dynet::sinh" (CExpression& x) except + #
+    CExpression c_cosh "dynet::cosh" (CExpression& x) except + #
     CExpression c_tanh "dynet::tanh" (CExpression& x) except + #
+    CExpression c_asinh "dynet::asinh" (CExpression& x) except + #
+    CExpression c_acosh "dynet::acosh" (CExpression& x) except + #
+    CExpression c_atanh "dynet::atanh" (CExpression& x) except + #
     CExpression c_exp "dynet::exp" (CExpression& x) except + #
     CExpression c_square "dynet::square" (CExpression& x) except + #
     CExpression c_sqrt "dynet::sqrt" (CExpression& x) except + #
@@ -337,6 +349,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_trace_of_product "dynet::trace_of_product" (CExpression& x, CExpression& y) except +;
 
     CExpression c_dot_product "dynet::dot_product" (CExpression& x, CExpression& y) except + #
+    CExpression c_circ_conv "dynet::circ_conv" (CExpression& u, CExpression& v) except + #
+    CExpression c_circ_corr "dynet::circ_corr" (CExpression& u, CExpression& v) except + #
     CExpression c_squared_distance "dynet::squared_distance" (CExpression& x, CExpression& y) except + #
     CExpression c_squared_norm "dynet::squared_norm" (CExpression& x) except + #
     CExpression c_l2_norm "dynet::l2_norm" (CExpression& x) except + #
@@ -380,6 +394,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
 
     CExpression c_pick_batch_elems "dynet::pick_batch_elems" (CExpression& x, vector[unsigned] vs) except + #
     CExpression c_pick_batch_elem "dynet::pick_batch_elem" (CExpression& x, unsigned v) except + #
+    CExpression c_strided_select "dynet::strided_select" (CExpression& x, vector[int] strides, vector[int] range_from, vector[int] range_to) except +
+
     CExpression c_pickneglogsoftmax "dynet::pickneglogsoftmax" (CExpression& x, unsigned v) except + #
     CExpression c_pickneglogsoftmax "dynet::pickneglogsoftmax" (CExpression& x, vector[unsigned] vs) except + #
 
@@ -467,7 +483,7 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
 
     cdef cppclass CVanillaLSTMBuilder "dynet::VanillaLSTMBuilder" (CRNNBuilder):
         CVanillaLSTMBuilder()
-        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm)
+        CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm, float forget_bias)
         void set_dropout(float d, float d_r)
         void set_dropout_masks(unsigned batch_size)
 

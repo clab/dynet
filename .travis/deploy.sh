@@ -2,5 +2,7 @@
 set -xe
 
 cd "$TRAVIS_BUILD_DIR"
-python setup.py sdist  # Build sdist
+if [[ "$TRAVIS_OS_NAME" == linux ]]; then
+  python setup.py sdist  # Build sdist
+fi
 twine upload --skip-existing dist/*  # Upload to PyPI

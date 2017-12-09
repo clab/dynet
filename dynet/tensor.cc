@@ -92,8 +92,11 @@ float TensorTools::access_element(const Tensor& v, const Dim& index) {
   if (v.device->type == DeviceType::CPU) {
     return (*v)(index[0], index[1]);
 #if HAVE_CUDA
-  } else if (v.device->type == DeviceType::GPU) {
-    DYNET_NO_CUDA_IMPL_ERROR("TensorTools::access_element(Tensor,Dim)")
+  if (v.device->type == DeviceType::GPU) {
+    float ret = 0.0f;
+    CUDA_CHECK(cudaMemcpy(&ret, v.v + (v.d.rows() * index[0] + index[1]), sizeof(float), cudaMemcpyDeviceToHost));
+    return ret;
+  }
 #endif
   } else { throw std::runtime_error("Bad device type"); }
   return 0;
@@ -133,7 +136,7 @@ void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rinde
       } else {
         cudaMemcpyPeerAsync(&r.v[rindex], ((Device_GPU*)r.device)->cuda_device_id,
                             &l.v[lindex], ((Device_GPU*)l.device)->cuda_device_id,
-                            sizeof(real), dynet::default_stream);
+                            sizeof(real));
       }
     } else { throw std::runtime_error("Bad device type"); }
 #endif
@@ -173,7 +176,7 @@ void TensorTools::copy_elements(Tensor& v, const Tensor& v_src) {
       } else {
         cudaMemcpyPeerAsync(v.v, ((Device_GPU*)v.device)->cuda_device_id,
                             v_src.v, ((Device_GPU*)v_src.device)->cuda_device_id,
-                            sizeof(real) * v.d.size(), dynet::default_stream);
+                            sizeof(real) * v.d.size());
       }
     }
 #endif

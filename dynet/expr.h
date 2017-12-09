@@ -860,6 +860,94 @@ Expression erf(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Inverse sine
+ * \details Elementwise calculation of the inverse sine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to asin(x_i)
+ */
+Expression asin(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse cosine
+ * \details Elementwise calculation of the inverse cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to acos(x_i)
+ */
+Expression acos(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse tangent
+ * \details Elementwise calculation of the inverse tangent
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to atan(x_i)
+ */
+Expression atan(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Sine
+ * \details Elementwise calculation of the sine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to sin(x_i)
+ */
+Expression sin(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Cosine
+ * \details Elementwise calculation of the cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to cos(x_i)
+ */
+Expression cos(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Tangent
+ * \details Elementwise calculation of the tangent
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to tan(x_i)
+ */
+Expression tan(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Hyperbolic sine
+ * \details Elementwise calculation of the hyperbolic sine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to sinh(x_i)
+ */
+Expression sinh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Hyperbolic cosine
+ * \details Elementwise calculation of the hyperbolic cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to cosh(x_i)
+ */
+Expression cosh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Hyperbolic tangent
  * \details Elementwise calculation of the hyperbolic tangent
  *
@@ -868,6 +956,39 @@ Expression erf(const Expression& x);
  * \return An expression where the ith element is equal to tanh(x_i)
  */
 Expression tanh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse hyperbolic sine
+ * \details Elementwise calculation of the inverse hyperbolic sine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to asinh(x_i)
+ */
+Expression asinh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse hyperbolic cosine
+ * \details Elementwise calculation of the inverse hyperbolic cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to acosh(x_i)
+ */
+Expression acosh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse hyperbolic tangent
+ * \details Elementwise calculation of the inverse hyperbolic tangent
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to atanh(x_i)
+ */
+Expression atanh(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
@@ -1081,6 +1202,30 @@ inline Expression max(const T& xs) { return detail::f<Max>(xs); }
  * \return An expression equal to the dot product
  */
 Expression dot_product(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Circular convolution
+ * \details Calculate the circular convolution
+ *
+ * \param x The input expression
+ * \param y The input expression
+ *
+ * \return An expression equal to the circular convolution
+ */
+Expression circ_conv(const Expression& u, const Expression& v);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Circular correlation
+ * \details Calculate the circular correlation
+ *
+ * \param x The input expression
+ * \param y The input expression
+ *
+ * \return An expression equal to the circular correlation
+ */
+Expression circ_corr(const Expression& u, const Expression& v);
 
 /**
  * \ingroup arithmeticoperations
@@ -1427,10 +1572,10 @@ Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptar
  * \brief Constrained softmax
  * \details The constrained softmax function.
  *          **Note:** This function is not yet implemented on GPU.
- * 
+ *
  * \param x A vector of scores
  * \param y A vector of upper bound constraints on probabilities
- * 
+ *
  * \return The constrained softmax of the scores.
  */
 Expression constrained_softmax(const Expression& x, const Expression& y);
@@ -1444,7 +1589,6 @@ Expression constrained_softmax(const Expression& x, const Expression& y);
  *
  * \return The squared L2 norm
  */
-
 Expression squared_norm(const Expression& x);
 
 /**
@@ -1881,6 +2025,21 @@ inline Expression concatenate_to_batch(const T& xs) { return detail::f<Concatena
 
 /**
  * \ingroup flowoperations
+ * \brief Strided select in multiple dimensions
+ * \details Select a range and/or stride of elements from an expression.
+ *
+ * \param x The input expression
+ * \param strides List of strides for each dimension, must be >= 1. Dimensions not included default to 1. Batch dimension can be included as very last dimension.
+ * \param from    List of 0-based offsets (inclusive) for each dimension, must be >= 0. Dimensions not included default to 0. Batch dimension can be included as very last dimension.
+ * \param to      List of highest 0-based index to select (exclusive) for each dimension, must be >= 0. Dimensions not included default to the corresponding dim size. Batch dimension can be included as very last dimension.
+ *
+ * \return The value of x[from[0]:to[0]:strides[0],..] (as it would be in numpy syntax)
+ */
+Expression strided_select(const Expression& x, const std::vector<int>& strides, const std::vector<int>& from = {}, const std::vector<int>& to = {});
+
+
+/**
+ * \ingroup flowoperations
  * \brief Concatenate columns
  * \details Perform a concatenation of the columns in multiple expressions.
  *          All expressions must have the same number of rows.
@@ -1902,7 +2061,7 @@ inline Expression concatenate_cols(const T& xs) { return detail::f<Concatenate>(
  *          the dimension to be concatenated (rows by default).
  *
  * \param xs The input expressions
- * \param xs The dimension along which to perform concatenation
+ * \param d The dimension along which to perform concatenation
  *
  * \return The expression with the specified dimension concatenated
  */

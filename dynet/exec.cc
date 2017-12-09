@@ -94,8 +94,8 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
 
     for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
       const Node* node = cg.nodes[num_nodes_evaluated];
-      if (autobatch_debug_flag) {
-        current_node_name = node->as_dummy_string();
+      if (profiling_flag) {
+        current_node_name = "fwd " + node->as_dummy_string();
         timer.start(current_node_name);
       }
       xs.resize(node->arity());
@@ -138,7 +138,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       // Compute f(xs) and store to node_fx.
       node->forward(xs, node_fx);
 
-      if (autobatch_debug_flag) { timer.stop(current_node_name); }
+      if (profiling_flag) { timer.stop(current_node_name); }
     }
   }
 
@@ -214,9 +214,14 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   vector<bool> in_computation(num_nodes, false);
   in_computation[num_nodes - 1] = true;
   vector<const Tensor*> xs(16);
+  string current_node_name;  // Optionally used for debugging (reused).
   for (int i = num_nodes - 1; i >= 0; --i) {
     if (!in_computation[i]) continue;
     const Node* node = cg.nodes[i];
+    if (profiling_flag) {
+      current_node_name = "BWD " + node->as_dummy_string();
+      timer.start(current_node_name);
+    }
     const auto& node_fx = nfxs[i];  // f(x_1, x_2, ..., x_arity), which
                                     // was previously computed by forward.
     const auto& node_dEdfx = ndEdfs[i];  // dE/df(x_1, x_2, ..., x_arity)
@@ -239,6 +244,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
       }
       ++ai;
     }
+    if (profiling_flag) { timer.stop(current_node_name); }
   }
 
   // Accumulate gradients into parameters.
@@ -317,9 +323,10 @@ void BatchedExecutionEngine::combine_tensors(
     float** trgs = static_cast<float**>(basemem) + TRG;
     std::size_t* lens = static_cast<std::size_t*>(basemem) + LEN;
     CUDA_CHECK(cudaMemcpyAsync(basemem,
-                               &(locs)[0],
-                               locs.size() * sizeof(CopyArgs),
-                               cudaMemcpyHostToDevice));
+                          &(locs)[0],
+                          locs.size() * sizeof(CopyArgs),
+                          cudaMemcpyHostToDevice,
+                          static_cast<Device_GPU*>(tout.device)->estream->stream()));
     gpu::parallel_memcpy(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
   } else if (tout.device->type == DeviceType::CPU) {
@@ -368,9 +375,10 @@ void BatchedExecutionEngine::accumulate_tensors(
     float** trgs = static_cast<float**>(basemem) + TRG;
     std::size_t* lens = static_cast<std::size_t*>(basemem) + LEN;
     CUDA_CHECK(cudaMemcpyAsync(basemem,
-                               &(locs)[0],
-                               locs.size() * sizeof(CopyArgs),
-                               cudaMemcpyHostToDevice));
+                          &(locs)[0],
+                          locs.size() * sizeof(CopyArgs),
+                          cudaMemcpyHostToDevice,
+                          static_cast<Device_GPU*>(tin.device)->estream->stream()));
     gpu::parallel_accumulate(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
   }
@@ -678,7 +686,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
     }
 
     // 2.5 print some debug info
-    if (autobatch_debug_flag) {
+    if (profiling_flag) {
       cout << "Forward Call" << endl;
       for(VariableIndex bid = num_batches_evaluated; bid < batch_id; ++bid) {
         auto & batch_ids = batches[bid].ids;
@@ -775,7 +783,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
     while(num_batches_evaluated < batch_id) {
       // Read in the stuff for this batch
       auto & my_batch = batches[num_batches_evaluated];
-      if (autobatch_debug_flag) {
+      if (profiling_flag) {
         VariableIndex nid = my_batch.ids[0];
         Node* node = cg.nodes[nid];
         current_batch_name = node->as_dummy_string();
@@ -845,7 +853,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
         // cerr << "batched forward[" << num_batches_evaluated << "] (nodes:"; for(auto id : my_batch.ids) cerr << ' ' << id; cerr << ") == " << print_vec(as_vector(my_batch.nfx)) << endl;
         ++num_batches_evaluated;
       } // execute a batch node (not a single instance node)
-      if (autobatch_debug_flag) { timer.stop(current_batch_name); }
+      if (profiling_flag) { timer.stop(current_batch_name); }
     }
 
     free(node2profid);
