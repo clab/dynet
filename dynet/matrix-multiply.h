@@ -26,8 +26,6 @@ inline void MatrixMultiply(const Device_GPU & dev, const Tensor& l, const Tensor
           acc_scalar, y.v, y.d.rows()));
   } else {
     // Otherwise, loop over the batches
-    DYNET_ARG_CHECK(r.d.bd != 1 || r.d.bd != l.d.bd,
-                 "Number of batch elements in matrix multiply must match, but got: " << r.d.bd << ", " << l.d.bd);
     for(unsigned b = 0; b < y.d.bd; ++b) {
       CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
             y.d.rows(), y.d.cols(), l.d.cols(),
@@ -58,9 +56,6 @@ inline void MatrixMultiply(const Device_CPU & dev, const Tensor& l, const Tensor
 
   } else {
     // Otherwise, loop over the batches
-    DYNET_ARG_CHECK(r.d.bd != 1 || r.d.bd != l.d.bd,
-                 "Number of batch elements in matrix multiply must match, but got: " << r.d.bd << ", " << l.d.bd);
-
     for(unsigned b = 0; b < y.d.bd; ++b)
       y.batch_matrix(b).noalias() += l.batch_matrix(b) * r.batch_matrix(b);
 

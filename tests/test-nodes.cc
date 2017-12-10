@@ -346,7 +346,7 @@ BOOST_AUTO_TEST_CASE( logsumexp_dim_gradient ) {
   for (int d = 1; d >= 0; d--)
     exps.push_back(logsumexp_dim(x, d));
   Expression z = sum_elems(sum(exps));
-  BOOST_CHECK(check_grad(mod, z, 1));
+  BOOST_CHECK(check_grad(mod, z, 0));
 }
 
 // Expression operator+(const Expression& x, real y);
@@ -1549,7 +1549,7 @@ BOOST_AUTO_TEST_CASE( kmax_pooling_keq1_gradient ) {
   dynet::ComputationGraph cg;
   Expression xsquare = parameter(cg, param_square1);
   Expression y = tanh(kmax_pooling(xsquare, 1));
-  Expression z = sum_elems(y);
+  Expression z = pickneglogsoftmax(y, 1);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
@@ -1567,7 +1567,27 @@ BOOST_AUTO_TEST_CASE( fold_rows_gradient ) {
   dynet::ComputationGraph cg;
   Expression x4 = parameter(cg, param4);
   Expression y = fold_rows(x4, 2);
-  Expression z = sum_elems(y);
+  Expression z = pickneglogsoftmax(y, 1);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression circ_corr(const Expression& u, const Expression& v);
+BOOST_AUTO_TEST_CASE( circ_corr_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression u = parameter(cg, param5);
+  Expression v = parameter(cg, param2);
+  Expression y = circ_corr(u, v);
+  Expression z = pickneglogsoftmax(y, 1);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression circ_conv(const Expression& u, const Expression& v);
+BOOST_AUTO_TEST_CASE( circ_conv_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression u = parameter(cg, param5);
+  Expression v = parameter(cg, param2);
+  Expression y = circ_conv(u, v);
+  Expression z = pickneglogsoftmax(y, 1);
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 

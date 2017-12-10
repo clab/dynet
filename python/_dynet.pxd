@@ -348,6 +348,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_trace_of_product "dynet::trace_of_product" (CExpression& x, CExpression& y) except +;
 
     CExpression c_dot_product "dynet::dot_product" (CExpression& x, CExpression& y) except + #
+    CExpression c_circ_conv "dynet::circ_conv" (CExpression& u, CExpression& v) except + #
+    CExpression c_circ_corr "dynet::circ_corr" (CExpression& u, CExpression& v) except + #
     CExpression c_squared_distance "dynet::squared_distance" (CExpression& x, CExpression& y) except + #
     CExpression c_squared_norm "dynet::squared_norm" (CExpression& x) except + #
     CExpression c_l2_norm "dynet::l2_norm" (CExpression& x) except + #

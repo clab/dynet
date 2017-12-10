@@ -2607,6 +2607,34 @@ cpdef Expression dot_product(Expression x, Expression y):
     """
     ensure_freshness(y); 
     return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
+cpdef Expression circ_conv(Expression u, Expression v):
+    """Circular convolution
+
+    Calculate the circular convolution :math:`[u * v]_k=\sum_i u_iv_{(k-i) \mod d}`
+
+    Args:
+        u (dynet.Expression): The first input expression
+        v (dynet.Expression): The second input expression
+
+    Returns:
+        dynet.Expression: :math:`u * v`
+    """
+    ensure_freshness(v);
+    return Expression.from_cexpr(u.cg_version, c_circ_conv(u.c(), v.c()))
+cpdef Expression circ_corr(Expression u, Expression v):
+    """Circular correlation
+
+    Calculate the circular correlation :math:`[u \star v]_k=\sum_i u_iv_{(i + k) \mod d}`
+
+    Args:
+        u (dynet.Expression): The first input expression
+        v (dynet.Expression): The second input expression
+
+    Returns:
+        dynet.Expression: :math:`u \star v`
+    """
+    ensure_freshness(v);
+    return Expression.from_cexpr(u.cg_version, c_circ_corr(u.c(), v.c()))
 cpdef Expression squared_norm(Expression x):
     """Squared norm
     
@@ -4011,6 +4039,7 @@ cpdef Expression esum(list xs):
     cvec = vector[CExpression]()
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for esum.'
         ensure_freshness(x)
         cvec.push_back(x.c())
     #print(cvec.size(), file=sys.stderr)
@@ -4032,6 +4061,7 @@ cpdef Expression logsumexp(list xs):
     cvec = vector[CExpression]()
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for logsumexp.'
         ensure_freshness(x)
         cvec.push_back(x.c())
     #print(cvec.size(), file=sys.stderr)
@@ -4067,6 +4097,7 @@ cpdef Expression average(list xs):
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs: 
+        assert x, 'Empty element for average.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_average(cvec))
@@ -4088,6 +4119,7 @@ cpdef Expression emax(list xs):
     c = xs[0]
     ensure_freshness(c) 
     for x in xs: 
+        assert x, 'Empty element for emax.'
         ensure_freshness(x) 
         c = Expression.from_cexpr(x.cg_version, c_bmax(x.c(),c.c()))
     return c
@@ -4104,10 +4136,11 @@ cpdef Expression concatenate_cols(list xs):
     Returns:
         dynet.Expression: The expression with the columns concatenated
     """
-    assert xs, 'List is empty, nothing to concatenate.'
+    assert xs, 'List is empty, nothing to concatenate_cols.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for concatenate_cols.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat_cols(cvec))
@@ -4129,6 +4162,7 @@ cpdef Expression concatenate(list xs, unsigned d=0):
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for concatenate.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat(cvec, d))
@@ -4144,10 +4178,11 @@ cpdef Expression concatenate_to_batch(list xs):
     Returns:
         dynet.Expression: The expression with the batch dimensions concatenated
     """
-    assert xs, 'List is empty, nothing to concatenate.'
+    assert xs, 'List is empty, nothing to concatenate_to_batch.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for concatenate_to_batch.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat_to_batch(cvec))
@@ -4167,6 +4202,7 @@ cpdef Expression affine_transform(list exprs):
     cdef Expression e
     cdef vector[CExpression] ves
     for e in exprs:
+        assert e, 'Empty element for affine_transform.'
         ensure_freshness(e) 
         ves.push_back(e.c())
     return Expression.from_cexpr(e.cg_version, c_affine_transform(ves))

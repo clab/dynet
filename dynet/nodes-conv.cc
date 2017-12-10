@@ -150,12 +150,12 @@ void FoldRows::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  const Eigen::array<Eigen::DenseIndex, 1> broadcasts = {nrows};
-  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec().broadcast(broadcasts);
-  // unsigned orows = fx.d.rows();
-  // for (unsigned i = 0; i < orows; ++i)
-  //   for (unsigned j = 0; j < nrows; ++j)
-  //     dEdxi.tb<2>().chip<0>(i * nrows + j) += d.tb<2>().chip<0>(i);
+  //const Eigen::array<Eigen::DenseIndex, 1> broadcasts = {nrows};
+  //dEdxi.tvec().device(*dev.edevice) += dEdf.tvec().broadcast(broadcasts);
+  unsigned orows = fx.d.rows();
+  for (unsigned i = 0; i < orows; ++i)
+    for (unsigned j = 0; j < nrows; ++j)
+      dEdxi.tb<2>().chip<0>(i * nrows + j).device(*dev.edevice) += dEdf.tb<2>().chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(FoldRows)
 
@@ -330,5 +330,151 @@ void KMHNGram::backward_dev_impl(const MyDevice & dev,
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(KMHNGram)
+
+// ************* CircularCorrelation *************
+
+#ifndef __CUDACC__
+
+string CircularCorrelation::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "circ_corr(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return s.str();
+}
+
+Dim CircularCorrelation::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs[0].ndims() == 1 && xs[0] == xs[1],
+                  "Bad input dimensions in CircularCorrelation: " << xs);
+  return xs[0];
+}
+
+#endif
+
+namespace {
+// TODO these operations should be implemented using FFTs rather than the naive
+// quadratic algorithm that's here. Eigen provides an FFT/IFFT that will run on
+// CPU and GPU that can be used.
+
+inline int mod(int diff, int d) {
+  if (diff < 0) return diff + d;
+  return diff;
+}
+
+// adds the result of a * b to out
+template <typename T>
+void add_circular_convolution_naive(const T& a, const T& b, T& out) {
+  const int d = a.rows();
+  for (int k = 0; k < d; ++k) {
+    for (int i = 0; i < d; ++i) {
+      out(k, 0) += a(i, 0) * b(mod(k - i, d), 0);
+    }
+  }
+}
+
+// adds the result of a \star b to out
+template <typename T>
+void add_circular_correlation_naive(const T& a, const T& b, T& out) {
+  const int d = a.rows();
+  for (int k = 0; k < d; ++k) {
+    for (int i = 0; i < d; ++i) {
+      out(k, 0) += a(i, 0) * b((k + i) % d, 0);
+    }
+  }
+}
+}  // namespace
+
+template<class MyDevice>
+void CircularCorrelation::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef __CUDACC__
+  DYNET_NO_CUDA_IMPL_ERROR("CircularCorrelation forward");
+#else
+  auto a = **xs[0];
+  auto b = **xs[1];
+  auto y = *fx;
+  const int d = a.rows();
+  for (int i = 0; i < d; ++i) y(i, 0) = 0;
+  add_circular_correlation_naive(a, b, y);
+#endif
+}
+
+template<class MyDevice>
+void CircularCorrelation::backward_dev_impl(const MyDevice & dev,
+                                            const vector<const Tensor*>& xs,
+                                            const Tensor& fx,
+                                            const Tensor& dEdf,
+                                            unsigned i,
+                                            Tensor& dEdxi) const {
+#ifdef __CUDACC__
+  DYNET_NO_CUDA_IMPL_ERROR("CircularCorrelation backward");
+#else
+  auto a = **xs[0];
+  auto b = **xs[1];
+  auto dr = *dEdf;
+  auto out = *dEdxi;
+  const int d = a.rows();
+  if (i == 0) {
+    add_circular_correlation_naive(dr, b, out);
+  } else {
+    add_circular_convolution_naive(a, dr, out);
+  }
+#endif
+}
+DYNET_NODE_INST_DEV_IMPL(CircularCorrelation)
+
+// ************* CircularConvolution *************
+
+#ifndef __CUDACC__
+
+string CircularConvolution::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "circ_conv(" << arg_names[0] << ", " << arg_names[1] << ')';
+  return s.str();
+}
+
+Dim CircularConvolution::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs[0].ndims() == 1 && xs[0] == xs[1],
+                  "Bad input dimensions in CircularConvolution: " << xs);
+  return xs[0];
+}
+
+#endif
+
+template<class MyDevice>
+void CircularConvolution::forward_dev_impl(
+    const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+#ifdef __CUDACC__
+  DYNET_NO_CUDA_IMPL_ERROR("CircularConvolution forward");
+#else
+  auto a = **xs[0];
+  auto b = **xs[1];
+  auto y = *fx;
+  const int d = a.rows();
+  for (int i = 0; i < d; ++i) y(i, 0) = 0;
+  add_circular_convolution_naive(a, b, y);
+#endif
+}
+
+template<class MyDevice>
+void CircularConvolution::backward_dev_impl(const MyDevice & dev,
+                                            const vector<const Tensor*>& xs,
+                                            const Tensor& fx,
+                                            const Tensor& dEdf,
+                                            unsigned i,
+                                            Tensor& dEdxi) const {
+#ifdef __CUDACC__
+  DYNET_NO_CUDA_IMPL_ERROR("CircularConvolution backward");
+#else
+  auto a = **xs[0];
+  auto b = **xs[1];
+  auto dr = *dEdf;
+  auto out = *dEdxi;
+  const int d = a.rows();
+  if (i == 0) {
+    add_circular_correlation_naive(b, dr, out);
+  } else {
+    add_circular_correlation_naive(a, dr, out);
+  }
+#endif
+}
+DYNET_NODE_INST_DEV_IMPL(CircularConvolution)
 
 } // namespace dynet

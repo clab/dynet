@@ -123,6 +123,8 @@ Expression squared_norm(const Expression& x) { return Expression(x.pg, x.pg->add
 Expression l2_norm(const Expression& x) { return Expression(x.pg, x.pg->add_function<L2Norm>({x.i})); }
 
 Expression dot_product(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<DotProduct>({x.i, y.i})); }
+Expression circ_conv(const Expression& u, const Expression& v) { return Expression(u.pg, u.pg->add_function<CircularConvolution>({u.i, v.i})); }
+Expression circ_corr(const Expression& u, const Expression& v) { return Expression(u.pg, u.pg->add_function<CircularCorrelation>({u.i, v.i})); }
 Expression squared_distance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<SquaredEuclideanDistance>({x.i, y.i})); }
 Expression huber_distance(const Expression& x, const Expression& y, real c) { return Expression(x.pg, x.pg->add_function<HuberDistance>({x.i, y.i}, c)); }
 Expression l1_distance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<L1Distance>({x.i, y.i})); }
