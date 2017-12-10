@@ -21,14 +21,18 @@
       std::cerr << "CUDA failure in " << #stmt << std::endl\
                 << cudaGetErrorString(err) << std::endl;   \
       if (err == cudaErrorMemoryAllocation) {              \
-        size_t free_bytes, total_bytes;                    \
+        size_t free_bytes=0, total_bytes=0;                \
         cudaMemGetInfo(&free_bytes, &total_bytes);         \
+        int devid=-1;                                      \
+        cudaGetDevice(&devid);                             \
         std::cerr << "CUDA is unable to allocate enough "  \
-                  << "GPU memory, at current stage only "  \
+                  << "GPU memory on GPU:" << devid         \
+                  << ", at current stage only "            \
                   << free_bytes/1024/1024 << " MB out of " \
                   << total_bytes/1024/1024 << " MB is free"\
                   << ". Note due to hardware limitations " \
-                  << "not all free memories can be alloc." \
+                  << "not all free memories can be "       \
+                  << "allocated."                          \
                   << std::endl;                            \
       }                                                    \
       throw dynet::cuda_exception(#stmt);                  \
