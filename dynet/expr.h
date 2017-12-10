@@ -1569,6 +1569,19 @@ Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptar
 
 /**
  * \ingroup lossoperations
+ * \brief Constrained softmax
+ * \details The constrained softmax function.
+ *          **Note:** This function is not yet implemented on GPU.
+ *
+ * \param x A vector of scores
+ * \param y A vector of upper bound constraints on probabilities
+ *
+ * \return The constrained softmax of the scores.
+ */
+Expression constrained_softmax(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup lossoperations
  * \brief Squared norm
  * \details The squared L2 norm of the values of x: \f$\sum_i x_i^2\f$.
  *
