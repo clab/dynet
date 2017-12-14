@@ -35,7 +35,7 @@ The documentation is automatically rebuilt by ReadTheDocs each time you push on 
 
 If you want to build the documentation locally you'll need to install doxygen, sphinx and breathe and then run :code:`build_doc.sh` from the :code:`doc` folder.
 
-.. _Doxygen: www.doxygen.org/
+.. _Doxygen: http://www.doxygen.org/
 .. _Sphinx: http://www.sphinx-doc.org/en/stable/index.html
 .. _training: https://github.com/clab/dynet/blob/master/dynet/training.h
 .. _reStructuredText: http://docutils.sourceforge.net/rst.html
