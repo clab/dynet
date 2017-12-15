@@ -410,7 +410,6 @@ void CircularCorrelation::backward_dev_impl(const MyDevice & dev,
   auto b = **xs[1];
   auto dr = *dEdf;
   auto out = *dEdxi;
-  const int d = a.rows();
   if (i == 0) {
     add_circular_correlation_naive(dr, b, out);
   } else {
@@ -467,7 +466,6 @@ void CircularConvolution::backward_dev_impl(const MyDevice & dev,
   auto b = **xs[1];
   auto dr = *dEdf;
   auto out = *dEdxi;
-  const int d = a.rows();
   if (i == 0) {
     add_circular_correlation_naive(b, dr, out);
   } else {

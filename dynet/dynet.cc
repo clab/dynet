@@ -7,6 +7,7 @@
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet-helper.h"
 #include "dynet/expr.h"
+#include "dynet/timing.h"
 
 using namespace std;
 
@@ -393,9 +394,6 @@ void ComputationGraph::set_check_validity(bool cv) {
   check_validity = cv;
 }
 
-// for sorting
-template<typename A, typename B> std::pair<B,A> flip_pair(const std::pair<A,B> &p) { return std::pair<B,A>(p.second, p.first); }
-template<typename A, typename B> std::multimap<B,A> flip_map(const std::map<A,B> &src) { std::multimap<B,A> dst; std::transform(src.begin(), src.end(), std::inserter(dst, dst.begin()),flip_pair<A,B>);return dst;}
 void ComputationGraph::print_graphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";
   unsigned nc = 0;
@@ -407,7 +405,7 @@ void ComputationGraph::print_graphviz() const {
          << node->as_string(var_names);
     if (profiling_flag){
       cerr << " (MEM: ";
-      cerr << std::setprecision(4) << std::setw(11) << (node->aux_storage_size() + 2*node->dim.size()) * sizeof(real) / 1024.0;
+      cerr << std::setprecision(4) << std::setw(11) << (node->aux_storage_size() + 2*node->dim.size() * sizeof(real)) / 1024.0;
       cerr << " KiB)";
     }
     cerr << "\"];\n";
@@ -422,7 +420,7 @@ void ComputationGraph::print_graphviz() const {
     std::map<string,unsigned> nodes_map, count_map;
     double total_memory = 0;
     for (auto node : nodes) {
-      unsigned mem = (node->aux_storage_size() + 2*node->dim.size()) * sizeof(real);
+      unsigned mem = node->aux_storage_size() + 2*node->dim.size() * sizeof(real);
       if(nodes_map.count(node->as_dummy_string()) == 0){
         nodes_map[node->as_dummy_string()] = 0;
         count_map[node->as_dummy_string()] = 0;

@@ -95,7 +95,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
     for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
       const Node* node = cg.nodes[num_nodes_evaluated];
       if (profiling_flag) {
-        current_node_name = "fwd " + node->as_dummy_string();
+        current_node_name = "FWD " + node->as_dummy_string();
         timer.start(current_node_name);
       }
       xs.resize(node->arity());
@@ -786,7 +786,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
       if (profiling_flag) {
         VariableIndex nid = my_batch.ids[0];
         Node* node = cg.nodes[nid];
-        current_batch_name = "fwd " + node->as_dummy_string();
+        current_batch_name = "FWD " + node->as_dummy_string();
         timer.start(current_batch_name);
       }
       if (my_batch.ids.size() == 1) { // execute a single node
