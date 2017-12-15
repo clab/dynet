@@ -82,3 +82,7 @@ void AlignedMemoryPool::set_used(size_t s) {
   // pools[c]->used = s;
   // current = c;
 }
+
+size_t AlignedMemoryPool::get_cap() {
+  return cap;
+}
