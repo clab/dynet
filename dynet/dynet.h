@@ -464,6 +464,11 @@ struct ComputationGraph {
   /**
    * \brief Used for debugging
    */
+  void show_pool_mem_info() const;
+
+  /**
+   * \brief Used for debugging
+   */
   void print_graphviz() const;
 
   /**
