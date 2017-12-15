@@ -50,6 +50,7 @@ Mode advanced topics are below:
    minibatch
    multiprocessing
    unorthodox
+   complex
 
 And we welcome your contributions!
 
