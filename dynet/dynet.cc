@@ -438,10 +438,10 @@ void ComputationGraph::print_graphviz() const {
     }
     std::cerr << std::setprecision(4) << std::setw(11) << (total_memory/1024.0) << " KiB\t100%\t(total)" << std::endl;
 
-    cerr << "\nMemory pool info for each devices.\n";
+    cerr << "\nMemory pool info for each devices:\n";
     DeviceManager* device_manager = get_device_manager();
     for (Device* dev : device_manager->get_devices()) {
-      cerr << " Device " << dev->name << ": FOR Memory " << (dev->pools[0]->get_cap() >> 20)
+      cerr << " Device " << dev->name << " - FOR Memory " << (dev->pools[0]->get_cap() >> 20)
            << "MB, BACK Memory " << (dev->pools[1]->get_cap() >> 20)
            << "MB, PARAM Memory " << (dev->pools[2]->get_cap() >> 20)
            << "MB, SCRATCH Memory " << (dev->pools[3]->get_cap() >> 20) << "MB." << endl;
