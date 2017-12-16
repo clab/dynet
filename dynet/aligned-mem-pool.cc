@@ -1,4 +1,7 @@
-#include "aligned-mem-pool.h"
+#include "dynet/aligned-mem-pool.h"
+#include "dynet/devices.h"
+#include "dynet/init.h"
+#include "dynet/globals.h"
 
 #include <sstream>
 
@@ -39,6 +42,9 @@ void* AlignedMemoryPool::allocate(size_t n) {
     cap += new_pool_size;
     current++;
     res = pools[current]->allocate(n);
+  }
+  if (profiling_flag > 1) {
+    if (res == nullptr) show_pool_mem_info();
   }
   return res;
 }

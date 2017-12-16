@@ -395,17 +395,6 @@ void ComputationGraph::set_check_validity(bool cv) {
   check_validity = cv;
 }
 
-void ComputationGraph::show_pool_mem_info() const {
-  cerr << "\nMemory pool info for each devices:\n";
-  DeviceManager* device_manager = get_device_manager();
-  for (Device* dev : device_manager->get_devices()) {
-    cerr << " Device " << dev->name << " - FOR Memory " << (dev->pools[0]->get_cap() >> 20)
-        << "MB, BACK Memory " << (dev->pools[1]->get_cap() >> 20)
-        << "MB, PARAM Memory " << (dev->pools[2]->get_cap() >> 20)
-        << "MB, SCRATCH Memory " << (dev->pools[3]->get_cap() >> 20) << "MB." << endl;
-  }
-}
-
 void ComputationGraph::print_graphviz() const {
   cerr << "digraph G {\n  rankdir=LR;\n  nodesep=.05;\n";
   unsigned nc = 0;

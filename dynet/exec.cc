@@ -122,7 +122,6 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
           node_fx_pools[(int)DeviceMempool::FXS]->allocate(
               node->dim.size() * sizeof(float)));
       if (node_fx.v == nullptr) {
-        cg.show_pool_mem_info();
         DYNET_RUNTIME_ERR("Ran out of memory when executing node " <<
                           num_nodes_evaluated << ", allocating FWD memory.");
       }
@@ -179,7 +178,6 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
         node_dEdfx.device->pools[(int)DeviceMempool::DEDFS]->allocate(
             dim.size() * sizeof(float)));
     if (node_dEdfx.v == nullptr) {
-      cg.show_pool_mem_info();
       DYNET_RUNTIME_ERR(
           "out of memory while attempting to allocate space for "
           "derivatives of node " << i << ", allocating BWD memory.");
@@ -720,7 +718,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
         nfx.v = static_cast<float*>(
             mempool->allocate(node2size[curr_node] * sizeof(float)));
         if (nfx.v == nullptr) {
-          cg.show_pool_mem_info();
           DYNET_RUNTIME_ERR("Ran out of memory when allocating for node "
                             << curr_node << ", allocating FWD memory.");
         }
@@ -753,7 +750,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
         float *head_main = static_cast<float*>(
             mempool->allocate(tot_main * sizeof(float)));
         if (head_main == nullptr) {
-          cg.show_pool_mem_info();
           DYNET_RUNTIME_ERR("Ran out of memory when executing batch " << bid <<
                             ", allocating FWD memory.");
         }
@@ -762,7 +758,6 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
         if (tot_aux > 0) {
           head_aux = static_cast<char*>(mempool->allocate(tot_aux));
           if (head_aux == nullptr) {
-            cg.show_pool_mem_info();
             DYNET_RUNTIME_ERR("Ran out of memory when executing node " << bid <<
                               ", allocating FWD memory.");
           }
@@ -943,7 +938,6 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
     batched_ndEdfs[i].mem_pool = DeviceMempool::DEDFS;
     batched_ndEdfs[i].v = static_cast<float*>(batched_ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
     if (!batched_ndEdfs[i].v) {
-      cg.show_pool_mem_info(); 
       DYNET_RUNTIME_ERR("out of memory while attempting to allocate space for derivatives of node " << i << ", allocating BWD memory.");
     }
     // Assign the memory within the batch
