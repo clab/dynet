@@ -7,6 +7,7 @@
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet-helper.h"
 #include "dynet/expr.h"
+#include "dynet/devices.h"
 #include "dynet/timing.h"
 
 using namespace std;
@@ -434,6 +435,7 @@ void ComputationGraph::print_graphviz() const {
       std::cerr << std::setprecision(4) << std::setw(11) << (item.first/1024.0) << " KiB\t" << (100.0*(double)item.first/total_memory) << "%\t" << "called " << count_map[item.second] << "x\t" << item.second << std::endl;
     }
     std::cerr << std::setprecision(4) << std::setw(11) << (total_memory/1024.0) << " KiB\t100%\t(total)" << std::endl;
+    show_pool_mem_info();
   }
 }
 

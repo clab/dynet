@@ -13,6 +13,9 @@
 #include <mm_malloc.h>
 #endif
 #include "dynet/except.h"
+#include "dynet/devices.h"
+#include "dynet/globals.h"
+#include "dynet/init.h"
 #if HAVE_CUDA
 #include "dynet/cuda.h"
 #include <cuda.h>
@@ -28,6 +31,7 @@ MemAllocator::~MemAllocator() {}
 void* CPUAllocator::malloc(size_t n) {
   void* ptr = _mm_malloc(n, align);
   if (!ptr) {
+    if (profiling_flag > 1) show_pool_mem_info();
     cerr << "CPU memory allocation failed n=" << n << " align=" << align << endl;
     throw dynet::out_of_memory("CPU memory allocation failed");
   }
@@ -49,6 +53,7 @@ void* SharedAllocator::malloc(size_t n) {
 #else
   void* ptr = mmap(NULL, n, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
   if (ptr == MAP_FAILED) {
+    if (profiling_flag > 1) show_pool_mem_info();
     cerr << "Shared memory allocation failed n=" << n << endl;
     throw dynet::out_of_memory("Shared memory allocation failed");
   }
@@ -70,6 +75,7 @@ void* GPUAllocator::malloc(size_t n) {
   CUDA_CHECK(cudaSetDevice(devid));
   CUDA_CHECK(cudaMalloc(&ptr, n));
   if (!ptr) {
+    if (profiling_flag > 1) show_pool_mem_info();
     cerr << "GPU memory allocation failed n=" << n << endl;
     throw dynet::out_of_memory("GPU memory allocation failed");
   }
