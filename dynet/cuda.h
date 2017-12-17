@@ -12,6 +12,7 @@
 #include <cudnn.h>
 #endif
 #include "dynet/except.h"
+#include "dynet/devices.h"
 
 #define MAX_GPUS 256
 
@@ -21,6 +22,7 @@
       std::cerr << "CUDA failure in " << #stmt << std::endl\
                 << cudaGetErrorString(err) << std::endl;   \
       if (err == cudaErrorMemoryAllocation) {              \
+        show_pool_mem_info();                              \
         size_t free_bytes=0, total_bytes=0;                \
         cudaMemGetInfo(&free_bytes, &total_bytes);         \
         int devid=-1;                                      \
