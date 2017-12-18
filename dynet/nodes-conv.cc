@@ -347,6 +347,10 @@ Dim CircularCorrelation::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+size_t CircularCorrelation::aux_storage_size() const {
+  return dim.size() * sizeof(std::complex<float>) * 2;
+}
+
 #endif
 
 namespace {
@@ -362,10 +366,10 @@ inline int mod(int diff, int d) {
 // adds the result of a * b to out
 template <typename T>
 void add_circular_convolution_naive(const T& a, const T& b, T& out) {
-  const int d = a.rows();
+  const int d = a.dimension(0);
   for (int k = 0; k < d; ++k) {
     for (int i = 0; i < d; ++i) {
-      out(k, 0) += a(i, 0) * b(mod(k - i, d), 0);
+      out(k) += a(i) * b(mod(k - i, d));
     }
   }
 }
@@ -373,26 +377,42 @@ void add_circular_convolution_naive(const T& a, const T& b, T& out) {
 // adds the result of a \star b to out
 template <typename T>
 void add_circular_correlation_naive(const T& a, const T& b, T& out) {
-  const int d = a.rows();
+  const int d = a.dimension(0);
   for (int k = 0; k < d; ++k) {
     for (int i = 0; i < d; ++i) {
-      out(k, 0) += a(i, 0) * b((k + i) % d, 0);
+      out(k) += a(i) * b((k + i) % d);
     }
   }
 }
 }  // namespace
 
 template<class MyDevice>
-void CircularCorrelation::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+void CircularCorrelation::forward_dev_impl(
+    const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("CircularCorrelation forward");
 #else
-  auto a = **xs[0];
-  auto b = **xs[1];
-  auto y = *fx;
-  const int d = a.rows();
-  for (int i = 0; i < d; ++i) y(i, 0) = 0;
-  add_circular_correlation_naive(a, b, y);
+  auto a = xs[0]->t<1>();
+  auto b = xs[1]->t<1>();
+  auto y = fx.t<1>();
+
+  // set up memory for FFTs
+  std::complex<float>* a_fft_mem = static_cast<std::complex<float>*>(aux_mem);
+  std::complex<float>* b_fft_mem = a_fft_mem + xs[0]->d.size();
+  Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      a_fft(a_fft_mem, xs[0]->d.size());
+  Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      b_fft(b_fft_mem, xs[1]->d.size());
+
+  // do FFTs
+  const Eigen::array<ptrdiff_t, 1> fft {0};
+  a_fft = a.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
+  b_fft = b.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
+
+  // this is circular correlation:
+  auto ab_fft = a_fft.conjugate() * b_fft;
+  y.device(*dev.edevice) =
+    ab_fft.template fft<Eigen::RealPart, Eigen::FFT_REVERSE>(fft);
 #endif
 }
 
@@ -406,10 +426,10 @@ void CircularCorrelation::backward_dev_impl(const MyDevice & dev,
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("CircularCorrelation backward");
 #else
-  auto a = **xs[0];
-  auto b = **xs[1];
-  auto dr = *dEdf;
-  auto out = *dEdxi;
+  auto a = xs[0]->t<1>();
+  auto b = xs[1]->t<1>();
+  auto dr = dEdf.t<1>();
+  auto out = dEdxi.t<1>();
   if (i == 0) {
     add_circular_correlation_naive(dr, b, out);
   } else {
@@ -435,6 +455,10 @@ Dim CircularConvolution::dim_forward(const vector<Dim>& xs) const {
   return xs[0];
 }
 
+size_t CircularConvolution::aux_storage_size() const {
+  return dim.size() * sizeof(std::complex<float>) * 2;
+}
+
 #endif
 
 template<class MyDevice>
@@ -443,12 +467,27 @@ void CircularConvolution::forward_dev_impl(
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("CircularConvolution forward");
 #else
-  auto a = **xs[0];
-  auto b = **xs[1];
-  auto y = *fx;
-  const int d = a.rows();
-  for (int i = 0; i < d; ++i) y(i, 0) = 0;
-  add_circular_convolution_naive(a, b, y);
+  auto a = xs[0]->t<1>();
+  auto b = xs[1]->t<1>();
+  auto y = fx.t<1>();
+
+  // set up memory for FFTs
+  std::complex<float>* a_fft_mem = static_cast<std::complex<float>*>(aux_mem);
+  std::complex<float>* b_fft_mem = a_fft_mem + xs[0]->d.size();
+  Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      a_fft(a_fft_mem, xs[0]->d.size());
+  Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      b_fft(b_fft_mem, xs[1]->d.size());
+
+  // do FFTs
+  const Eigen::array<ptrdiff_t, 1> fft {0};
+  a_fft = a.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
+  b_fft = b.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
+
+  // this is circular convolution:
+  auto ab_fft = a_fft * b_fft;
+  y.device(*dev.edevice) =
+    ab_fft.template fft<Eigen::RealPart, Eigen::FFT_REVERSE>(fft);
 #endif
 }
 
@@ -462,10 +501,10 @@ void CircularConvolution::backward_dev_impl(const MyDevice & dev,
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("CircularConvolution backward");
 #else
-  auto a = **xs[0];
-  auto b = **xs[1];
-  auto dr = *dEdf;
-  auto out = *dEdxi;
+  auto a = xs[0]->t<1>();
+  auto b = xs[1]->t<1>();
+  auto dr = dEdf.t<1>();
+  auto out = dEdxi.t<1>();
   if (i == 0) {
     add_circular_correlation_naive(b, dr, out);
   } else {
@@ -475,4 +514,4 @@ void CircularConvolution::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(CircularConvolution)
 
-} // namespace dynet
+}  // namespace dynet
