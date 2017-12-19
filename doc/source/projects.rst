@@ -1,4 +1,4 @@
-Complex Structures
+Projects using DyNet
 ==================
 
 DyNet works for your complex neural networks
