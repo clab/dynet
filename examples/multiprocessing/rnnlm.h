@@ -2,6 +2,7 @@
 #include "dynet/expr.h"
 #include "dynet/dict.h"
 #include "dynet/lstm.h"
+#include "dynet/rand.h"
 
 #include <vector>
 

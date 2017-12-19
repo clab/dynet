@@ -1,6 +1,7 @@
 #include "dynet/cfsm-builder.h"
 #include "dynet/except.h"
 #include "dynet/param-init.h"
+#include "dynet/rand.h"
 
 #include <fstream>
 #include <iostream>

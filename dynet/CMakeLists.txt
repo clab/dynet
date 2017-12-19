@@ -55,6 +55,7 @@ set(dynet_library_SRCS
     param-init.cc
     param-nodes.cc
     pretrain.cc
+    rand.cc
     rnn-state-machine.cc
     rnn.cc
     saxe-init.cc
@@ -135,6 +136,7 @@ set(dynet_library_HDRS
     param-init.h
     param-nodes.h
     pretrain.h
+    rand.h
     rnn-state-machine.h
     rnn.h
     saxe-init.h
