@@ -908,6 +908,27 @@ BOOST_AUTO_TEST_CASE( logistic_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression logistic(const Expression& x);
+BOOST_AUTO_TEST_CASE( logistic_monotonic ) {
+  dynet::ComputationGraph cg;
+  unsigned int len = 30;
+  vector<float> in(len,0.f);
+  in[0] = -17.0677127838;
+  in[1] = -17.0516262054;
+  in[2] = -17.0502529144;
+  in[3] = -17.0403594971;
+  in[4] = -17.0335273743;
+  Expression x = input(cg, {len}, in);
+  Expression y = logistic(x);
+  vector<float> out = as_vector(y.value());
+  for(size_t i = 0; i < len; ++i) {
+    BOOST_CHECK_GE(out[i], 0.f);
+    BOOST_CHECK_LE(out[i], 1.f);
+    if(i < len-1)
+      BOOST_CHECK_LE(out[i], out[i+1]);
+  }
+}
+
 // Expression rectify(const Expression& x);
 BOOST_AUTO_TEST_CASE( rectify_gradient ) {
   dynet::ComputationGraph cg;
