@@ -334,4 +334,132 @@ void PickBatchElements::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(PickBatchElements)
 
+
+// ************* StridedSelect *************
+
+#ifndef __CUDACC__
+
+string StridedSelect::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "StridedSelect(" << arg_names[0] << ',';
+  s << '[';
+  if (strides.size()) {
+    s << "strides=" << strides[0];
+    for (size_t i = 1; i < strides.size(); ++i)
+      s << ',' << strides[i];
+  }
+  if (from.size()) {
+    s << "from=" << from[0];
+    for (size_t i = 1; i < from.size(); ++i)
+      s << ',' << from[i];
+  }
+  if (to.size()) {
+    s << "to=" << to[0];
+    for (size_t i = 1; i < to.size(); ++i)
+      s << ',' << to[i];
+  }
+  s << "]";
+  s << ")";
+  return s.str();
+}
+
+Dim StridedSelect::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in StridedSelect")
+  DYNET_ARG_CHECK(xs[0].nd < 5, "StridedSelect not currently supported for tensors of 5 or more dimensions.");
+  DYNET_ARG_CHECK(strides.size() <= xs[0].nd+1, "StridedSelect: number of strides must be less than or equal to number of dimension in input");
+  DYNET_ARG_CHECK(from.size() <= xs[0].nd+1, "StridedSelect: from.size() must be less than or equal to number of dimension in input");
+  DYNET_ARG_CHECK(to.size() <= xs[0].nd+1, "StridedSelect: to.size() must be less than or equal to number of dimension in input");
+  Dim ret(xs[0]);
+  for(unsigned d=0; d<strides.size(); d++){
+    DYNET_ARG_CHECK(strides[d] > 0, "require stride > 0, was " << strides[d]);
+  }
+  for(unsigned d=0; d<from.size(); d++){
+    if(d<xs[0].nd){
+      DYNET_ARG_CHECK(from[d] < xs[0].d[d] && from[d] >= 0, "require 0 <= from < dim_size, was " << from[d]);
+    } else { // batch dim
+      DYNET_ARG_CHECK(from[d] < xs[0].bd && from[d] >= 0, "require 0 <= from < batch_size, was " << from[d]);
+    }
+  }
+  for(unsigned d=0; d<to.size(); d++){
+    if(d<xs[0].nd){
+      DYNET_ARG_CHECK(to[d] <= xs[0].d[d] && to[d] > 0, "require 0 < to <= dim_size, was " << to[d]);
+    } else { // batch dim
+      DYNET_ARG_CHECK(to[d] <= xs[0].bd && to[d] > 0, "require 0 < to <= batch_size, was " << to[d]);
+    }
+  }
+  for(unsigned d=0; d<max(strides.size(), max(to.size(), from.size())); d++){
+    unsigned from_d = 0; if(d<from.size()) from_d = from[d];
+    unsigned to_d;
+    if(d<to.size()) to_d = to[d];
+    else if(d<xs[0].nd) to_d = ret.d[d];
+    else to_d = ret.bd;
+    unsigned stride_d = 1; if(d<strides.size()) stride_d = strides[d];
+
+    unsigned dim_size = ceil((float)(to_d - from_d) / (float)stride_d);
+    if(d<xs[0].nd){
+      ret.d[d] = dim_size;
+    } else { // batch dim
+      ret.bd = dim_size;
+    }
+  }
+  return ret;
+}
+
+#endif
+
+template<class MyDevice>
+void StridedSelect::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  Eigen::array<int, 5> offsets = {0, 0, 0, 0, 0};
+  Eigen::array<int, 5> extents = {(int)(xs[0]->d[0]), (int)(xs[0]->d.nd < 2 ? 1 : xs[0]->d[1]), (int)(xs[0]->d.nd < 3 ? 1 : xs[0]->d[2]), (int)(xs[0]->d.nd < 4 ? 1 : xs[0]->d[3]), (int)(xs[0]->d.bd)};
+  Eigen::array<int, 5> strides_arr = {1,1,1,1,1};
+  for(unsigned d=0; d<max(strides.size(), max(to.size(),from.size())); d++){
+    offsets[d<xs[0]->d.nd?d:4] = (d<from.size())?from[d]:0;
+    extents[d<xs[0]->d.nd?d:4] = ((d<to.size())?to[d]:(d<xs[0]->d.nd?xs[0]->d[d]:xs[0]->d.bd)) - offsets[d<xs[0]->d.nd?d:4];
+    strides_arr[d<xs[0]->d.nd?d:4] = (d<strides.size())?strides[d]:1;
+  }
+
+  // this is a workaround using aux memory, since slice and stride operators don't seem to be chainable
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+  Tensor tmp_tensor(Dim({(unsigned)extents[0],(unsigned)extents[1],(unsigned)extents[2],(unsigned)extents[3]},(unsigned)extents[4]), nullptr, fx.device, fx.mem_pool);
+  tmp_tensor.v = static_cast<float*>(scratch_allocator->allocate(tmp_tensor.d.size() * sizeof(float)));
+
+  tmp_tensor.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().slice(offsets, extents);
+  fx.tb<4>().device(*dev.edevice) = tmp_tensor.tb<4>().stride(strides_arr);
+
+  scratch_allocator->free();
+}
+
+template<class MyDevice>
+void StridedSelect::backward_dev_impl(const MyDevice & dev,
+                                  const vector<const Tensor*>& xs,
+                                  const Tensor& fx,
+                                  const Tensor& dEdf,
+                                  unsigned i,
+                                  Tensor& dEdxi) const {
+  Eigen::array<int, 5> offsets = {0, 0, 0, 0, 0};
+  Eigen::array<int, 5> extents = {(int)(xs[0]->d[0]), (int)(xs[0]->d.nd < 2 ? 1 : xs[0]->d[1]), (int)(xs[0]->d.nd < 3 ? 1 : xs[0]->d[2]), (int)(xs[0]->d.nd < 4 ? 1 : xs[0]->d[3]), (int)(xs[0]->d.bd)};
+  Eigen::array<int, 5> strides_arr = {1,1,1,1,1};
+  for(unsigned d=0; d<max(strides.size(), max(to.size(),from.size())); d++){
+    offsets[d<xs[0]->d.nd?d:4] = (d<from.size())?from[d]:0;
+    extents[d<xs[0]->d.nd?d:4] = ((d<to.size())?to[d]:(d<xs[0]->d.nd?xs[0]->d[d]:xs[0]->d.bd)) - offsets[d<xs[0]->d.nd?d:4];
+    strides_arr[d<xs[0]->d.nd?d:4] = (d<strides.size())?strides[d]:1;
+  }
+
+  // same workaround as in forward pass
+  AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
+  Tensor tmp_tensor(Dim({(unsigned)extents[0],(unsigned)extents[1],(unsigned)extents[2],(unsigned)extents[3]},(unsigned)extents[4]), nullptr, fx.device, fx.mem_pool);
+  tmp_tensor.v = static_cast<float*>(scratch_allocator->allocate(tmp_tensor.d.size() * sizeof(float)));
+  TensorTools::zero(tmp_tensor);
+
+  tmp_tensor.tb<4>().stride(strides_arr).device(*dev.edevice) = dEdf.tb<4>();
+
+  dEdxi.tb<4>().slice(offsets, extents).device(*dev.edevice) += tmp_tensor.tb<4>();
+
+  scratch_allocator->free();
+}
+DYNET_NODE_INST_DEV_IMPL(StridedSelect)
+
+
+
+
 }

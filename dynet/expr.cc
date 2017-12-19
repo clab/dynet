@@ -60,7 +60,18 @@ Expression contract3d_1d(const Expression& x, const Expression& y, const Express
 Expression sqrt(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sqrt>({x.i})); }
 Expression abs(const Expression& x) { return Expression(x.pg, x.pg->add_function<Abs>({x.i})); }
 Expression erf(const Expression& x) { return Expression(x.pg, x.pg->add_function<Erf>({x.i})); }
+Expression sin(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sin>({x.i})); }
+Expression cos(const Expression& x) { return Expression(x.pg, x.pg->add_function<Cos>({x.i})); }
+Expression tan(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tan>({x.i})); }
+Expression asin(const Expression& x) { return Expression(x.pg, x.pg->add_function<Asin>({x.i})); }
+Expression acos(const Expression& x) { return Expression(x.pg, x.pg->add_function<Acos>({x.i})); }
+Expression atan(const Expression& x) { return Expression(x.pg, x.pg->add_function<Atan>({x.i})); }
+Expression sinh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Sinh>({x.i})); }
+Expression cosh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Cosh>({x.i})); }
 Expression tanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Tanh>({x.i})); }
+Expression asinh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Asinh>({x.i})); }
+Expression acosh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Acosh>({x.i})); }
+Expression atanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Atanh>({x.i})); }
 Expression lgamma(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogGamma>({x.i})); }
 Expression log(const Expression& x) { return Expression(x.pg, x.pg->add_function<Log>({x.i})); }
 Expression exp(const Expression& x) { return Expression(x.pg, x.pg->add_function<Exp>({x.i})); }
@@ -86,6 +97,7 @@ Expression sparsemax(const Expression& x) { return Expression(x.pg, x.pg->add_fu
 Expression sparsemax_loss(const Expression& x, const vector<unsigned>& target_support) { return Expression(x.pg, x.pg->add_function<SparsemaxLoss>({x.i}, target_support)); }
 Expression sparsemax_loss(const Expression& x, const vector<unsigned>* ptarget_support) { return Expression(x.pg, x.pg->add_function<SparsemaxLoss>({x.i}, ptarget_support)); }
 Expression softmax(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<Softmax>({x.i}, d)); }
+Expression constrained_softmax(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<ConstrainedSoftmax>({x.i, y.i})); }
 Expression softsign(const Expression& x) { return Expression(x.pg, x.pg->add_function<SoftSign>({x.i})); }
 Expression pow(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Pow>({x.i, y.i})); }
 Expression min(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<Min>({x.i, y.i})); }
@@ -112,6 +124,8 @@ Expression squared_norm(const Expression& x) { return Expression(x.pg, x.pg->add
 Expression l2_norm(const Expression& x) { return Expression(x.pg, x.pg->add_function<L2Norm>({x.i})); }
 
 Expression dot_product(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<DotProduct>({x.i, y.i})); }
+Expression circ_conv(const Expression& u, const Expression& v) { return Expression(u.pg, u.pg->add_function<CircularConvolution>({u.i, v.i})); }
+Expression circ_corr(const Expression& u, const Expression& v) { return Expression(u.pg, u.pg->add_function<CircularCorrelation>({u.i, v.i})); }
 Expression squared_distance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<SquaredEuclideanDistance>({x.i, y.i})); }
 Expression huber_distance(const Expression& x, const Expression& y, real c) { return Expression(x.pg, x.pg->add_function<HuberDistance>({x.i, y.i}, c)); }
 Expression l1_distance(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<L1Distance>({x.i, y.i})); }
@@ -149,6 +163,8 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u) {
   std::cerr << "WARNING: The function naming pickrange() has been deprecated. Please use pick_range() instead." << std::endl;
   return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u, 0));
 }
+
+Expression strided_select(const Expression& x, const std::vector<int>& strides, const std::vector<int>& range_from, const std::vector<int>& range_to) { return Expression(x.pg, x.pg->add_function<StridedSelect>({x.i}, strides, range_from, range_to)); }
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
 Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
