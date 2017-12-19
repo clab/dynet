@@ -354,10 +354,8 @@ size_t CircularCorrelation::aux_storage_size() const {
 #endif
 
 namespace {
-// TODO these operations should be implemented using FFTs rather than the naive
-// quadratic algorithm that's here. Eigen provides an FFT/IFFT that will run on
-// CPU and GPU that can be used.
-
+// These operations are implemented using FFTs (described below), but the slow
+// quadratic implementation is left here for a reference.
 inline int mod(int diff, int d) {
   if (diff < 0) return diff + d;
   return diff;
@@ -365,9 +363,10 @@ inline int mod(int diff, int d) {
 
 // adds the result of a * b to out
 template <typename T>
-void add_circular_convolution_naive(const T& a, const T& b, T& out) {
+void circular_convolution_naive(const T& a, const T& b, T& out) {
   const int d = a.dimension(0);
   for (int k = 0; k < d; ++k) {
+    out(k) = 0;
     for (int i = 0; i < d; ++i) {
       out(k) += a(i) * b(mod(k - i, d));
     }
@@ -376,9 +375,10 @@ void add_circular_convolution_naive(const T& a, const T& b, T& out) {
 
 // adds the result of a \star b to out
 template <typename T>
-void add_circular_correlation_naive(const T& a, const T& b, T& out) {
+void circular_correlation_naive(const T& a, const T& b, T& out) {
   const int d = a.dimension(0);
   for (int k = 0; k < d; ++k) {
+    out(k) = 0;
     for (int i = 0; i < d; ++i) {
       out(k) += a(i) * b((k + i) % d);
     }
@@ -386,12 +386,30 @@ void add_circular_correlation_naive(const T& a, const T& b, T& out) {
 }
 }  // namespace
 
+// The circular convolution operation a * b is computed as
+//     IFFT(FFT(a) . FFT(b)),
+// where . is componentwise multiplication of complex numbers. Since a and b
+// are real vectors (DyNet doesn't do complex numbers), the result of the
+// convolution is also real valued, so when computing the IFFT, it is only
+// necessary to compute the real part.
+//
+// The circular correlation operation a \star b is computed as
+//     IFFT(conj(FFT(a)) . FFT(b)),
+// where . is componentwise complex multiplication, and conj is the complex
+// conjugate. Again, the IFFT need only compute the real part since the
+// circular correlation will be real.
+//
+// the derivatives are:
+//     d(a \star b) = (da) \star b + a * (db)   [* = circ conv]
+//     d(a * b) = b \star (da) + a \star (db)
 template<class MyDevice>
 void CircularCorrelation::forward_dev_impl(
     const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("CircularCorrelation forward");
 #else
+  // TODO this should work on GPU, double check this.
+  // TODO implement batched version of this
   auto a = xs[0]->t<1>();
   auto b = xs[1]->t<1>();
   auto y = fx.t<1>();
@@ -406,13 +424,15 @@ void CircularCorrelation::forward_dev_impl(
 
   // do FFTs
   const Eigen::array<ptrdiff_t, 1> fft {0};
-  a_fft = a.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
-  b_fft = b.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
+  a_fft.device(*dev.edevice) =
+      a.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
+  b_fft.device(*dev.edevice) =
+      b.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
 
   // this is circular correlation:
   auto ab_fft = a_fft.conjugate() * b_fft;
   y.device(*dev.edevice) =
-    ab_fft.template fft<Eigen::RealPart, Eigen::FFT_REVERSE>(fft);
+      ab_fft.template fft<Eigen::RealPart, Eigen::FFT_REVERSE>(fft);
 #endif
 }
 
@@ -426,15 +446,49 @@ void CircularCorrelation::backward_dev_impl(const MyDevice & dev,
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("CircularCorrelation backward");
 #else
-  auto a = xs[0]->t<1>();
-  auto b = xs[1]->t<1>();
+  // grab the results of the FFTs of xs[0] and xs[1] that were computed
+  // during forward and are needed here.
+  std::complex<float>* a_fft_mem = static_cast<std::complex<float>*>(aux_mem);
+  std::complex<float>* b_fft_mem = a_fft_mem + xs[0]->d.size();
+  const Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      a_fft(a_fft_mem, xs[0]->d.size());
+  const Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      b_fft(b_fft_mem, xs[1]->d.size());
+
+  // eigen requires the evaluation of an FFT to be put into memory somewhere
+  // (normally we would just add the result to dedxi directly).
+  AlignedMemoryPool* scratch_allocator =
+      fx.device->pools[(int)DeviceMempool::SCS];
+  float* tmpmem = static_cast<float*>(scratch_allocator->allocate(
+      dEdxi.d.size() * sizeof(float)));
+  Eigen::TensorMap<Eigen::Tensor<float, 1>>
+      dtmp(tmpmem, xs[i]->d.size());
+
+  // we also need memory for the FFT of dedf
+  std::complex<float>* dr_fft_mem =
+      static_cast<std::complex<float>*>(scratch_allocator->allocate(
+          dEdxi.d.size() * sizeof(std::complex<float>)));
+  Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      dr_fft(dr_fft_mem, xs[i]->d.size());
   auto dr = dEdf.t<1>();
   auto out = dEdxi.t<1>();
+  // do FFT of dedf
+  const Eigen::array<ptrdiff_t, 1> fft {0};
+  dr_fft.device(*dev.edevice) =
+      dr.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
   if (i == 0) {
-    add_circular_correlation_naive(dr, b, out);
+    // circ_corr(dr, b)
+    auto d_fft = dr_fft.conjugate() * b_fft;
+    dtmp.device(*dev.edevice) =
+        d_fft.template fft<Eigen::RealPart, Eigen::FFT_REVERSE>(fft);
   } else {
-    add_circular_convolution_naive(a, dr, out);
+    // circ_conv(a, dr)
+    auto d_fft = a_fft * dr_fft;
+    dtmp.device(*dev.edevice) =
+        d_fft.template fft<Eigen::RealPart, Eigen::FFT_REVERSE>(fft);
   }
+  out.device(*dev.edevice) += dtmp;
+  scratch_allocator->free();
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(CircularCorrelation)
@@ -501,15 +555,49 @@ void CircularConvolution::backward_dev_impl(const MyDevice & dev,
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("CircularConvolution backward");
 #else
-  auto a = xs[0]->t<1>();
-  auto b = xs[1]->t<1>();
+  // grab the results of the FFTs of xs[0] and xs[1] that were computed
+  // during forward and are needed here.
+  std::complex<float>* a_fft_mem = static_cast<std::complex<float>*>(aux_mem);
+  std::complex<float>* b_fft_mem = a_fft_mem + xs[0]->d.size();
+  const Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      a_fft(a_fft_mem, xs[0]->d.size());
+  const Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      b_fft(b_fft_mem, xs[1]->d.size());
+
+  // eigen requires the evaluation of an FFT to be put into memory somewhere
+  // (normally we would just add the result to dedxi directly).
+  AlignedMemoryPool* scratch_allocator =
+      fx.device->pools[(int)DeviceMempool::SCS];
+  float* tmpmem = static_cast<float*>(scratch_allocator->allocate(
+      dEdxi.d.size() * sizeof(float)));
+  Eigen::TensorMap<Eigen::Tensor<float, 1>>
+      dtmp(tmpmem, xs[i]->d.size());
+
+  // we also need memory for the FFT of dedf
+  std::complex<float>* dr_fft_mem =
+      static_cast<std::complex<float>*>(scratch_allocator->allocate(
+          dEdxi.d.size() * sizeof(std::complex<float>)));
+  Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
+      dr_fft(dr_fft_mem, xs[i]->d.size());
   auto dr = dEdf.t<1>();
   auto out = dEdxi.t<1>();
+  // do FFT of dedf
+  const Eigen::array<ptrdiff_t, 1> fft {0};
+  dr_fft.device(*dev.edevice) =
+      dr.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
   if (i == 0) {
-    add_circular_correlation_naive(b, dr, out);
+    // circ_cor(b, dr)
+    auto d_fft = b_fft.conjugate() * dr_fft;
+    dtmp.device(*dev.edevice) =
+        d_fft.template fft<Eigen::RealPart, Eigen::FFT_REVERSE>(fft);
   } else {
-    add_circular_correlation_naive(a, dr, out);
+    // circ_cor(a, dr)
+    auto d_fft = a_fft.conjugate() * dr_fft;
+    dtmp.device(*dev.edevice) =
+        d_fft.template fft<Eigen::RealPart, Eigen::FFT_REVERSE>(fft);
   }
+  out.device(*dev.edevice) += dtmp;
+  scratch_allocator->free();
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(CircularConvolution)
