@@ -187,8 +187,8 @@ struct Dim {
    * \param s Dimension size
    */
   inline void set(unsigned int i, unsigned int s) {
-    DYNET_ARG_CHECK(i < nd || s == 1, "Out of bounds exception in Dim::set(" << i << "," << s << ") for node of size " << d);
-    DYNET_ARG_CHECK(s != 0, "Attempt to set dimension size to zero in Dim::set(" << i << "," << s << ") for node of size " << d);
+    DYNET_ARG_CHECK(i < nd || s == 1, "Out of bounds exception in Dim::set(" << i << "," << s << ") for node of size " << nd);
+    DYNET_ARG_CHECK(s != 0, "Attempt to set dimension size to zero in Dim::set(" << i << "," << s << ") for node of size " << nd);
     d[i] = s;
   }
   /**
@@ -210,7 +210,7 @@ struct Dim {
    * \param i index of the dimension to be removed
    */
   inline void delete_dim(unsigned int i) {
-    DYNET_ARG_CHECK(i < nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d );
+    DYNET_ARG_CHECK(i < nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << nd );
     if(i == nd-1){
       if(nd == 1){
         d[0] = 1;
@@ -255,19 +255,31 @@ struct Dim {
       bd = 1;
   }
   /**
+   * \brief Insert a dimension to the end
+   * \param n the size of the new dimension
+   */
+  inline void add_dim(unsigned int n) {
+    DYNET_ARG_CHECK(nd + 1 <= DYNET_MAX_TENSOR_DIM, "Out of bounds exception in Dim::add_dim");
+    d[nd] = n;
+    nd++;
+  }
+  /**
    * \brief Insert a dimension
-   * \param i the index before which to insert the new dimension
+   * \param i the index to insert the new dimension
    * \param n the size of the new dimension
    */
   inline void insert_dim(unsigned int i, unsigned int n) {
-    DYNET_ARG_CHECK(i <= nd, "Out of bounds exception in Dim::delete_dim(" << i << ") for node of size " << d);
-    if (nd == 1) {
-      d[0] = 1;
+    DYNET_ARG_CHECK(nd + 1 <= DYNET_MAX_TENSOR_DIM, "Out of bounds exception in Dim::add_dim");
+    DYNET_ARG_CHECK(i <= nd, "Out of bounds exception in Dim::insert_dim(" << i << ") for node of size " << nd);
+    if (nd == 0) {
+      d[0] = n;
     } else {
-      for (; i + 1 < nd; ++i)
-        d[i] = d[i + 1];
-      --nd;
+      for (int k = nd; k > (int)i; --k) {
+        d[k] = d[k-1];
+      }
     }
+    d[i] = n;
+    ++nd;
   }
   /**
   * \brief Transpose a vector or a matrix
@@ -277,7 +289,7 @@ struct Dim {
   inline Dim transpose() const {
     if (nd == 1) { return Dim({1, d[0]}, bd); }
     else {
-      DYNET_ARG_CHECK(nd == 2, "Cannot transpose Dim object with more than 2 dimensions, but got " << d);
+      DYNET_ARG_CHECK(nd == 2, "Cannot transpose Dim object with more than 2 dimensions, but got " << nd);
       return Dim({d[1], d[0]}, bd);
     }
   }

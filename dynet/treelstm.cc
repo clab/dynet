@@ -133,6 +133,11 @@ void NaryTreeLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hini
   }
 }
 
+void NaryTreeLSTMBuilder::set_num_elements(int length) {
+  h.resize(length);
+  c.resize(length);
+}
+
 Expression NaryTreeLSTMBuilder::add_input(int id, vector<int> children, const Expression& x) {
   DYNET_ASSERT(id >= 0 && h.size() == (unsigned)id, "Failed dimension check in TreeLSTMBuilder");
   DYNET_ASSERT(id >= 0 && c.size() == (unsigned)id, "Failed dimension check in TreeLSTMBuilder");
@@ -300,6 +305,10 @@ void UnidirectionalTreeLSTMBuilder::start_new_sequence_impl(const vector<Express
   node_builder.start_new_sequence(hinit);
 }
 
+void UnidirectionalTreeLSTMBuilder::set_num_elements(int length) {
+  h.resize(length);
+}
+
 Expression UnidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children, const Expression& x) {
   DYNET_ASSERT(id >= 0 && h.size() == (unsigned)id, "Failed dimension check in TreeLSTMBuilder");
 
@@ -338,8 +347,12 @@ void BidirectionalTreeLSTMBuilder::start_new_sequence_impl(const vector<Expressi
   rev_node_builder.start_new_sequence(hinit);
 }
 
+void BidirectionalTreeLSTMBuilder::set_num_elements(int length) {
+  h.resize(length);
+}
+
 Expression BidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children, const Expression& x) {
-  DYNET_ASSERT(id >= 0 && h.size() == (unsigned)id, "Failed dimension check in TreeLSTMBuilder");
+  DYNET_ASSERT(id >= 0 && h.size() >= (unsigned)id, "Failed dimension check in TreeLSTMBuilder");
 
   RNNPointer prev = (RNNPointer)(-1);
   Expression fwd_embedding = fwd_node_builder.add_input(prev, x);
@@ -359,9 +372,10 @@ Expression BidirectionalTreeLSTMBuilder::add_input(int id, vector<int> children,
   }
 
   Expression embedding = concatenate({fwd_embedding, rev_embedding});
-  h.push_back(embedding);
+  if (h.size() == id)
+	h.push_back(embedding);
+  else
+	h[id] = embedding;
 
   return embedding;
 }
-
-Expression BidirectionalTreeLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) { throw std::runtime_error("set_h() not a valid function for BidirectionalTreeLSTMBuilder"); }

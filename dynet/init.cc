@@ -98,7 +98,7 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     else if (arg == "--dynet-profiling" || arg == "--dynet_profiling") {
       string a2 = argv[argi + 1];
       istringstream c(a2); c >> params.profiling;
-      remove_args(argc, argv, argi, 1);
+      remove_args(argc, argv, argi, 2);
     }
 
 #if HAVE_CUDA

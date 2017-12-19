@@ -10,6 +10,9 @@ namespace dynet {
 struct CwiseSum : public Node {
   template <typename T> explicit CwiseSum(const T& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override;
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override;
   template<class MyDevice, int ReductionOrder>
   void backward_helper(const MyDevice & dev,
 					   const std::vector<const Tensor*>& xs,
@@ -17,7 +20,6 @@ struct CwiseSum : public Node {
 					   const Tensor& dEdf,
 					   unsigned i,
 					   Tensor& dEdxi) const;
-  virtual bool supports_multibatch() const override { return true; }
 };
 
 

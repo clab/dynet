@@ -96,7 +96,7 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
     for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
       const Node* node = cg.nodes[num_nodes_evaluated];
       if (profiling_flag) {
-        current_node_name = "fwd " + node->as_dummy_string();
+        current_node_name = "FWD " + node->as_dummy_string();
         timer.start(current_node_name);
       }
       xs.resize(node->arity());
@@ -122,9 +122,10 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       node_fx.v = static_cast<float*>(
           node_fx_pools[(int)DeviceMempool::FXS]->allocate(
               node->dim.size() * sizeof(float)));
-      if (node_fx.v == nullptr)
+      if (node_fx.v == nullptr) {
         DYNET_RUNTIME_ERR("Ran out of memory when executing node " <<
-                          num_nodes_evaluated);
+                          num_nodes_evaluated << ", allocating FWD memory.");
+      }
       void* aux_mem = nullptr;
       // Is the node requesting extra memory?
       size_t aux_size = node->aux_storage_size();
@@ -180,7 +181,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     if (node_dEdfx.v == nullptr) {
       DYNET_RUNTIME_ERR(
           "out of memory while attempting to allocate space for "
-          "derivatives of node " << i);
+          "derivatives of node " << i << ", allocating BWD memory.");
     }
   }
   // Zero all derivative memory (which is contiguous on each device)
@@ -324,9 +325,10 @@ void BatchedExecutionEngine::combine_tensors(
     float** trgs = static_cast<float**>(basemem) + TRG;
     std::size_t* lens = static_cast<std::size_t*>(basemem) + LEN;
     CUDA_CHECK(cudaMemcpyAsync(basemem,
-                               &(locs)[0],
-                               locs.size() * sizeof(CopyArgs),
-                               cudaMemcpyHostToDevice));
+                          &(locs)[0],
+                          locs.size() * sizeof(CopyArgs),
+                          cudaMemcpyHostToDevice,
+                          static_cast<Device_GPU*>(tout.device)->estream->stream()));
     gpu::parallel_memcpy(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
   } else if (tout.device->type == DeviceType::CPU) {
@@ -375,9 +377,10 @@ void BatchedExecutionEngine::accumulate_tensors(
     float** trgs = static_cast<float**>(basemem) + TRG;
     std::size_t* lens = static_cast<std::size_t*>(basemem) + LEN;
     CUDA_CHECK(cudaMemcpyAsync(basemem,
-                               &(locs)[0],
-                               locs.size() * sizeof(CopyArgs),
-                               cudaMemcpyHostToDevice));
+                          &(locs)[0],
+                          locs.size() * sizeof(CopyArgs),
+                          cudaMemcpyHostToDevice,
+                          static_cast<Device_GPU*>(tin.device)->estream->stream()));
     gpu::parallel_accumulate(batch_ids.size(), max_length, srcs, trgs, lens);
 #endif
   }
@@ -685,7 +688,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
     }
 
     // 2.5 print some debug info
-    if (profiling_flag) {
+    if (profiling_flag > 1) {
       cout << "Forward Call" << endl;
       for(VariableIndex bid = num_batches_evaluated; bid < batch_id; ++bid) {
         auto & batch_ids = batches[bid].ids;
@@ -715,9 +718,10 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
         auto mempool = node->device->pools[(int)DeviceMempool::FXS];
         nfx.v = static_cast<float*>(
             mempool->allocate(node2size[curr_node] * sizeof(float)));
-        if (nfx.v == nullptr)
+        if (nfx.v == nullptr) {
           DYNET_RUNTIME_ERR("Ran out of memory when allocating for node "
-                            << curr_node);
+                            << curr_node << ", allocating FWD memory.");
+        }
         const size_t aux_size = node->aux_storage_size();
         if (aux_size) {
           node->aux_mem = mempool->allocate(aux_size);
@@ -746,14 +750,18 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
         auto mempool = node->device->pools[(int)DeviceMempool::FXS];
         float *head_main = static_cast<float*>(
             mempool->allocate(tot_main * sizeof(float)));
-        if (head_main == nullptr)
-          DYNET_RUNTIME_ERR("Ran out of memory when executing batch " << bid);
+        if (head_main == nullptr) {
+          DYNET_RUNTIME_ERR("Ran out of memory when executing batch " << bid <<
+                            ", allocating FWD memory.");
+        }
         // for(auto curr_node : batch_ids) nfxs[curr_node].v = head_main + node2diff[curr_node];
         char *head_aux = nullptr;
         if (tot_aux > 0) {
           head_aux = static_cast<char*>(mempool->allocate(tot_aux));
-          if (head_aux == nullptr)
-            DYNET_RUNTIME_ERR("Ran out of memory when executing node " << bid);
+          if (head_aux == nullptr) {
+            DYNET_RUNTIME_ERR("Ran out of memory when executing node " << bid <<
+                              ", allocating FWD memory.");
+          }
           for (auto curr_node : batch_ids)
             cg.nodes[curr_node]->aux_mem =
                 (void*)(head_aux + (ptrdiff_t)cg.nodes[curr_node]->aux_mem);
@@ -785,7 +793,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
       if (profiling_flag) {
         VariableIndex nid = my_batch.ids[0];
         Node* node = cg.nodes[nid];
-        current_batch_name = node->as_dummy_string();
+        current_batch_name = "FWD " + node->as_dummy_string();
         timer.start(current_batch_name);
       }
       if (my_batch.ids.size() == 1) { // execute a single node
@@ -930,8 +938,9 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
     batched_ndEdfs[i].device = cg.nodes[my_batch.ids[0]]->device;
     batched_ndEdfs[i].mem_pool = DeviceMempool::DEDFS;
     batched_ndEdfs[i].v = static_cast<float*>(batched_ndEdfs[i].device->pools[(int)DeviceMempool::DEDFS]->allocate(dim.size() * sizeof(float)));
-    if (!batched_ndEdfs[i].v)
-      DYNET_RUNTIME_ERR("out of memory while attempting to allocate space for derivatives of node " << i);
+    if (!batched_ndEdfs[i].v) {
+      DYNET_RUNTIME_ERR("out of memory while attempting to allocate space for derivatives of node " << i << ", allocating BWD memory.");
+    }
     // Assign the memory within the batch
     for(auto id : my_batch.ids) {
       ndEdfs[id].d = cg.nodes[id]->dim;
@@ -978,11 +987,17 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
   vector<bool> in_computation(num_batches, false);
   in_computation.back() = true;
   vector<const Tensor*> xs;
+  string current_batch_name;
   for (int i = num_batches - 1; i >= 0; --i) {
     if (!in_computation[i]) continue;
     const auto & my_batch = batches[i];
+    VariableIndex nid = my_batch.ids[0];
+    if (profiling_flag) {
+      Node* node = cg.nodes[nid];
+      current_batch_name = "BWD " + node->as_dummy_string();
+      timer.start(current_batch_name);
+    }
     if (my_batch.ids.size() == 1) { // execute a single node
-      VariableIndex nid = my_batch.ids[0];
       const Node* node = cg.nodes[nid];
       xs.resize(node->arity());
       unsigned ai = 0;
@@ -1056,6 +1071,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
         ++ai;
       }
     }
+    if(profiling_flag) { timer.stop(current_batch_name); }
   }
 
   // accumulate gradients into parameters

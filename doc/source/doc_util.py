@@ -102,6 +102,9 @@ def create_doc_copy(in_file='../../python/_dynet.pyx', out_file='dynet.py'):
                         print(l[:-1], file=py)
                     # Toggle in_comment indicator
                     in_comment = not in_comment
+                    # If this is a single line comment, end in_comment scope
+                    if l.count('"""') > 1:
+                        in_comment = False
                 # Print comment line
                 if in_comment:
                     print(l[:-1], file=py)

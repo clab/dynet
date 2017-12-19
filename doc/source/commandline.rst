@@ -35,4 +35,4 @@ options.
    Currently, DyNet needs you to specify the device ID explictly.
    The option ``--dynet-gpu-ids`` is deprecated.
 -  ``--dynet-profiling NUMBER``: Will output information about the amount of
-   time/memory used by each node in the graph.
+   time/memory used by each node in the graph. Profile level with ``0, 1`` and ``2``.

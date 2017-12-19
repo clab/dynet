@@ -93,6 +93,19 @@ class DeviceManager final {
 
 DeviceManager* get_device_manager();
 
+inline void show_pool_mem_info() {
+  DeviceManager* device_manager = get_device_manager();
+  auto devs = device_manager->get_devices();
+  if (devs.size() == 0) return;
+  std::cerr << "\nMemory pool info for each devices:\n";
+  for (Device* dev : devs) {
+    std::cerr << " Device " << dev->name << " - FOR Memory " << (dev->pools[0]->get_cap() >> 20)
+        << "MB, BACK Memory " << (dev->pools[1]->get_cap() >> 20)
+        << "MB, PARAM Memory " << (dev->pools[2]->get_cap() >> 20)
+        << "MB, SCRATCH Memory " << (dev->pools[3]->get_cap() >> 20) << "MB." << std::endl;
+  }
+}
+
 } // namespace dynet
 
 #endif
