@@ -31,7 +31,7 @@
 #include "dynet/nodes-moments.h"
 #include "dynet/nodes-contract.h"
 
-#include "dynet/devices.h"
+// #include "dynet/devices.h"
 
 #include <stdexcept>
 
@@ -59,11 +59,7 @@ struct Expression {
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg),
     i(i), graph_id(pg->get_id()) {}
 
-  inline std::string get_device_name() const {
-    if (pg->nodes[i]->device == nullptr)
-      throw std::runtime_error("Unknown device for node:" + std::to_string(i));
-    return pg->nodes[i]->device->name;
-  }
+  std::string get_device_name() const;
 
   const bool is_stale() const {
     return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());

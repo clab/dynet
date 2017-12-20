@@ -1,7 +1,8 @@
 #include "dynet/nodes-affinetransform.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/matrix-multiply.h"
+#include "dynet/tensor-eigen.h"
 
 using namespace std;
 
@@ -71,23 +72,23 @@ std::vector<int> AffineTransform::autobatch_concat(const ComputationGraph & cg) 
 
 #endif
 
-// Affine transform uses different implementations for CPU and GPU because this is 
+// Affine transform uses different implementations for CPU and GPU because this is
 // much faster than using Eigen's tensor contractions (as of the writing)
 template<class MyDevice>
 void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() % 2 == 1, "Failed dimension check in AffineTransform::forward");
   if (xs.size() == 1) {
-    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+    tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
     return;
   } else {
     // Add the first matrix
     size_t b_size = xs[0]->d.size(), fx_size = fx.d.size();
     if(fx_size == b_size) {
-      fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+      tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
     } else {
 #ifdef __CUDACC__
       Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = fx.d[1]/xs[0]->d[1]; bcast[2] = fx.d.bd/xs[0]->d.bd;
-      fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>().broadcast(bcast);
+      tb<2>(fx).device(*dev.edevice) = tb<2>(*xs[0]).broadcast(bcast);
 #else
       DYNET_ARG_CHECK(xs[0]->d.bd == 1, "In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
       float *curr_ptr = fx.v, *end_ptr = curr_ptr + fx.d.size(), *in_ptr = xs[0]->v;
@@ -107,11 +108,11 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
     // Multiply
     for (unsigned i = 1; i < xs.size(); i += 2) {
       if(xs[i]->d.bd == 1 && xs[i+1]->d.bd == fx.d.bd) {
-        fx.colbatch_matrix().noalias() += **xs[i] * xs[i+1]->colbatch_matrix();
+        colbatch_matrix(fx).noalias() += mat(*xs[i]) * colbatch_matrix(*xs[i+1]);
       } else {
         DYNET_ASSERT(xs[i+1]->d.bd == 1 || xs[i+1]->d.bd == xs[i]->d.bd, "Failed dimension check in AffineTransform::forward");
         for(unsigned b = 0; b < fx.d.bd; ++b) {
-          fx.batch_matrix(b).noalias() += xs[i]->batch_matrix(b) * xs[i+1]->batch_matrix(b);
+          batch_matrix(fx, b).noalias() += batch_matrix(*xs[i], b) * batch_matrix(*xs[i+1], b);
         }
       }
     }
@@ -131,26 +132,26 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
   if (i == 0) { // bias term
     size_t dx_size = dEdxi.d.size(), df_size = dEdf.d.size();
     if(dx_size == df_size) {
-      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+      tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
     } else {
       DYNET_ARG_CHECK(dEdxi.d.bd == 1, "In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
 #ifdef __CUDACC__
       if(dEdxi.d[1] == dEdf.d[1]) {
         Eigen::array<int, 1> red_axis; red_axis[0] = 2;
-        dEdxi.t<2>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+        t<2>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).sum(red_axis);
       } else {
         Eigen::array<int, 2> red_axis; red_axis[0] = 1; red_axis[1] = 2;
-        dEdxi.t<1>().device(*dev.edevice) += dEdf.tb<2>().sum(red_axis);
+        t<1>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).sum(red_axis);
       }
 #else
       if(dEdxi.d[1] == dEdf.d[1]) {
         for(unsigned b = 0; b < dEdf.d.bd; ++b)
-          (*dEdxi).noalias() += dEdf.batch_matrix(b);
+          mat(dEdxi).noalias() += batch_matrix(dEdf, b);
       } else {
         Tensor mychip(dEdxi.d, dEdf.v, dEdf.device, dEdf.mem_pool);
         size_t len = dEdf.d.bd * dEdf.d[1];
         for(unsigned b = 0; b < len; ++b) {
-          (*dEdxi).noalias() += *mychip;
+          mat(dEdxi).noalias() += mat(mychip);
           mychip.v += dx_size;
         }
       }
@@ -179,10 +180,10 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
     }
 #else
     if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[i+1]->d.bd)) {
-      (*dEdxi).noalias() += dEdf.colbatch_matrix() * xs[i+1]->colbatch_matrix().transpose();
+      mat(dEdxi).noalias() += colbatch_matrix(dEdf) * colbatch_matrix(*xs[i+1]).transpose();
     } else {
       for(int b = 0; b < max_b; ++b)
-        dEdxi.batch_matrix(b).noalias() += dEdf.batch_matrix(b) * xs[i+1]->batch_matrix(b).transpose();
+        batch_matrix(dEdxi, b).noalias() += batch_matrix(dEdf, b) * batch_matrix(*xs[i+1], b).transpose();
     }
 #endif
   } else {  // right argument of matrix multiply
@@ -190,7 +191,7 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
 #ifdef __CUDACC__
     // Do a single multiply if xs[i-1] has one batch
     if(xs[i-1]->d.bd == 1 && dEdxi.d.bd == dEdf.d.bd) {
-      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, 
+      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
             dEdxi.d.rows(), dEdxi.d.cols()*dEdxi.d.batch_elems(), xs[i-1]->d.rows(),
             dev.kSCALAR_ONE,
             xs[i-1]->v, xs[i-1]->d.rows(),
@@ -207,10 +208,10 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
     }
 #else
     if(xs[i-1]->d.bd == 1 && dEdxi.d.bd == dEdf.d.bd) {
-      dEdxi.colbatch_matrix().noalias() += (**xs[i-1]).transpose() * dEdf.colbatch_matrix();
+      colbatch_matrix(dEdxi).noalias() += mat(*xs[i-1]).transpose() * colbatch_matrix(dEdf);
     } else {
       for(int b = 0; b < max_b; ++b)
-        dEdxi.batch_matrix(b).noalias() += xs[i-1]->batch_matrix(b).transpose() * dEdf.batch_matrix(b);
+        batch_matrix(dEdxi, b).noalias() += batch_matrix(*xs[i-1], b).transpose() * batch_matrix(dEdf, b);
     }
 #endif
   }

@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-arith-cwise.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 using namespace std;
 
@@ -54,15 +55,15 @@ void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*
   // No broadcasting over dims, just batches
   if(i == fx.d.nd) {
     if(xs[0]->d.bd == xs[1]->d.bd) {
-      fx.tvec().device(*dev.edevice) = xs[0]->tvec() + xs[1]->tvec();
+      tvec(fx).device(*dev.edevice) = tvec(*xs[0]) + tvec(*xs[1]);
     } else {
       int greater = xs[0]->d.bd > xs[1]->d.bd ? 0 : 1;
 #ifdef __CUDACC__
       Eigen::array<int, 2> bcast = {1,(int)xs[greater]->d.bd};
-      fx.tbvec().device(*dev.edevice) = xs[1-greater]->tbvec().broadcast(bcast) + xs[greater]->tbvec();
+      tbvec(fx).device(*dev.edevice) = tbvec(*xs[1-greater]).broadcast(bcast) + tbvec(*xs[greater]);
 #else
       for(size_t b = 0; b < fx.d.bd; ++b)
-        fx.tbvec().chip<1>(b).device(*dev.edevice) = xs[1-greater]->tvec() + xs[greater]->tbvec().chip<1>(b);
+        tbvec(fx).chip<1>(b).device(*dev.edevice) = tvec(*xs[1-greater]) + tbvec(*xs[greater]).chip<1>(b);
 #endif
     }
   // Broadcasting over dims as well
@@ -86,11 +87,11 @@ void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*
       bcast_left[4] =  xs[1]->d.bd;
     }
     if(has_right && has_left) {
-      fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) + xs[1]->tb<4>().broadcast(bcast_right);
+      tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]).broadcast(bcast_left) + tb<4>(*xs[1]).broadcast(bcast_right);
     } else if(has_right) {
-      fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() + xs[1]->tb<4>().broadcast(bcast_right);
+      tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]) + tb<4>(*xs[1]).broadcast(bcast_right);
     } else {
-      fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) + xs[1]->tb<4>();
+      tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]).broadcast(bcast_left) + tb<4>(*xs[1]);
     }
   }
 }
@@ -110,14 +111,14 @@ void CwiseSum::backward_dev_impl(const MyDevice & dev,
   // If dimensions are the same, just add over the whole vector
   if(!n_red) {
     if(dEdxi.d.bd == dEdf.d.bd) {
-      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+      tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
     } else {
 #ifdef __CUDACC__
       Eigen::array<int, 1> red_axis = {1};
-      dEdxi.tvec().device(*dev.edevice) += dEdf.tbvec().sum(red_axis);
+      tvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).sum(red_axis);
 #else
       for(size_t b = 0; b < dEdf.d.bd; ++b)
-        dEdxi.tvec().device(*dev.edevice) += dEdf.tbvec().chip<1>(b);
+        tvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).chip<1>(b);
 #endif
     }
   // Otherwise work with broadcasting, etc.
@@ -151,7 +152,7 @@ void CwiseSum::backward_helper(const MyDevice & dev,
     morph[di] = xs[i]->d[di];
   }
 
-  dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>().sum(red_axis).reshape(morph);
+  tb<4>(dEdxi).device(*dev.edevice) += tb<4>(dEdf).sum(red_axis).reshape(morph);
 }
 
 // ************* CwiseMultiply *************
@@ -200,15 +201,15 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
   // No broadcasting over dims, just batches
   if(i == fx.d.nd) {
     if(xs[0]->d.bd == xs[1]->d.bd) {
-      fx.tvec().device(*dev.edevice) = xs[0]->tvec() * xs[1]->tvec(); 
+      tvec(fx).device(*dev.edevice) = tvec(*xs[0]) * tvec(*xs[1]); 
     } else {
       int greater = xs[0]->d.bd > xs[1]->d.bd ? 0 : 1;
 #ifdef __CUDACC__
       Eigen::array<int, 2> bcast = {1,(int)xs[greater]->d.bd};
-      fx.tbvec().device(*dev.edevice) = xs[1-greater]->tbvec().broadcast(bcast) * xs[greater]->tbvec();
+      tbvec(fx).device(*dev.edevice) = tbvec(*xs[1-greater]).broadcast(bcast) * tbvec(*xs[greater]);
 #else
       for(size_t b = 0; b < fx.d.bd; ++b)
-        fx.tbvec().chip<1>(b).device(*dev.edevice) = xs[1-greater]->tvec() * xs[greater]->tbvec().chip<1>(b);
+        tbvec(fx).chip<1>(b).device(*dev.edevice) = tvec(*xs[1-greater]) * tbvec(*xs[greater]).chip<1>(b);
 #endif
     }
   // Broadcasting over dims as well
@@ -232,11 +233,11 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
       bcast_left[4] =  xs[1]->d.bd;
     }
     if(has_right && has_left) {
-      fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) * xs[1]->tb<4>().broadcast(bcast_right);
+      tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]).broadcast(bcast_left) * tb<4>(*xs[1]).broadcast(bcast_right);
     } else if(has_right) {
-      fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() * xs[1]->tb<4>().broadcast(bcast_right);
+      tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]) * tb<4>(*xs[1]).broadcast(bcast_right);
     } else {
-      fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().broadcast(bcast_left) * xs[1]->tb<4>();
+      tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]).broadcast(bcast_left) * tb<4>(*xs[1]);
     }
   }
 }
@@ -259,14 +260,14 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
   // If dimensions are the same, just add over the whole vector
   if(!must_red) {
     if(xs[0]->d.bd == xs[1]->d.bd) {
-      dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * xs[1-i]->tvec();
+      tvec(dEdxi).device(*dev.edevice) += tvec(dEdf) * tvec(*xs[1-i]);
     } else if(xs[1-i]->d.bd == 1) {
       // TODO: Make alternative code path for CPU?
       Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
-      dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * xs[1-i]->tbvec().broadcast(bcast);
+      tbvec(dEdxi).device(*dev.edevice) += tbvec(dEdf) * tbvec(*xs[1-i]).broadcast(bcast);
     } else {
       Eigen::array<int, 1> red_axis; red_axis[0] = 1;
-      dEdxi.tvec().device(*dev.edevice) += (dEdf.tbvec() * xs[1-i]->tbvec()).sum(red_axis);
+      tvec(dEdxi).device(*dev.edevice) += (tbvec(dEdf) * tbvec(*xs[1-i])).sum(red_axis);
     }
   // Otherwise work with broadcasting, etc.
   } else {
@@ -302,7 +303,7 @@ void CwiseMultiply::backward_helper(const MyDevice & dev,
   }
   if(xs[1-i]->d.bd == 1) bcast_other[4] = dim.bd;
 
-  dEdxi.tb<4>().device(*dev.edevice) += (dEdf.tb<4>() * xs[1-i]->tb<4>().broadcast(bcast_other)).sum(red_axis).reshape(morph);
+  tb<4>(dEdxi).device(*dev.edevice) += (tb<4>(dEdf) * tb<4>(*xs[1-i]).broadcast(bcast_other)).sum(red_axis).reshape(morph);
 }
 
 // ************* CwiseQuotient *************
@@ -338,14 +339,14 @@ template<class MyDevice>
 void CwiseQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseQuotient::forward (cdiv)");
   if(xs[0]->d.size() == xs[1]->d.size()){
-    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() / xs[1]->tb<4>();
+    tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]) / tb<4>(*xs[1]);
   } else {
     Eigen::array<int, 5> bcast = {1,1,1,1,1};
     for(unsigned int di = 0; di<xs[0]->d.nd; di++){
       if(xs[1]->d[di]==1) bcast[di] = xs[0]->d[di];
     }
     if(xs[1]->d.bd == 1) bcast[4] = xs[0]->d.bd;
-    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>() / xs[1]->tb<4>().broadcast(bcast);
+    tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]) / tb<4>(*xs[1]).broadcast(bcast);
   }
 }
 
@@ -359,18 +360,18 @@ void CwiseQuotient::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(i < 2, "Failed dimension check in CwiseQuotient::backward (cdiv)");
   if (i == 0) {
     if(xs[0]->d.size() == xs[1]->d.size()){
-      dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() / xs[1]->tb<4>();
+      tb<4>(dEdxi).device(*dev.edevice) += tb<4>(dEdf) / tb<4>(*xs[1]);
     } else {
       Eigen::array<int, 5> bcast = {1,1,1,1,1};
       for(unsigned int di = 0; di<xs[0]->d.nd; di++){
         if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
       }
       if(xs[0]->d.bd!=xs[1]->d.bd) bcast[4] = xs[0]->d.bd;
-      dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>() / xs[1]->tb<4>().broadcast(bcast);
+      tb<4>(dEdxi).device(*dev.edevice) += tb<4>(dEdf) / tb<4>(*xs[1]).broadcast(bcast);
     }
   } else { // i = 1
     if(xs[0]->d.size() == xs[1]->d.size()){
-      dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs[1]->tb<4>().square() * xs[0]->tb<4>());
+      tb<4>(dEdxi).device(*dev.edevice) -= (tb<4>(dEdf) / tb<4>(*xs[1]).square() * tb<4>(*xs[0]));
     } else {
       int n_red = xs[0]->d.bd!=xs[1]->d.bd?1:0;
       for(unsigned int di = 0; di < xs[0]->d.nd; di++) if(xs[0]->d[di]!=xs[1]->d[di]) n_red++;
@@ -414,8 +415,8 @@ void CwiseQuotient::backward_helper(const MyDevice & dev,
     AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
     Tensor xs1_squared(xs[1]->d, nullptr, fx.device, fx.mem_pool);
     xs1_squared.v = static_cast<float*>(scratch_allocator->allocate(xs1_squared.d.size() * sizeof(float)));
-    xs1_squared.tb<4>().device(*dev.edevice) = xs[1]->tb<4>().square();
-    dEdxi.tb<4>().device(*dev.edevice) -= (dEdf.tb<4>() / xs1_squared.tb<4>().broadcast(bcast) * xs[0]->tb<4>()).sum(red_axis).reshape(morph);
+    tb<4>(xs1_squared).device(*dev.edevice) = tb<4>(*xs[1]).square();
+    tb<4>(dEdxi).device(*dev.edevice) -= (tb<4>(dEdf) / tb<4>(xs1_squared).broadcast(bcast) * tb<4>(*xs[0])).sum(red_axis).reshape(morph);
     scratch_allocator->free();
 }
 
@@ -441,7 +442,7 @@ Dim Pow::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void Pow::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ARG_CHECK(xs.size() == 2, "Failed dimension check in Pow::forward");
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().pow(as_scalar(*xs[1]));
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).pow(as_scalar(*xs[1]));
 }
 
 template<class MyDevice>
@@ -454,14 +455,14 @@ void Pow::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 2, "Failed dimension check in Pow::backward");
   real x2 = as_scalar(*xs[1]);
   if (i == 0) {
-    dEdxi.tvec().device(*dev.edevice) += xs[0]->tvec().pow(x2 - 1) * dEdf.tvec() * x2;
+    tvec(dEdxi).device(*dev.edevice) += tvec(*xs[0]).pow(x2 - 1) * tvec(dEdf) * x2;
   } else {
 #if defined(__CUDACC__) && defined(EIGEN_NO_MALLOC)
     DYNET_RUNTIME_ERR("CUDA memory allocation in Pow");
 #endif
     // y = a^x
     // dy/dx = a^x * log(a)
-    dEdxi.t<0>().device(*dev.edevice) += (fx.tvec() * xs[0]->tvec().log() * dEdf.tvec()).sum();
+    t<0>(dEdxi).device(*dev.edevice) += (tvec(fx) * tvec(*xs[0]).log() * tvec(dEdf)).sum();
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Pow)

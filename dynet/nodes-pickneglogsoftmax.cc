@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-pickneglogsoftmax.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 #ifdef __CUDACC__
 #include "dynet/cuda.h"
@@ -91,7 +92,7 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
                       "Index error in PickNegLogSoftmax: Index " << *pval << " out of bounds for input tensor " << xs[0]->d);
     } else {
       DYNET_ASSERT(pvals, "Neither single nor vector of elements available in PickNegLogSoftmax::forward");
-      DYNET_ARG_CHECK(pvals->size() == fx.d.batch_elems(), 
+      DYNET_ARG_CHECK(pvals->size() == fx.d.batch_elems(),
                               "In PickNegLogSoftmax::forward, number of elements in the passed-in index vector (" << pvals->size() << ")"
                               " did not match number of elements in mini-batch elements in expression (of dimension" << fx.d << ")");
       size_t batch_size = xs[0]->d.batch_size();
@@ -111,7 +112,7 @@ void PickNegLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<cons
     for(unsigned b = 0; b < fx.d.bd; ++b)
       fx.v[b] = xs[0]->v[ids_dev[b]];
 #endif
-    fx.tvec().device(*dev.edevice) = z.tvec() - fx.tvec();
+    tvec(fx).device(*dev.edevice) = tvec(z) - tvec(fx);
   } else {
     DYNET_RUNTIME_ERR("PickNegLogSoftmax::forward not yet implemented for multiple columns");
   }
@@ -127,14 +128,14 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
   if (xs[0]->d.cols() == 1) {
     Tensor z(Dim({1},fx.d.batch_elems()), (float*)aux_mem, fx.device, DeviceMempool::FXS);
     unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 2*fx.d.bd);
-#ifdef __CUDACC__ 
+#ifdef __CUDACC__
     Eigen::array<int, 2> bcast({(int)xs[0]->d[0],1});
-    dEdxi.tb<1>().device(*dev.edevice) += (xs[0]->tb<1>() - z.tb<1>().broadcast(bcast)).exp() * dEdf.tb<1>().broadcast(bcast);
+    tb<1>(dEdxi).device(*dev.edevice) += (tb<1>(*xs[0]) - tb<1>(z).broadcast(bcast)).exp() * tb<1>(dEdf).broadcast(bcast);
     dynet::gpu::dense_to_sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);
 #else
     // TODO: We want to do broadcasting here too, but it's slow
     for(unsigned b = 0; b < fx.d.bd; ++b) {
-      dEdxi.tb<1>().chip<1>(b).device(*dev.edevice) += (xs[0]->tb<1>().chip<1>(b) - z.v[b]).exp() * dEdf.v[b];
+      tb<1>(dEdxi).chip<1>(b).device(*dev.edevice) += (tb<1>(*xs[0]).chip<1>(b) - z.v[b]).exp() * dEdf.v[b];
       dEdxi.v[ids_dev[b]] -= dEdf.v[b];
     }
 #endif

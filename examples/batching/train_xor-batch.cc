@@ -1,7 +1,4 @@
-#include "dynet/nodes.h"
-#include "dynet/dynet.h"
 #include "dynet/training.h"
-#include "dynet/gpu-ops.h"
 #include "dynet/expr.h"
 #include "dynet/io.h"
 

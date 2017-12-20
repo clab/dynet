@@ -2,7 +2,7 @@
 #define DYNET_NODES_CONV2D_H_
 
 #include "dynet/dynet.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-def-macros.h"
 
 #if HAVE_CUDNN
 #include "dynet/cudnn-ops.h"

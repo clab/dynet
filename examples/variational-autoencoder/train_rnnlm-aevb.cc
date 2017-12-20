@@ -1,10 +1,6 @@
-#include "dynet/nodes.h"
-#include "dynet/dynet.h"
 #include "dynet/training.h"
 #include "dynet/timing.h"
-#include "dynet/rnn.h"
 #include "dynet/gru.h"
-#include "dynet/lstm.h"
 #include "dynet/dict.h"
 #include "dynet/expr.h"
 #include "dynet/globals.h"
@@ -14,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cassert>
 
 using namespace std;
 using namespace dynet;

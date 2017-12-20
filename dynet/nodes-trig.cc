@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-trig.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/simd-functors.h"
 
 using namespace std;
@@ -26,8 +27,8 @@ Dim Sin::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Sin::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_sin_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_sin_op<float>());
 }
 
 template<class MyDevice>
@@ -37,9 +38,9 @@ void Sin::backward_dev_impl(const MyDevice & dev,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_cos_op<float>()) *
-      dEdf.tvec();
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_cos_op<float>()) *
+      tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(Sin)
 
@@ -62,8 +63,8 @@ Dim Cos::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Cos::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_cos_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_cos_op<float>());
 }
 
 template<class MyDevice>
@@ -73,9 +74,9 @@ void Cos::backward_dev_impl(const MyDevice & dev,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) -=
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_sin_op<float>()) *
-      dEdf.tvec();
+  tvec(dEdxi).device(*dev.edevice) -=
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_sin_op<float>()) *
+      tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(Cos)
 
@@ -98,8 +99,8 @@ Dim Tan::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Tan::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_tan_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_tan_op<float>());
 }
 
 template<class MyDevice>
@@ -109,8 +110,8 @@ void Tan::backward_dev_impl(const MyDevice & dev,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      fx.tvec().binaryExpr(dEdf.tvec(), scalar_tan_backward_op<float>());
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(fx).binaryExpr(tvec(dEdf), scalar_tan_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Tan)
 
@@ -133,8 +134,8 @@ Dim Asin::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Asin::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_asin_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_asin_op<float>());
 }
 
 template<class MyDevice>
@@ -144,8 +145,8 @@ void Asin::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      xs[0]->tvec().binaryExpr(dEdf.tvec(), scalar_asin_backward_op<float>());
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(*xs[0]).binaryExpr(tvec(dEdf), scalar_asin_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Asin)
 
@@ -168,8 +169,8 @@ Dim Acos::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Acos::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_acos_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_acos_op<float>());
 }
 
 template<class MyDevice>
@@ -179,8 +180,8 @@ void Acos::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      xs[0]->tvec().binaryExpr(dEdf.tvec(), scalar_acos_backward_op<float>());
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(*xs[0]).binaryExpr(tvec(dEdf), scalar_acos_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Acos)
 
@@ -203,8 +204,8 @@ Dim Atan::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Atan::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_atan_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_atan_op<float>());
 }
 
 template<class MyDevice>
@@ -214,8 +215,8 @@ void Atan::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      xs[0]->tvec().binaryExpr(dEdf.tvec(), scalar_atan_backward_op<float>());
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(*xs[0]).binaryExpr(tvec(dEdf), scalar_atan_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Atan)
 
@@ -238,8 +239,8 @@ Dim Sinh::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Sinh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_sinh_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_sinh_op<float>());
 }
 
 template<class MyDevice>
@@ -249,9 +250,9 @@ void Sinh::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_cosh_op<float>()) *
-      dEdf.tvec();
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_cosh_op<float>()) *
+      tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(Sinh)
 
@@ -274,8 +275,8 @@ Dim Cosh::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Cosh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_cosh_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_cosh_op<float>());
 }
 
 template<class MyDevice>
@@ -285,9 +286,9 @@ void Cosh::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      xs[0]->tvec().unaryExpr(Eigen::internal::scalar_sinh_op<float>()) *
-      dEdf.tvec();
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_sinh_op<float>()) *
+      tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(Cosh)
 
@@ -310,7 +311,7 @@ Dim Tanh::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Tanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().tanh();
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).tanh();
 }
 
 template<class MyDevice>
@@ -320,8 +321,8 @@ void Tanh::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      fx.tvec().binaryExpr(dEdf.tvec(), scalar_tanh_backward_op<float>());
+  tvec(dEdxi).device(*dev.edevice) += 
+      tvec(fx).binaryExpr(tvec(dEdf), scalar_tanh_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Tanh)
 
@@ -344,8 +345,8 @@ Dim Asinh::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Asinh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(scalar_asinh_forward_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(scalar_asinh_forward_op<float>());
 }
 
 template<class MyDevice>
@@ -355,8 +356,8 @@ void Asinh::backward_dev_impl(const MyDevice & dev,
                               const Tensor& dEdf,
                               unsigned i,
                               Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      xs[0]->tvec().binaryExpr(dEdf.tvec(), scalar_asinh_backward_op<float>());
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(*xs[0]).binaryExpr(tvec(dEdf), scalar_asinh_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Asinh)
 
@@ -379,8 +380,8 @@ Dim Acosh::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Acosh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(scalar_acosh_forward_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(scalar_acosh_forward_op<float>());
 }
 
 template<class MyDevice>
@@ -390,8 +391,8 @@ void Acosh::backward_dev_impl(const MyDevice & dev,
                               const Tensor& dEdf,
                               unsigned i,
                               Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      xs[0]->tvec().binaryExpr(dEdf.tvec(), scalar_acosh_backward_op<float>());
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(*xs[0]).binaryExpr(tvec(dEdf), scalar_acosh_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Acosh)
 
@@ -414,8 +415,8 @@ Dim Atanh::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Atanh::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) =
-      xs[0]->tvec().unaryExpr(scalar_atanh_forward_op<float>());
+  tvec(fx).device(*dev.edevice) =
+      tvec(*xs[0]).unaryExpr(scalar_atanh_forward_op<float>());
 }
 
 template<class MyDevice>
@@ -425,8 +426,8 @@ void Atanh::backward_dev_impl(const MyDevice & dev,
                               const Tensor& dEdf,
                               unsigned i,
                               Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) +=
-      xs[0]->tvec().binaryExpr(dEdf.tvec(), scalar_atanh_backward_op<float>());
+  tvec(dEdxi).device(*dev.edevice) +=
+      tvec(*xs[0]).binaryExpr(tvec(dEdf), scalar_atanh_backward_op<float>());
 }
 DYNET_NODE_INST_DEV_IMPL(Atanh)
 

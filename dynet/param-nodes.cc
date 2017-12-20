@@ -1,10 +1,11 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/param-nodes.h"
 
 #include <limits>
 #include <cmath>
 #include <stdexcept>
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/weight-decay.h"
 
 #ifdef HAVE_CUDA
@@ -179,9 +180,9 @@ template<class MyDevice>
 void ConstParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
   if(params.p != nullptr)
-    fx.tvec().device(*dev.edevice) = params.get_storage().values.tvec() * params.current_weight_decay();
+    tvec(fx).device(*dev.edevice) = tvec(params.get_storage().values) * params.current_weight_decay();
   else if(lparams.p != nullptr)
-    fx.tvec().device(*dev.edevice) = lparams.get_storage().all_values.tvec() * lparams.current_weight_decay();
+    tvec(fx).device(*dev.edevice) = tvec(lparams.get_storage().all_values) * lparams.current_weight_decay();
   else
     DYNET_RUNTIME_ERR("ConstParameterNode has neither Parameter nor LookupParameter");
 }
@@ -206,9 +207,9 @@ void ParameterNode::forward_dev_impl(const MyDevice & dev, const vector<const Te
 //    return;
 //  }
   if(params.p != nullptr)
-    fx.tvec().device(*dev.edevice) = params.get_storage().values.tvec() * params.current_weight_decay();
+    tvec(fx).device(*dev.edevice) = tvec(params.get_storage().values) * params.current_weight_decay();
   else if(lparams.p != nullptr)
-    fx.tvec().device(*dev.edevice) = lparams.get_storage().all_values.tvec() * lparams.current_weight_decay();
+    tvec(fx).device(*dev.edevice) = tvec(lparams.get_storage().all_values) * lparams.current_weight_decay();
   else
     DYNET_RUNTIME_ERR("ParameterNode has neither Parameter nor LookupParameter");
 }
@@ -255,7 +256,7 @@ DYNET_NODE_INST_DEV_IMPL(InputNode)
 template<class MyDevice>
 void SparseInputNode::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in FUNCNAME");
-  fx.tvec().device(*dev.edevice) = fx.tvec().constant(defdata);
+  tvec(fx).device(*dev.edevice) = tvec(fx).constant(defdata);
 #ifdef __CUDACC__
   unsigned int* ids_ptr = (unsigned int*)aux_mem;
   float* data_ptr = (float*)(ids_ptr + ids.size());
@@ -307,7 +308,7 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
     DYNET_ARG_CHECK(*pindex < params.get_storage().values.size(),
                     "Out-of-bounds attempt to access index " << *pindex << " for LookupParameter of size " << params.get_storage().values.size());
     DYNET_ASSERT(fx.d.batch_elems() == 1, "Batch dimension > 1 for lookup with single index");
-    fx.tvec().device(*dev.edevice) = params.get_storage().values[*pindex].tvec() * params.current_weight_decay();
+    tvec(fx).device(*dev.edevice) = tvec(params.get_storage().values[*pindex]) * params.current_weight_decay();
   } else {
     DYNET_ASSERT(pindices, "Have neither index nor index vector in LookupNode");
     DYNET_ARG_CHECK(fx.d.batch_elems() == pindices->size(),
@@ -321,7 +322,7 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
       unsigned i = pindices->at(b);
       DYNET_ARG_CHECK(i < params.get_storage().values.size(),
                               "Out-of-bounds attempt to access index " << i << " for LookupParameter of size " << params.get_storage().values.size());
-      fx.tb<2>().chip<2>(b).device(*dev.edevice) = params.get_storage().values[i].t<2>() * params.current_weight_decay();
+      tb<2>(fx).chip<2>(b).device(*dev.edevice) = t<2>(params.get_storage().values[i]) * params.current_weight_decay();
     }
 #endif
   }

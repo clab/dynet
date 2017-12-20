@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <map>
+#include <cstddef>
 
 namespace dynet {
 

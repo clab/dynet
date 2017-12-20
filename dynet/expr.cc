@@ -3,10 +3,17 @@
 #include <initializer_list>
 
 #include "dynet/nodes.h"
+#include "dynet/devices.h"
 
 namespace dynet {
 
 using std::vector;
+
+std::string Expression::get_device_name() const {
+  if (pg->nodes[i]->device == nullptr)
+    throw std::runtime_error("Unknown device for node:" + std::to_string(i));
+  return pg->nodes[i]->device->name;
+}
 
 Expression input(ComputationGraph& g, real s, Device *device) { return Expression(&g, g.add_input(s, device)); }
 Expression input(ComputationGraph& g, const real *ps, Device *device) { return Expression(&g, g.add_input(ps, device)); }
