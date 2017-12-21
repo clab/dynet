@@ -35,7 +35,7 @@ install:
   - conda create -q -n test-env python=%PYTHON_VERSION% cython numpy pypandoc
   - activate test-env
   - cinst pandoc
-  - ps: if ($env:APPVEYOR_REPO_TAG -eq $True) { (gc setup.py) -replace '. (version=.)0.0.0', '${1}' + "$env:APPVEYOR_REPO_TAG_NAME" | Out-File -encoding 'UTF8' setup.py }
+  - ps: if ($env:APPVEYOR_REPO_TAG -eq $True) { (gc setup.py) -replace '. (version=.)0.0.0', "`${1}$env:APPVEYOR_REPO_TAG_NAME" | Out-File -encoding 'UTF8' setup.py }
 
 before_build:
   - cmd: md build
