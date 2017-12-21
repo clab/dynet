@@ -42,7 +42,7 @@ struct NodeTest {
                                              11.1f, 12.2f, 13.3f, 11.2f, 12.2f, 13.2f
                                             };
     std::vector<float> param_square1_vals = {1.1f, 2.2f, 3.4f, 1.2f, 2.5f, 3.2f, 5.3f, 2.3f, 3.3f};
-    std::vector<float> param_cube1_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
+    std::vector<float> param_cube1_vals = {.051f, .062f, .073f, .052f, .062f, .072f, .053f, .063f, .073f,
                                            .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
                                            .211f, .222f, .233f, .212f, .222f, .232f, .213f, .223f, .233f
                                           };
@@ -2231,7 +2231,7 @@ BOOST_AUTO_TEST_CASE( std_dim_value ) {
   Expression y = std_dim(x, vector<unsigned>({0}), true);
   Expression z = mean_dim(y, vector<unsigned>({0}), false);
 
-  BOOST_CHECK_CLOSE(as_scalar(z.value()), 0.1306032736, 0.1);
+  BOOST_CHECK_CLOSE(as_scalar(z.value()), 0.128319368, 0.1);
 }
 
 // Expression mean_dim(x);
