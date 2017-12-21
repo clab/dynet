@@ -456,14 +456,14 @@ void CircularCorrelation::backward_dev_impl(const MyDevice & dev,
   const Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
       b_fft(b_fft_mem, xs[1]->d.size());
 
-  // eigen requires the evaluation of an FFT to be put into memory somewhere
-  // (normally we would just add the result to dedxi directly).
+  // Normally we would just add the value of the derivative directly to dEdxi,
+  // but Eigen requires that the evaluation of an FFT be assigned somewhere, so
+  // we allocate some scratch memory and wrap it with dtmp:
   AlignedMemoryPool* scratch_allocator =
       fx.device->pools[(int)DeviceMempool::SCS];
   float* tmpmem = static_cast<float*>(scratch_allocator->allocate(
       dEdxi.d.size() * sizeof(float)));
-  Eigen::TensorMap<Eigen::Tensor<float, 1>>
-      dtmp(tmpmem, xs[i]->d.size());
+  Eigen::TensorMap<Eigen::Tensor<float, 1>> dtmp(tmpmem, xs[i]->d.size());
 
   // we also need memory for the FFT of dedf
   std::complex<float>* dr_fft_mem =
@@ -565,14 +565,14 @@ void CircularConvolution::backward_dev_impl(const MyDevice & dev,
   const Eigen::TensorMap<Eigen::Tensor<std::complex<float>, 1>>
       b_fft(b_fft_mem, xs[1]->d.size());
 
-  // eigen requires the evaluation of an FFT to be put into memory somewhere
-  // (normally we would just add the result to dedxi directly).
+  // Normally we would just add the value of the derivative directly to dEdxi,
+  // but Eigen requires that the evaluation of an FFT be assigned somewhere, so
+  // we allocate some scratch memory and wrap it with dtmp:
   AlignedMemoryPool* scratch_allocator =
       fx.device->pools[(int)DeviceMempool::SCS];
   float* tmpmem = static_cast<float*>(scratch_allocator->allocate(
       dEdxi.d.size() * sizeof(float)));
-  Eigen::TensorMap<Eigen::Tensor<float, 1>>
-      dtmp(tmpmem, xs[i]->d.size());
+  Eigen::TensorMap<Eigen::Tensor<float, 1>> dtmp(tmpmem, xs[i]->d.size());
 
   // we also need memory for the FFT of dedf
   std::complex<float>* dr_fft_mem =
