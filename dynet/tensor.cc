@@ -241,11 +241,10 @@ void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
     generate(val.v, val.v + val.d.size(), b);
 #if HAVE_CUDA
   } else if (val.device->type == DeviceType::GPU) {
-    float* t = new float[val.d.size()];
-    generate(t, t + val.d.size(), b);
-    CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
-    CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-    delete[] t;
+    CURAND_CHECK(curandGenerateUniform(curandeng, val.v, val.d.size()));
+    TensorTools::uniform_to_bernoulli_dev<Device_GPU>(*(Device_GPU*)val.device, val, p);
+    if(scale != 1.0)
+      TensorTools::scale_dev<Device_GPU>(*(Device_GPU*)val.device, val, scale, 0);
 #endif
   } else { throw std::runtime_error("Bad device type"); }
 }
@@ -411,6 +410,29 @@ void TensorTools::scale(Tensor& d, float a, float b) {
 #else
 void TensorTools::scale(Tensor& d, float a, float b) {
   if (d.device->type == DeviceType::CPU) { return scale_dev(*(const Device_CPU*)d.device, d, a, b); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+#endif
+
+template <class MyDevice>
+void TensorTools::uniform_to_bernoulli_dev(const MyDevice & dev, Tensor& x, float p) {
+  tvec(x).device(*dev.edevice) = (tvec(x) + p).floor();
+}
+#ifdef __CUDACC__
+template void TensorTools::uniform_to_bernoulli_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float p);
+#else
+template void TensorTools::uniform_to_bernoulli_dev<Device_CPU>(const Device_CPU & dev, Tensor& d, float p);
+#ifdef HAVE_CUDA
+extern template void TensorTools::uniform_to_bernoulli_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float p);
+void TensorTools::uniform_to_bernoulli(Tensor& d, float p) {
+  if (d.device->type == DeviceType::CPU) { return uniform_to_bernoulli_dev(*(const Device_CPU*)d.device, d, p); }
+  else if (d.device->type == DeviceType::GPU) { return uniform_to_bernoulli_dev(*(const Device_GPU*)d.device, d, p); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+void TensorTools::uniform_to_bernoulli(Tensor& d, float p) {
+  if (d.device->type == DeviceType::CPU) { return uniform_to_bernoulli_dev(*(const Device_CPU*)d.device, d, p); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #endif
