@@ -4,7 +4,8 @@
 #include <random>
 
 #ifdef HAVE_CUDA
-struct curandGenerator_t;
+struct curandGenerator_st;
+typedef struct curandGenerator_st *curandGenerator_t;
 #endif
 
 namespace dynet {
@@ -17,7 +18,7 @@ extern Device* default_device;
 extern NamedTimer timer; // debug timing in executors.
 
 #ifdef HAVE_CUDA
-extern curandGenerator_t* rndeng;
+extern curandGenerator_t curandeng;
 #endif
 
 } // namespace dynet
