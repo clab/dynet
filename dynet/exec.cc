@@ -70,6 +70,9 @@ const Tensor& SimpleExecutionEngine::get_gradient(VariableIndex i) {
                       << ", but backward pass was computed from node "
                       << (backward_computed - 1));
   }
+  if(cg.nodes[i]->backward_inplaced()){
+    DYNET_RUNTIME_ERR("This operation is an inplaced operation, thus no valid gradient");
+  }
   return ndEdfs[i];
 }
 
@@ -119,26 +122,32 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       node_fx.mem_pool = DeviceMempool::FXS;
       // Get the memory to store f(xs)
       auto& node_fx_pools = node_fx.device->pools;
-      node_fx.v = static_cast<float*>(
+      // If inplaced operation reuse (share) memory and don't call forward
+      if(node->forward_inplaced()) {
+        node_fx.v = nfxs[node->args[0]].v;
+      // If inplaced operation reuse (share) memory and don't call forward
+      } else {
+        node_fx.v = static_cast<float*>(
           node_fx_pools[(int)DeviceMempool::FXS]->allocate(
               node->dim.size() * sizeof(float)));
-      if (node_fx.v == nullptr) {
-        DYNET_RUNTIME_ERR("Ran out of memory when executing node " <<
-                          num_nodes_evaluated << ", allocating FWD memory.");
-      }
-      void* aux_mem = nullptr;
-      // Is the node requesting extra memory?
-      size_t aux_size = node->aux_storage_size();
-      if (aux_size) {
-        aux_mem = node_fx_pools[(int)DeviceMempool::FXS]->allocate(aux_size);
-        if (aux_mem == nullptr)
-          DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node "
-                            << num_nodes_evaluated);
-      }
-      node->aux_mem = aux_mem;
+        if (node_fx.v == nullptr) {
+          DYNET_RUNTIME_ERR("Ran out of memory when executing node " <<
+                            num_nodes_evaluated << ", allocating FWD memory.");
+        }
+        void* aux_mem = nullptr;
+        // Is the node requesting extra memory?
+        size_t aux_size = node->aux_storage_size();
+        if (aux_size) {
+          aux_mem = node_fx_pools[(int)DeviceMempool::FXS]->allocate(aux_size);
+          if (aux_mem == nullptr)
+            DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node "
+                              << num_nodes_evaluated);
+        }
+        node->aux_mem = aux_mem;
 
-      // Compute f(xs) and store to node_fx.
-      node->forward(xs, node_fx);
+        // Compute f(xs) and store to node_fx.
+        node->forward(xs, node_fx);
+      }
 
       if (profiling_flag) { timer.stop(current_node_name); }
     }
@@ -175,13 +184,19 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     node_dEdfx.d = dim;
     node_dEdfx.device = nfxs[i].device;
     node_dEdfx.mem_pool = DeviceMempool::DEDFS;
-    node_dEdfx.v = static_cast<float*>(
-        node_dEdfx.device->pools[(int)DeviceMempool::DEDFS]->allocate(
-            dim.size() * sizeof(float)));
-    if (node_dEdfx.v == nullptr) {
-      DYNET_RUNTIME_ERR(
-          "out of memory while attempting to allocate space for "
-          "derivatives of node " << i << ", allocating BWD memory.");
+    const Node* node = cg.nodes[i];
+    // If the operation is inplaced, re-use memory
+    if(node->backward_inplaced()) {
+      node_dEdfx.v = static_cast<float*>(ndEdfs[node->args[0]].v);
+    } else {
+      node_dEdfx.v = static_cast<float*>(
+          node_dEdfx.device->pools[(int)DeviceMempool::DEDFS]->allocate(
+              dim.size() * sizeof(float)));
+      if (node_dEdfx.v == nullptr) {
+        DYNET_RUNTIME_ERR(
+            "out of memory while attempting to allocate space for "
+            "derivatives of node " << i << ", allocating BWD memory.");
+      }
     }
   }
   // Zero all derivative memory (which is contiguous on each device)
@@ -220,6 +235,8 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
   for (int i = num_nodes - 1; i >= 0; --i) {
     if (!in_computation[i]) continue;
     const Node* node = cg.nodes[i];
+    // If the operation is inplaced, no need to call backward
+    if(node->backward_inplaced()) continue;
     if (profiling_flag) {
       current_node_name = "BWD " + node->as_dummy_string();
       timer.start(current_node_name);

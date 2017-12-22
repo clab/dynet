@@ -34,8 +34,7 @@ Dim Reshape::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  // just point to the input memory and change dimensions
-  // dimensions are handled by forward_dim
+  // note: this will not be called most of the time, because this operation is in-placed
   tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
 }
 
@@ -46,8 +45,8 @@ void Reshape::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device, dEdf.mem_pool);
-  tvec(dEdxi).device(*dev.edevice) += tvec(reshaped);
+  // note: this will not be called most of the time, because this operation is in-placed
+  tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(Reshape)
 
@@ -68,6 +67,7 @@ Dim Identity::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Identity::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // note: this will not be called most of the time, because the operation is in-placed
   tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
 }
 
@@ -78,6 +78,7 @@ void Identity::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
+  // note: this will not be called most of the time, because the operation is in-placed
   tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(Identity)
@@ -101,6 +102,7 @@ Dim NoBackprop::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void NoBackprop::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // note: this will not be called most of the time, because the operation is in-placed
   tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
 }
 
@@ -134,6 +136,7 @@ Dim FlipGradient::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void FlipGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  // note: this will not be called most of the time, because the operation is in-placed
   tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
 }
 
