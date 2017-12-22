@@ -9,6 +9,7 @@ env:
 branches:
   only:
     - master
+    - /^[0-9.]*$/
 stages:
   - test
   - name: test_pip

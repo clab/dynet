@@ -46,6 +46,10 @@ if [[ "$BACKEND" == cuda ]]; then
   sudo ln -s /usr/local/cuda-${CUDA_VERSION_MAJOR}.${CUDA_VERSION_MINOR} /usr/local/cuda
 fi
 
+if [[ "$TRAVIS_OS_NAME" == linux ]]; then
+  python setup.py sdist  # Build sdist
+fi
+
 # Eigen
 hg clone https://bitbucket.org/eigen/eigen/ -r 699b659
 cd eigen
