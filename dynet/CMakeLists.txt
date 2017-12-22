@@ -282,6 +282,7 @@ if(WITH_CUDA_BACKEND)
     target_compile_definitions(dynet PRIVATE HAVE_CUDNN)
   endif()
   cuda_add_cublas_to_target(dynet)
+  cuda_add_curand_to_target(dynet)
   target_link_libraries(dynet ${LIBS})
 else()
   # Build cpu library

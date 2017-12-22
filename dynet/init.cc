@@ -192,6 +192,13 @@ void initialize(DynetParams& params) {
   }
   cerr << "[dynet] random seed: " << params.random_seed << endl;
   rndeng = new mt19937(params.random_seed);
+#if HAVE_CUDA
+  curandeng = new curandGenerator_t;
+  CURAND_CHECK(curandCreateGenerator(curandeng, 
+                                     CURAND_RNG_PSEUDO_PHILOX4_32_10));
+  CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(*curandeng, 
+                                                  params.random_seed+1));
+#endif
 
   // Set weight decay rate
   if (params.weight_decay < 0 || params.weight_decay >= 1)
