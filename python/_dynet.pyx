@@ -97,20 +97,21 @@ cdef class DynetParams: # {{{
             shared_parameters([type]): [description] (default: None)
         """
         cpu_use = False
-        if '--dynet-gpu' in sys.argv:
-            sys.argv.remove('--dynet-gpu')
-            sys.argv.append('--dynet-gpus')
-            sys.argv.append('1')
-        elif not ('--dynet-gpus' in sys.argv or
-                  '--dynet-devices' in sys.argv or
-                  '--dynet-viz' in sys.argv):
+        sys_argv = list(sys.argv)
+        if '--dynet-gpu' in sys_argv:
+            sys_argv.remove('--dynet-gpu')
+            sys_argv.append('--dynet-gpus')
+            sys_argv.append('1')
+        elif not ('--dynet-gpus' in sys_argv or
+                  '--dynet-devices' in sys_argv or
+                  '--dynet-viz' in sys_argv):
             cpu_use = True
 
-        argv_count = int(len(sys.argv))
+        argv_count = int(len(sys_argv))
         cdef int argc = argv_count + 2 if cpu_use else argv_count
         cdef char** c_argv
         c_argv = <char**>malloc(sizeof(char*) * argc) # TODO check failure?
-        args = [bytearray(x, encoding="utf-8") for x in sys.argv]
+        args = [bytearray(x, encoding="utf-8") for x in sys_argv]
         for idx, s in enumerate(args):
             c_argv[idx] = s
         if cpu_use:
