@@ -97,7 +97,7 @@ cdef class DynetParams: # {{{
             shared_parameters([type]): [description] (default: None)
         """
         cpu_use = False
-        sys_argv = sys.argv
+        sys_argv = list(sys.argv)
         if '--dynet-gpu' in sys_argv:
             sys_argv.remove('--dynet-gpu')
             sys_argv.append('--dynet-gpus')
