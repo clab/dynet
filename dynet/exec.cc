@@ -124,8 +124,10 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       auto& node_fx_pools = node_fx.device->pools;
       // If inplaced operation reuse (share) memory and don't call forward
       if(node->forward_inplaced()) {
+        cerr << node->as_dummy_string() << ", node->args.size() == " << node->args.size() << endl;
+        DYNET_ASSERT(node->args.size() == 1,
+                     "Inplacing only supported for arity-1 nodes");
         node_fx.v = nfxs[node->args[0]].v;
-      // If inplaced operation reuse (share) memory and don't call forward
       } else {
         node_fx.v = static_cast<float*>(
           node_fx_pools[(int)DeviceMempool::FXS]->allocate(
@@ -187,7 +189,10 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     const Node* node = cg.nodes[i];
     // If the operation is inplaced, re-use memory
     if(node->backward_inplaced()) {
-      node_dEdfx.v = static_cast<float*>(ndEdfs[node->args[0]].v);
+      cerr << node->as_dummy_string() << ", node->args.size() == " << node->args.size() << endl;
+      DYNET_ASSERT(node->args.size() == 1,
+                   "Inplacing only supported for arity-1 nodes");
+      node_dEdfx.v = ndEdfs[node->args[0]].v;
     } else {
       node_dEdfx.v = static_cast<float*>(
           node_dEdfx.device->pools[(int)DeviceMempool::DEDFS]->allocate(
@@ -236,34 +241,37 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     if (!in_computation[i]) continue;
     const Node* node = cg.nodes[i];
     // If the operation is inplaced, no need to call backward
-    if(node->backward_inplaced()) continue;
-    if (profiling_flag) {
-      current_node_name = "BWD " + node->as_dummy_string();
-      timer.start(current_node_name);
-    }
-    const auto& node_fx = nfxs[i];  // f(x_1, x_2, ..., x_arity), which
-                                    // was previously computed by forward.
-    const auto& node_dEdfx = ndEdfs[i];  // dE/df(x_1, x_2, ..., x_arity)
-    xs.resize(node->arity());
-    unsigned ai = 0;
-    for (VariableIndex arg : node->args) {
-      in_computation[arg] = true;
-      xs[ai] = &nfxs[arg];
-      ++ai;
-    }
-    ai = 0;
-    for (VariableIndex arg : node->args) {
-      if (needs_derivative[arg]) {
-        auto& node_dEdxai = ndEdfs[arg];  // where to store dE/dx_{ai}.
-        DYNET_ASSERT(node_fx.device == node_dEdfx.device,
-                     "Attempt to do tensor backward in different devices");
-        DYNET_ASSERT(node_fx.device == node_dEdxai.device,
-                     "Attempt to do tensor backward in different devices");
-        node->backward(xs, node_fx, node_dEdfx, ai, node_dEdxai);
+    if(node->backward_inplaced()) {
+      for (VariableIndex arg : node->args)
+        in_computation[arg] = true;
+    } else {
+      if (profiling_flag) {
+        current_node_name = "BWD " + node->as_dummy_string();
+        timer.start(current_node_name);
       }
-      ++ai;
+      const auto& node_fx = nfxs[i];  // f(x_1, x_2, ..., x_arity), which
+                                      // was previously computed by forward.
+      const auto& node_dEdfx = ndEdfs[i];  // dE/df(x_1, x_2, ..., x_arity)
+      xs.resize(node->arity());
+      unsigned ai = 0;
+      for (VariableIndex arg : node->args) {
+        in_computation[arg] = true;
+        xs[ai] = &nfxs[arg];
+        ++ai;
+      }
+      ai = 0;
+      for (VariableIndex arg : node->args) {
+        if (needs_derivative[arg]) {
+          auto& node_dEdxai = ndEdfs[arg];  // where to store dE/dx_{ai}.
+          DYNET_ASSERT(node_fx.device == node_dEdfx.device &&
+                       node_fx.device == node_dEdxai.device,
+                       "Attempt to do tensor backward in different devices");
+          node->backward(xs, node_fx, node_dEdfx, ai, node_dEdxai);
+        }
+        ++ai;
+      }
+      if (profiling_flag) { timer.stop(current_node_name); }
     }
-    if (profiling_flag) { timer.stop(current_node_name); }
   }
 
   // Accumulate gradients into parameters.
