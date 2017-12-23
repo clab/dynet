@@ -1725,7 +1725,7 @@ Expression nobackprop(const Expression& x);
  *
  * \return An output expression containing the same as input (only effects on backprop process)
  */
-Expression flip_gradient(const Expression& x);
+Expression flip_gradient(const Expression& x, float lambd = 1.0f);
 
 /**
  * \ingroup flowoperations
