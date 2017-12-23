@@ -422,8 +422,18 @@ void ComputationGraph::print_graphviz() const {
          << node->as_string(var_names);
     if (profiling_flag){
       cerr << " (MEM: ";
-      cerr << std::setprecision(4) << std::setw(11) << (node->aux_storage_size() + 2*node->dim.size() * sizeof(real)) / 1024.0;
-      cerr << " KiB)";
+      // if inplaced, note that no memory is used
+      if(node->forward_inplaced()) {
+        if(node->backward_inplaced()) {
+          cerr << "         0 KiB (forward/backward inplaced))";
+        } else {
+          cerr << std::setprecision(4) << std::setw(11) << node->dim.size() * sizeof(real) / 1024.0
+               << " KiB (forward inplaced))";
+        }
+      } else {
+        cerr << std::setprecision(4) << std::setw(11) << (node->aux_storage_size() + 2*node->dim.size() * sizeof(real)) / 1024.0
+             << " KiB)";
+      }
     }
     cerr << "\"];\n";
     for (auto arg : node->args)
