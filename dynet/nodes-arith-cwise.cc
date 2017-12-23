@@ -271,7 +271,7 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
     }
   // Otherwise work with broadcasting, etc.
   } else {
-    DYNET_ASSERT(n_red < 5 && n_red > 0, "Unsupported number of reductions check in CwiseMultiply::backward (cmult)");
+    DYNET_ASSERT(n_red < 5, "Unsupported number of reductions check in CwiseMultiply::backward (cmult)");
     if(n_red==0) backward_helper<MyDevice, 0>(dev, xs, fx, dEdf, i, dEdxi);
     else if(n_red==1) backward_helper<MyDevice, 1>(dev, xs, fx, dEdf, i, dEdxi);
     else if(n_red==2) backward_helper<MyDevice, 2>(dev, xs, fx, dEdf, i, dEdxi);
