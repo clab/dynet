@@ -166,10 +166,19 @@ struct RNNBuilder {
   }
 
   /**
-   *
-   * \brief Set Dropout
-   *
    * \param d Dropout rate
+   * \details The dropout implemented here is the variational dropout with tied weights introduced in [Gal, 2016](http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks)
+   * More specifically, dropout masks \f$\mathbf{z_x}\sim \mathrm{Bernoulli}(1-d)\f$ are sampled at the start of each sequence.
+   * The dynamics of the cell are then modified to :
+   *
+   * \f$
+   * \begin{split}
+    h_t & =\tanh(W_{x}(\frac 1 {1-d}\mathbf{z_x} \circ x_t)+W_{h}(\frac 1 {1-d}\mathbf{z_h} \circ h_{t-1})+b_i)\\
+   \end{split}
+   * \f$
+   *
+   * For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+   * \param d Dropout rate \f$d\f$ for the input \f$x_t\f$
    */
   void set_dropout(float d) { dropout_rate = d; }
   /**

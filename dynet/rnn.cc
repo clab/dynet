@@ -40,7 +40,6 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
 
 void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
-  _cg = &cg;
   for (unsigned i = 0; i < layers; ++i) {
     Parameter p_x2h = params[i][X2H];
     Parameter p_h2h = params[i][H2H];
@@ -57,7 +56,8 @@ void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
     }
 
     param_vars.push_back(vars);
-  }
+  } 
+  _cg = &cg;
 }
 
 void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
@@ -94,6 +94,7 @@ void SimpleRNNBuilder::set_dropout_masks(unsigned batch_size){
 
             // hidden
             masks_i.push_back(random_bernoulli(*_cg, Dim({hidden_dim_}, batch_size), retention_rate, scale));
+
             masks.push_back(masks_i);
         }
     }
@@ -115,23 +116,26 @@ Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
     if(dropout_rate > 0.f){
       x = cmult(x,masks[i][0]);
     }
+
+    bool exists_h_prev = false;
     // y <--- g(y_prev)
     if(prev >= 0) {
       h_prev = h[prev][i];
-      if(dropout_rate > 0.f)
-        h_prev = cmult(h_prev,masks[i][1]);
-      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h_prev}) );
+      exists_h_prev = true;
     } else if(h0.size() > 0) {
       h_prev = h0[i]; 
+      exists_h_prev = true;
+    }
+
+    if(exists_h_prev) {
       if(dropout_rate > 0.f)
         h_prev = cmult(h_prev,masks[i][1]);
       x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h_prev}) );
-    } else {
-      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x}) );
     }
-
-  }
-
+    else{
+      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x}) ); 
+    }
+  } 
   return h[t].back();
 }
 
