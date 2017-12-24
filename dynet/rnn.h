@@ -323,17 +323,26 @@ public:
   std::vector<std::vector<Expression>> param_vars;
 
 private:
+  void set_dropout_masks(unsigned batch_size = 1);
+
   ParameterCollection local_model;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
+
+  // first index is layer, second specifies W_i, W_u
+  std::vector<std::vector<Expression>> masks;
 
   // initial value of h
   // defaults to zero matrix input
   std::vector<Expression> h0;
 
   unsigned layers;
+  unsigned input_dim_, hidden_dim_;
   bool lagging;
+  bool dropout_masks_valid;
+
+  ComputationGraph * _cg;
 
 };
 

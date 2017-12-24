@@ -21,7 +21,7 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
                        ParameterCollection& model,
-                       bool support_lags) : layers(layers), lagging(support_lags) {
+                       bool support_lags) : layers(layers), input_dim_(input_dim),hidden_dim_(hidden_dim),lagging(support_lags) {
   local_model = model.add_subcollection("simple-rnn-builder");
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
@@ -40,6 +40,7 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
 
 void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
+  _cg = &cg;
   for (unsigned i = 0; i < layers; ++i) {
     Parameter p_x2h = params[i][X2H];
     Parameter p_h2h = params[i][H2H];
@@ -64,6 +65,7 @@ void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   h0 = h_0;
   DYNET_ARG_CHECK(h0.empty() || h0.size() == layers,
                           "Number of inputs passed to initialize RNNBuilder (" << h0.size() << ") is not equal to the number of layers (" << layers << ")");
+  dropout_masks_valid = false;
 }
 
 Expression SimpleRNNBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
@@ -78,27 +80,58 @@ Expression SimpleRNNBuilder::set_h_impl(int prev, const vector<Expression>& h_ne
   return h[t].back();
 }
 
+void SimpleRNNBuilder::set_dropout_masks(unsigned batch_size){
+    masks.clear();
+    for (unsigned i = 0; i < layers; ++i) {
+        std::vector<Expression> masks_i;
+        unsigned idim = (i == 0) ? input_dim_ : hidden_dim_;
+        if (dropout_rate > 0.f ) {
+            float retention_rate = 1.f - dropout_rate;
+            float scale = 1.f / retention_rate;
+
+            // input
+            masks_i.push_back(random_bernoulli(*_cg, Dim({idim}, batch_size), retention_rate, scale));
+
+            // hidden
+            masks_i.push_back(random_bernoulli(*_cg, Dim({hidden_dim_}, batch_size), retention_rate, scale));
+            masks.push_back(masks_i);
+        }
+    }
+    dropout_masks_valid = true;
+}
+
 Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
-  if(dropout_rate != 0.f)
-    throw std::runtime_error("SimpleRNNBuilder doesn't support dropout yet");
+  if(dropout_rate != 0.f && !dropout_masks_valid)
+    set_dropout_masks(in.dim().bd);
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
 
   Expression x = in;
+  Expression h_prev;
 
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
 
+    if(dropout_rate > 0.f){
+      x = cmult(x,masks[i][0]);
+    }
     // y <--- g(y_prev)
     if(prev >= 0) {
-      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h[prev][i]}) );
+      h_prev = h[prev][i];
+      if(dropout_rate > 0.f)
+        h_prev = cmult(h_prev,masks[i][1]);
+      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h_prev}) );
     } else if(h0.size() > 0) {
-      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h0[i]}) );
+      h_prev = h0[i]; 
+      if(dropout_rate > 0.f)
+        h_prev = cmult(h_prev,masks[i][1]);
+      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h_prev}) );
     } else {
       x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x}) );
     }
 
   }
+
   return h[t].back();
 }
 
