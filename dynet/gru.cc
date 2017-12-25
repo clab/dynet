@@ -15,7 +15,7 @@ enum { X2Z, H2Z, BZ, X2R, H2R, BR, X2H, H2H, BH };
 GRUBuilder::GRUBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
-                       ParameterCollection& model) : hidden_dim(hidden_dim), layers(layers) {
+                       ParameterCollection& model) : hidden_dim_(hidden_dim), input_dim_(input_dim), layers(layers) {
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("gru-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -65,6 +65,7 @@ void GRUBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
     vector<Expression> vars = {x2z, h2z, bz, x2r, h2r, br, x2h, h2h, bh};
     param_vars.push_back(vars);
   }
+  _cg = &cg;
 }
 
 void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
@@ -73,6 +74,9 @@ void GRUBuilder::start_new_sequence_impl(const std::vector<Expression>& h_0) {
   DYNET_ARG_CHECK(h0.empty() || h0.size() == layers,
                           "Number of inputs passed to initialize GRUBuilder (" << h0.size() << ") "
                           "is not equal to the number of layers (" << layers << ")");
+
+
+  dropout_masks_valid = false;
 }
 
 Expression GRUBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
@@ -108,7 +112,16 @@ Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
     if (prev >= 0 || has_initial_state) {
       h_tprev = (prev < 0) ? h0[i] : h[prev][i];
     } else { prev_zero = true; }
-    if (dropout_rate) in = dropout(in, dropout_rate);
+    //if (dropout_rate) in = dropout(in, dropout_rate);
+
+    if(dropout_rate > 0.f){
+      if(!dropout_masks_valid)
+        set_dropout_masks(x.dim().bd);
+
+      in = cmult(in, masks[i][0]);
+      if(!prev_zero)
+        h_tprev = cmult(masks[i][1],h_tprev); 
+    }
     // update gate
     Expression zt;
     if (prev_zero)
@@ -135,6 +148,8 @@ Expression GRUBuilder::add_input_impl(int prev, const Expression& x) {
       in = ht[i] = nwt;
     } else {
       Expression ght = cmult(rt, h_tprev);
+      if(dropout_rate > 0.f)
+        ght = cmult(masks[i][2],ght);
       ct = affine_transform({vars[BH], vars[X2H], in, vars[H2H], ght});
       ct = tanh(ct);
       Expression nwt = cmult(zt, ct);
@@ -157,6 +172,30 @@ void GRUBuilder::copy(const RNNBuilder & rnn) {
 
 ParameterCollection & GRUBuilder::get_parameter_collection() {
   return local_model;
+}
+
+void GRUBuilder::set_dropout_masks(unsigned batch_size){
+  masks.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    std::vector<Expression> masks_i;
+    unsigned idim = (i == 0) ? input_dim_ : hidden_dim_;
+    if (dropout_rate > 0.f ) {
+      float retention_rate = 1.f - dropout_rate;
+      float scale = 1.f / retention_rate;
+
+      // input
+      masks_i.push_back(random_bernoulli(*_cg, Dim({idim}, batch_size), retention_rate, scale));
+
+      // hidden
+      masks_i.push_back(random_bernoulli(*_cg, Dim({hidden_dim_}, batch_size), retention_rate, scale));
+
+      // gate
+      masks_i.push_back(random_bernoulli(*_cg, Dim({hidden_dim_}, batch_size), retention_rate, scale));
+
+      masks.push_back(masks_i);
+    }
+  }
+  dropout_masks_valid = true;
 }
 
 } // namespace dynet

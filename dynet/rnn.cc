@@ -81,24 +81,24 @@ Expression SimpleRNNBuilder::set_h_impl(int prev, const vector<Expression>& h_ne
 }
 
 void SimpleRNNBuilder::set_dropout_masks(unsigned batch_size){
-    masks.clear();
-    for (unsigned i = 0; i < layers; ++i) {
-        std::vector<Expression> masks_i;
-        unsigned idim = (i == 0) ? input_dim_ : hidden_dim_;
-        if (dropout_rate > 0.f ) {
-            float retention_rate = 1.f - dropout_rate;
-            float scale = 1.f / retention_rate;
+  masks.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    std::vector<Expression> masks_i;
+    unsigned idim = (i == 0) ? input_dim_ : hidden_dim_;
+    if (dropout_rate > 0.f ) {
+      float retention_rate = 1.f - dropout_rate;
+      float scale = 1.f / retention_rate;
 
-            // input
-            masks_i.push_back(random_bernoulli(*_cg, Dim({idim}, batch_size), retention_rate, scale));
+      // input
+      masks_i.push_back(random_bernoulli(*_cg, Dim({idim}, batch_size), retention_rate, scale));
 
-            // hidden
-            masks_i.push_back(random_bernoulli(*_cg, Dim({hidden_dim_}, batch_size), retention_rate, scale));
+      // hidden
+      masks_i.push_back(random_bernoulli(*_cg, Dim({hidden_dim_}, batch_size), retention_rate, scale));
 
-            masks.push_back(masks_i);
-        }
+      masks.push_back(masks_i);
     }
-    dropout_masks_valid = true;
+  }
+  dropout_masks_valid = true;
 }
 
 Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
