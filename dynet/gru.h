@@ -38,23 +38,15 @@ struct GRUBuilder : public RNNBuilder {
 
   ParameterCollection local_model;
 
-
-  void set_dropout_masks(unsigned batch_size = 1);
-
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
-
-  std::vector<std::vector<Expression>> masks;
 
   // initial values of h at each layer
   // - default to zero matrix input
   std::vector<Expression> h0;
 
-  unsigned hidden_dim_, input_dim_;
+  unsigned hidden_dim;
   unsigned layers;
-  bool dropout_masks_valid;
-  ComputationGraph * _cg;
-
 };
 
 } // namespace dynet

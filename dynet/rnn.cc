@@ -87,7 +87,7 @@ void SimpleRNNBuilder::set_dropout(float d){
 }
 
 void SimpleRNNBuilder::set_dropout(float d, float d_h){
-  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h > 0.f && d_h < 1.f,
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h >= 0.f && d_h <= 1.f,
                           "dropout rate must be a probability (>=0 and <=1)");
   dropout_rate = d;
   dropout_rate_h = d_h;

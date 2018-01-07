@@ -338,6 +338,15 @@ public:
    */
   void set_dropout(float d, float d_h);
 
+  /**
+   * \brief Set dropout masks at the beginning of a sequence for a specific bathc size
+   * \details If this function is not called on batched input, the same mask will be applied across
+   * all batch elements. Use this to apply different masks to each batch element
+   *
+   * \param batch_size Batch size
+   */
+  void set_dropout_masks(unsigned batch_size = 1);
+
   unsigned num_h0_components() const override { return layers; }
 
   ParameterCollection & get_parameter_collection() override;
@@ -349,7 +358,6 @@ public:
   std::vector<std::vector<Expression>> param_vars;
 
 private:
-  void set_dropout_masks(unsigned batch_size = 1);
 
   ParameterCollection local_model;
 
