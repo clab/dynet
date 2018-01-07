@@ -166,21 +166,13 @@ struct RNNBuilder {
   }
 
   /**
+   *
+   * \brief Set Dropout
+   *
    * \param d Dropout rate
-   * \details The dropout implemented here is the variational dropout with tied weights introduced in [Gal, 2016](http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks)
-   * More specifically, dropout masks \f$\mathbf{z_x}\sim \mathrm{Bernoulli}(1-d)\f$ are sampled at the start of each sequence.
-   * The dynamics of the cell are then modified to :
-   *
-   * \f$
-   * \begin{split}
-    h_t & =\tanh(W_{x}(\frac 1 {1-d}\mathbf{z_x} \circ x_t)+W_{h}(\frac 1 {1-d}\mathbf{z_h} \circ h_{t-1})+b_i)\\
-   \end{split}
-   * \f$
-   *
-   * For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
-   * \param d Dropout rate \f$d\f$ for the input \f$x_t\f$
    */
   void set_dropout(float d) { dropout_rate = d; }
+
   /**
    *
    * \brief Disable Dropout
@@ -321,6 +313,31 @@ public:
   std::vector<Expression> get_s(RNNPointer i) const override { return get_h(i); }
   void copy(const RNNBuilder & params) override;
 
+
+  /**
+   * \brief Set the dropout rates to a unique value
+   * \details This has the same effect as `set_dropout(d,d_h)` except that all the dropout rates are set to the same value.
+   * \param d Dropout rate to be applied on all of \f$x,h\f$
+   */
+  void set_dropout(float d);
+
+  /**
+   * \param d Dropout rate
+   * \details The dropout implemented here is the variational dropout introduced in [Gal, 2016](http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks)
+   * More specifically, dropout masks \f$\mathbf{z_x}\sim \mathrm{Bernoulli}(1-d_x)\f$ and \f$\mathbf{z_h}\sim \mathrm{Bernoulli}(1-d_h)\f$ are sampled at the start of each sequence.
+   * The dynamics of the cell are then modified to :
+   *
+   * \f$
+   * \begin{split}
+    h_t & =\tanh(W_{x}(\frac 1 {1-d}\mathbf{z_x} \circ x_t)+W_{h}(\frac 1 {1-d}\mathbf{z_h} \circ h_{t-1})+b)\\
+   \end{split}
+   * \f$
+   *
+   * For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+   * \param d Dropout rate \f$d\f$ for the input \f$x_t\f$
+   */
+  void set_dropout(float d, float d_h);
+
   unsigned num_h0_components() const override { return layers; }
 
   ParameterCollection & get_parameter_collection() override;
@@ -349,6 +366,9 @@ private:
   unsigned layers;
   unsigned input_dim_, hidden_dim_;
   bool lagging;
+
+
+  float dropout_rate_h;
   bool dropout_masks_valid;
 
   ComputationGraph * _cg;

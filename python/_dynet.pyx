@@ -4557,9 +4557,20 @@ cdef class _RNNBuilder: # {{{
 # _RNNBuilder }}}
 
 cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
-    """[summary]
-    
-    [description]
+    """ Simple RNNBuilder with tanh as the activation.
+    This cell runs according to the following dynamics :
+
+    .. math::
+
+        \\begin{split}
+            h_t & =\tanh(W_{x}x_t+W_{h}h_{t-1}+b)\\\\
+        \end{split}
+
+    Args:
+        layers (int): Number of layers
+        input_dim (int): Dimension of the input
+        hidden_dim (int): Dimension of the recurrent units
+        model (dynet.ParameterCollection): ParameterCollection to hold the parameters
     """
     cdef CSimpleRNNBuilder* thissimpleptr
     cdef tuple _spec
@@ -4618,6 +4629,41 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
                 layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
             exprs.append(layer_exprs)
         return exprs
+
+    cpdef void set_dropouts(self, float d, float d_h):
+        """Set the dropout rates
+        
+        The dropout implemented here is the variational dropout introduced in `Gal, 2016 <http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks>`_
+
+        More specifically, dropout masks :math:`\mathbf{z_x}\sim \\text{Bernoulli}(1-d)`, :math:`\mathbf{z_h}\sim \\text{Bernoulli}(1-d_h)` are sampled at the start of each sequence.
+
+        The dynamics of the cell are then modified to :
+
+        .. math::
+
+            \\begin{split}
+                h_t & =\\tanh(W_{x}(\\frac 1 {1-d}\mathbf{z_x} \circ x_t)+W_{h}(\\frac 1 {1-d}\mathbf{z_h} \circ h_{t-1})+b)
+            \end{split}
+
+        For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+
+        Args:
+            d (number): Dropout rate :math:`d` for the input.
+            d_h (number): Dropout rate :math:`d_h` for the hidden unit :math:`h_t`
+        """
+        self.thissimpleptr.set_dropout(d,d_h)
+
+    cpdef void set_dropout_masks(self, unsigned batch_size=1):
+        """Set dropout masks at the beginning of a sequence for a specific batch size
+        
+        If this function is not called on batched input, the same mask will be applied across all batch elements. Use this to apply different masks to each batch element
+
+        You need to call this __AFTER__ calling `initial_state`
+        
+        Args:
+            batch_size (int): Batch size (default: {1})
+        """
+        self.thissimpleptr.set_dropout_masks(batch_size)
 
     def whoami(self): return "SimpleRNNBuilder"
 # SimpleRNNBuilder }}}
