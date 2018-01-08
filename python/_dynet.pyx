@@ -1180,23 +1180,6 @@ cdef class ParameterCollection: # {{{
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
         
-    cpdef set_weight_decay_lambda(self, lam):
-        """Add a parameter to the ParameterCollection
-        
-        Args:
-            dim (tuple): Shape of the parameter
-        
-        Keyword Arguments:
-            init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
-            name (string)             : Optional name for this parameter (default: "")
-            device (string)           : Optional device name for this parameter (default: "", default device)
-        
-        Returns:
-            (dynet.Parameters): Created Parameter
-        """
-        assert(isinstance(lam,float))
-        self.thisptr.set_weight_decay_lambda(lam)
-
     cpdef add_lookup_parameters(self, dim, PyInitializer init=None, name="", device=""):
         """Add a lookup parameter to the ParameterCollection
         
@@ -1256,6 +1239,15 @@ cdef class ParameterCollection: # {{{
             (dynet.ParameterCollection) a parameter collection.
         """
         return ParameterCollection.wrap(self.thisptr.add_subcollection((name or "").encode()), self)
+
+    cpdef set_weight_decay_lambda(self, lam):
+        """Set the weight decay coefficient.
+        
+        Args:
+            lam (float): Weight decay coefficient
+        """
+        assert(isinstance(lam,float))
+        self.thisptr.set_weight_decay_lambda(lam)
 
     cpdef name(self):
         """
