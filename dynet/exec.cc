@@ -124,7 +124,6 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
       auto& node_fx_pools = node_fx.device->pools;
       // If inplaced operation reuse (share) memory and don't call forward
       if(node->forward_inplaced()) {
-        cerr << node->as_dummy_string() << ", node->args.size() == " << node->args.size() << endl;
         DYNET_ASSERT(node->args.size() == 1,
                      "Inplacing only supported for arity-1 nodes");
         node_fx.v = nfxs[node->args[0]].v;
