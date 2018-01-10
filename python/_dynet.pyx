@@ -5582,6 +5582,9 @@ cdef class Trainer:
     @learning_rate.setter
     def learning_rate(self, value):
         self.thisptr.learning_rate = value
+    
+    def set_learning_rate(self, value):
+        self.thisptr.learning_rate = value
 
 cdef class SimpleSGDTrainer(Trainer):
     """Stochastic gradient descent trainer
