@@ -341,6 +341,10 @@ class TestIOHighLevelAPI(unittest.TestCase):
         dy.save(self.file, [self.b])
         [b] = dy.load(self.file, self.m2)
 
+    def test_save_load_generator(self):
+        dy.save(self.file, (x for x in [self.b]))
+        [b] = list(dy.load_generator(self.file, self.m2))
+
 
 class TestExpression(unittest.TestCase):
 
