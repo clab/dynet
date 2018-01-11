@@ -40,7 +40,8 @@ void Rectify::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  tvec(dEdxi).device(*dev.edevice) += tvec(fx).binaryExpr(tvec(dEdf), FRectifyBackward());
+  auto mask = tvec(fx).cast<bool>().cast<float>();
+  tvec(dEdxi).device(*dev.edevice) += mask * tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(Rectify)
 

@@ -82,7 +82,8 @@ template<typename Scalar> struct scalar_logistic_sigmoid_op {
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
     using namespace Eigen::internal;
     const Packet half = pset1<Packet>(0.5);
-    return padd(half, pmul(half, ptanh(pmul(x, half))));
+    //return padd(pmul(half, ptanh(pmul(x, half))), half);
+    return pmadd(half, ptanh(pmul(x, half)), half);
   }
 };
 }
@@ -94,6 +95,33 @@ struct functor_traits<dynet::scalar_logistic_sigmoid_op<Scalar> > {
     Cost = NumTraits<Scalar>::AddCost * 2 + NumTraits<Scalar>::MulCost * 6,
     PacketAccess = packet_traits<Scalar>::HasAdd && packet_traits<Scalar>::HasMul &&
                    packet_traits<Scalar>::HasTanh
+  };
+};
+} }
+
+namespace dynet {
+template<typename Scalar> struct scalar_sqrt_backward_op {
+  EIGEN_EMPTY_STRUCT_CTOR(scalar_sqrt_backward_op)
+  DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& t, const Scalar& d) const {
+    const Scalar two = Scalar(2);
+    return d / (two * t);
+  }
+  template <typename Packet>
+  DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& t, const Packet& d) const {
+    using namespace Eigen::internal;
+    const Packet two = pset1<Packet>(2);
+    return pdiv(d, pmul(two, t));
+  }
+};
+typedef scalar_sqrt_backward_op<float> FSqrtBackward;
+}
+
+namespace Eigen { namespace internal {
+template<typename Scalar>
+struct functor_traits<dynet::scalar_sqrt_backward_op<Scalar> > {
+  enum {
+    Cost = NumTraits<Scalar>::MulCost * 2,
+    PacketAccess = packet_traits<Scalar>::HasMul && packet_traits<Scalar>::HasDiv
   };
 };
 } }
@@ -163,7 +191,7 @@ template<typename Scalar> struct scalar_tan_backward_op {
   DYNET_DEVICE_FUNC EIGEN_STRONG_INLINE const Packet packetOp(const Packet& t, const Packet& d) const {
     using namespace Eigen::internal;
     const Packet one = pset1<Packet>(1);
-    return pmul(padd(one, pmul(t, t)), d);
+    return pmul(pmadd(t, t, one), d);
   }
 };
 }
@@ -240,7 +268,8 @@ template<typename Scalar> struct scalar_atan_backward_op {
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x, const Packet& d) const {
     using namespace Eigen::internal;
     const Packet one = pset1<Packet>(1);
-    return pdiv(d, padd(pmul(x, x), one));
+    //return pdiv(d, padd(pmul(x, x), one));
+    return pdiv(d, pmadd(x, x, one));
   }
 };
 }
@@ -266,7 +295,7 @@ template<typename Scalar> struct scalar_asinh_backward_op {
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x, const Packet& d) const {
     using namespace Eigen::internal;
     const Packet one = pset1<Packet>(1);
-    return pmul(prsqrt(padd(pmul(x, x), one)), d);
+    return pmul(prsqrt(pmadd(x, x, one)), d);
   }
 };
 }

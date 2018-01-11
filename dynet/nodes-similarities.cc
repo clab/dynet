@@ -90,7 +90,9 @@ Dim HuberDistance::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void HuberDistance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "HuberDistance::forward dimension check failed");
-  t<0>(fx).device(*dev.edevice) = (tvec(*xs[0]) - tvec(*xs[1])).unaryExpr(FHuberForward(d)).sum();
+  auto x = tvec(*xs[0]) - tvec(*xs[1]);
+  auto dist = (x.abs() < d).select(x.square(), d * (2 * x.abs() - d));
+  t<0>(fx).device(*dev.edevice) = dist.sum();
 }
 
 template<class MyDevice>
@@ -101,7 +103,12 @@ void HuberDistance::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "HuberDistance::backward dimension check failed");
-  tvec(dEdxi).device(*dev.edevice) += (tvec(*xs[i]) - tvec(*xs[1-i])).unaryExpr(FHuberBackward(d, as_scalar(dEdf)));
+  auto scale = 2 * as_scalar(dEdf);
+  auto c = d;
+  auto x = tvec(*xs[i]) - tvec(*xs[1-i]);
+  auto a = x.abs();
+  auto r = scale * (a < c).select(x, c * ((x > 0.f).cast<float>() - (x < 0.f).cast<float>()));
+  tvec(dEdxi).device(*dev.edevice) += r;
 }
 DYNET_NODE_INST_DEV_IMPL(HuberDistance)
 
