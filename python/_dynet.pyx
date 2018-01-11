@@ -311,12 +311,12 @@ cdef _load_one(datafname, fh, model):
         obj.param_collection().populate(datafname, name)
         return obj
 
-cpdef save(basename, lst):
+cpdef save(basename, objects):
     """Saves a list of parameters, lookup parameters and builder objects to disk.
 
     Args:
         basename (string): The base-name of the files to save. Two files will be created: `basename.data` and `basename.meta`.
-        lst      (list):  A list of objects to save (see below).
+        objects  (iterable):  An iterable of objects to save (see below).
 
 
     Example:
@@ -336,7 +336,7 @@ cpdef save(basename, lst):
 
     
     What can be saved:
-        Each object in `lst` must be one of the following:
+        Each object in `objects` must be one of the following:
         
         (1) Parameter
         (2) LookupParameter
@@ -356,24 +356,23 @@ cpdef save(basename, lst):
         behind the scenes:
         
         - for each item, we write to `.meta`:
-            if its a Parameters/ParameterCollection: 
+            if it is a Parameters/ParameterCollection:
                 its type and full name.
-            if its a builder:
+            if it is a builder:
                 its class, its spec, the full name of its parameters collection.
         - the associated parameters/sub-collection is then saved to `.data`
     """
     open(basename+".data","w").close() # delete current
-    fh = open(basename+".meta","wb")
-    for item in lst:
-        _save_one(basename+".data", fh, item)
-    fh.close()
+    with open(basename+".meta","wb") as fh:
+        for item in objects:
+            _save_one(basename+".data", fh, item)
 
 cpdef load(basename, params):
     """Loads a list of parameters, lookup parameters and builder objects from disk.
-    The loaded objects are added to the supplied params collection, and returned.
+    The loaded objects are added to the supplied parameter collection, and returned.
 
     Args:
-        basename (string):  The basename to read from. 
+        basename (string):  The basename to read from.
                             This is the same string that was used when saving the objects.
         params   (dynet.ParameterCollection): A ParameterCollection to add the loaded objects to.
 
@@ -396,15 +395,42 @@ cpdef load(basename, params):
         pc = dy.ParameterCollection()
         E2, builder2, W2 = dy.load("model", pc)
     """
-    fh = open(basename+".meta","rb")
-    res = []
-    while True:
-        try:
-            obj = _load_one(basename+".data", fh, params)
-        except EOFError: break
-        res.append(obj)
-    fh.close()
-    return res
+    return list(load_generator(basename, params))
+
+def load_generator(basename, params):
+    """Same as load(), but the parameters are returned as a generator instead of a list.
+    This allows saving memory or even showing a progress bar while loading the parameters.
+
+    Args:
+        basename (string):  The basename to read from.
+                            This is the same string that was used when saving the objects.
+        params   (dynet.ParameterCollection): A ParameterCollection to add the loaded objects to.
+
+    Returns:
+        A generator of parameters, lookup parameters and builder objects, in the same order they
+        were passed to the save function.
+
+
+    Example:
+        import dynet as dy
+        from tqdm import tqdm
+
+        pc = dy.ParameterCollection()
+        W = pc.add_parameters((100,50))
+        E = pc.add_lookup_parameters((1000,50))
+        builder = dy.LSTMBuilder(2, 50, 50, pc)
+
+        dy.save("model", tqdm((E, builder, W), unit="param"))
+
+        # then, when loading:
+        pc = dy.ParameterCollection()
+        E2, builder2, W2 = tqdm(dy.load_generator("model", pc), unit="param")
+    """
+    with open(basename+".meta","rb") as fh:
+        while True:
+            try:
+                yield _load_one(basename+".data", fh, params)
+            except EOFError: break
 # }}}
 
 cdef c_tensor_as_np(CTensor &t):
