@@ -188,7 +188,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     const Node* node = cg.nodes[i];
     // If the operation is inplaced, re-use memory
     if(node->backward_inplaced()) {
-      cerr << node->as_dummy_string() << ", node->args.size() == " << node->args.size() << endl;
+      // cerr << node->as_dummy_string() << ", node->args.size() == " << node->args.size() << endl;
       DYNET_ASSERT(node->args.size() == 1,
                    "Inplacing only supported for arity-1 nodes");
       node_dEdfx.v = ndEdfs[node->args[0]].v;
