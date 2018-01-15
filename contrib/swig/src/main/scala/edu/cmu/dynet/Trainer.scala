@@ -83,6 +83,15 @@ class AdamTrainer private[dynet] (private[dynet] val trainer: internal.AdamTrain
   }
 }
 
+class AmsgradTrainer private[dynet] (private[dynet] val trainer: internal.AmsgradTrainer)
+  extends Trainer(trainer)
+{
+  def this(m: ParameterCollection, learningRate: Float = 0.001f, beta1: Float = 0.9f, beta2: Float = 0.999f,
+           eps: Float = 1e-8f) {
+    this(new internal.AmsgradTrainer(m.model, learningRate, beta1, beta2, eps))
+  }
+}
+
 //class EGTrainer private[dynet] (private[dynet] val trainer: internal.EGTrainer) extends Trainer(trainer)
 //{
 //  def this(m: ParameterCollection, learningRate: Float = 0.1f, mom: Float = 0.9f, ne: Float = 0.0f) {
