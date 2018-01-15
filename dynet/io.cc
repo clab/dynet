@@ -3,6 +3,8 @@
 #include "dynet/except.h"
 #include "dynet/str-util.h"
 
+#include <algorithm>
+
 // Normally DyNet style permits using namespace std, but to make compatibility
 // possible with some external code, it is simpler if types are fully
 // qualified in dynet/io.cc. Please do not uncomment the following:

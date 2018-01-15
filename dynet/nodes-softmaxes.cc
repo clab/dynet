@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-softmaxes.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
 
 using namespace std;
@@ -47,12 +48,12 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
     Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
     m.v = static_cast<float*>(scratch_allocator->allocate(m.d.size() * sizeof(float)));
     Eigen::array<int, 1> red_dim = {0};
-    m.tb<1>().device(*dev.edevice) = xs[0]->tb<2>().maximum(red_dim);
+    tb<1>(m).device(*dev.edevice) = tb<2>(*xs[0]).maximum(red_dim);
     Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
     Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
-    fx.tb<2>().device(*dev.edevice) = (xs[0]->tb<2>() - m.tvec().reshape(morph).broadcast(bcasts)).exp();
-    z.tb<1>().device(*dev.edevice) = fx.tb<2>().sum(red_dim);
-    fx.tb<2>().device(*dev.edevice) = fx.tb<2>() / z.tvec().reshape(morph).broadcast(bcasts);
+    tb<2>(fx).device(*dev.edevice) = (tb<2>(*xs[0]) - tvec(m).reshape(morph).broadcast(bcasts)).exp();
+    tb<1>(z).device(*dev.edevice) = tb<2>(fx).sum(red_dim);
+    tb<2>(fx).device(*dev.edevice) = tb<2>(fx) / tvec(z).reshape(morph).broadcast(bcasts);
 #else // CPU impl
     Tensor z(Dim({1}), nullptr, fx.device, DeviceMempool::FXS);
     z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
@@ -62,10 +63,10 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
     Tensor col_x(Dim({xs[0]->d[0]}), (float*)xs[0]->v, fx.device, DeviceMempool::FXS);
     Tensor col_fx(Dim({xs[0]->d[0]}), (float*)fx.v, fx.device, DeviceMempool::FXS);
     for(size_t col = 0; col < num_cols; ++col) {
-      m.t<0>() = col_x.tvec().maximum();
-      col_fx.tvec() = (col_x.tvec() - m.v[0]).exp();
-      z.t<0>() = col_fx.tvec().sum();
-      col_fx.tvec() = col_fx.tvec() / z.v[0];
+      t<0>(m) = tvec(col_x).maximum();
+      tvec(col_fx) = (tvec(col_x) - m.v[0]).exp();
+      t<0>(z) = tvec(col_fx).sum();
+      tvec(col_fx) = tvec(col_fx) / z.v[0];
       col_x.v += size;
       col_fx.v += size;
     }
@@ -76,12 +77,12 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
     Tensor m(Dim({xs[0]->d.rows()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
     m.v = static_cast<float*>(scratch_allocator->allocate(m.d.size() * sizeof(float)));
     Eigen::array<int, 1> red_dim = {1};
-    m.tb<1>().device(*dev.edevice) = xs[0]->tb<2>().maximum(red_dim);
+    tb<1>(m).device(*dev.edevice) = tb<2>(*xs[0]).maximum(red_dim);
     Eigen::array<int, 3> bcasts = {1, (int)xs[0]->d.cols(), 1};
     Eigen::array<int, 3> morph = {(int)z.d[0], 1, (int)z.d.bd};
-    fx.tb<2>().device(*dev.edevice) = (xs[0]->tb<2>() - m.tvec().reshape(morph).broadcast(bcasts)).exp();
-    z.tb<1>().device(*dev.edevice) = fx.tb<2>().sum(red_dim);
-    fx.tb<2>().device(*dev.edevice) = fx.tb<2>() / z.tvec().reshape(morph).broadcast(bcasts);
+    tb<2>(fx).device(*dev.edevice) = (tb<2>(*xs[0]) - tvec(m).reshape(morph).broadcast(bcasts)).exp();
+    tb<1>(z).device(*dev.edevice) = tb<2>(fx).sum(red_dim);
+    tb<2>(fx).device(*dev.edevice) = tb<2>(fx) / tvec(z).reshape(morph).broadcast(bcasts);
 
   }
   scratch_allocator->free();
@@ -98,19 +99,19 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
   Tensor z(Dim({fx.d.cols()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
   z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
   Eigen::array<int, 1> red_axis = {0};
-  z.tb<1>().device(*dev.edevice) = (fx.tb<2>() * dEdf.tb<2>()).sum(red_axis);
+  tb<1>(z).device(*dev.edevice) = (tb<2>(fx) * tb<2>(dEdf)).sum(red_axis);
   if(dimension==0){
 #ifdef __CUDACC__ // GPU impl
     Eigen::array<int, 3> bcast = {(int)xs[0]->d.rows(), 1, 1};
     Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
-    dEdxi.tb<2>().device(*dev.edevice) += (dEdf.tb<2>() - z.tvec().reshape(morph).broadcast(bcast)) * fx.tb<2>();
+    tb<2>(dEdxi).device(*dev.edevice) += (tb<2>(dEdf) - tvec(z).reshape(morph).broadcast(bcast)) * tb<2>(fx);
 #else // CPU impl
     unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
     Tensor col_fx(Dim({xs[0]->d[0]}), (float*)fx.v, fx.device, DeviceMempool::FXS);
     Tensor col_dEdf(Dim({xs[0]->d[0]}), (float*)dEdf.v, fx.device, DeviceMempool::FXS);
     Tensor col_dEdxi(Dim({xs[0]->d[0]}), (float*)dEdxi.v, fx.device, DeviceMempool::FXS);
     for(size_t col = 0; col < num_cols; ++col) {
-      col_dEdxi.tvec() += (col_dEdf.tvec() - z.v[col]) * col_fx.tvec();
+      tvec(col_dEdxi) += (tvec(col_dEdf) - z.v[col]) * tvec(col_fx);
       col_fx.v += size;
       col_dEdf.v += size;
       col_dEdxi.v += size;
@@ -120,10 +121,10 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
     Tensor z(Dim({fx.d.rows()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
     z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
     Eigen::array<int, 1> red_axis = {1};
-    z.tb<1>().device(*dev.edevice) = (fx.tb<2>() * dEdf.tb<2>()).sum(red_axis);
+    tb<1>(z).device(*dev.edevice) = (tb<2>(fx) * tb<2>(dEdf)).sum(red_axis);
     Eigen::array<int, 3> bcast = {1, (int)xs[0]->d.cols(), 1};
     Eigen::array<int, 3> morph = {(int)z.d[0], 1, (int)z.d.bd};
-    dEdxi.tb<2>().device(*dev.edevice) += (dEdf.tb<2>() - z.tvec().reshape(morph).broadcast(bcast)) * fx.tb<2>();
+    tb<2>(dEdxi).device(*dev.edevice) += (tb<2>(dEdf) - tvec(z).reshape(morph).broadcast(bcast)) * tb<2>(fx);
   }
   scratch_allocator->free();
 }
@@ -162,21 +163,21 @@ void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
 #ifdef __CUDACC__
     Eigen::array<int, 1> bcast;
     bcast[0] = xs[0]->d[0];
-    fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - z.t<1>().broadcast(bcast);
+    t<1>(fx).device(*dev.edevice) = t<1>(*xs[0]) - t<1>(z).broadcast(bcast);
 #else
-    fx.t<1>().device(*dev.edevice) = xs[0]->t<1>() - as_scalar(z);
+    t<1>(fx).device(*dev.edevice) = t<1>(*xs[0]) - as_scalar(z);
 #endif
   } else {
 #ifdef __CUDACC__ // GPU impl
     Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
     Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
-    fx.tb<2>().device(*dev.edevice) = xs[0]->tb<2>() - z.tvec().reshape(morph).broadcast(bcasts);
+    tb<2>(fx).device(*dev.edevice) = tb<2>(*xs[0]) - tvec(z).reshape(morph).broadcast(bcasts);
 #else // CPU impl
     unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
     Tensor col_fx(Dim({xs[0]->d[0]}), (float*)fx.v, fx.device, DeviceMempool::FXS);
     Tensor col_x(Dim({xs[0]->d[0]}), (float*)xs[0]->v, fx.device, DeviceMempool::FXS);
     for(size_t col = 0; col < num_cols; ++col) {
-      col_fx.tvec() = col_x.tvec() - z.v[col];
+      tvec(col_fx) = tvec(col_x) - z.v[col];
       col_x.v += size;
       col_fx.v += size;
     }
@@ -193,18 +194,18 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Eigen::array<int, 1> red_axis; red_axis[0] = 0;
-  z.tb<1>().device(*dev.edevice) = dEdf.tb<2>().sum(red_axis);
+  tb<1>(z).device(*dev.edevice) = tb<2>(dEdf).sum(red_axis);
 #ifdef __CUDACC__ // GPU impl
   Eigen::array<int, 3> bcast = {(int)fx.d.rows(), 1, 1};
   Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
-  dEdxi.tb<2>().device(*dev.edevice) += fx.tb<2>().exp() * -z.tvec().reshape(morph).broadcast(bcast) + dEdf.tb<2>();
+  tb<2>(dEdxi).device(*dev.edevice) += tb<2>(fx).exp() * -tvec(z).reshape(morph).broadcast(bcast) + tb<2>(dEdf);
 #else // CPU impl
   unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
   Tensor col_fx(Dim({xs[0]->d[0]}), (float*)fx.v, fx.device, DeviceMempool::FXS);
   Tensor col_dEdf(Dim({xs[0]->d[0]}), (float*)dEdf.v, fx.device, DeviceMempool::FXS);
   Tensor col_dEdxi(Dim({xs[0]->d[0]}), (float*)dEdxi.v, fx.device, DeviceMempool::FXS);
   for(size_t col = 0; col < num_cols; ++col) {
-    col_dEdxi.tvec() += (col_fx.tvec().exp() * -z.v[col]) + col_dEdf.tvec();
+    tvec(col_dEdxi) += (tvec(col_fx).exp() * -z.v[col]) + tvec(col_dEdf);
     col_fx.v += size;
     col_dEdf.v += size;
     col_dEdxi.v += size;
@@ -254,14 +255,14 @@ void RestrictedLogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<c
   // and do usual LogSoftmax stuff
   if(denom.size() == 0)
     DYNET_INVALID_ARG("Number of elements in denominator of RestrictedLogSoftmax::forward must be zero");
-  auto x = **xs[0];
+  auto x = mat(*xs[0]);
   if(denom.size() == 0)
     DYNET_RUNTIME_ERR("RestrictedLogSoftmax currently only supports single column expressions (contributions expanding support to multiple columns welcome!)");
   const real logz = logsumexp(x, denom);
   TensorTools::constant(fx, -numeric_limits<real>::infinity());
   for (auto i : denom)
-    (*fx)(i,0) = x(i,0) - logz;
-  if (denom.size() == 1) (*fx)(denom.front(), 0) = 0;
+    (mat(fx))(i,0) = x(i,0) - logz;
+  if (denom.size() == 1) (mat(fx))(denom.front(), 0) = 0;
 #endif
 }
 
@@ -278,9 +279,9 @@ void RestrictedLogSoftmax::backward_dev_impl(const MyDevice & dev,
 #else
   float z = 0;
   for (auto ind : denom)
-    z += (*dEdf)(ind, 0);
+    z += (mat(dEdf))(ind, 0);
   for (auto ind : denom)
-    (*dEdxi)(ind, 0) += (*dEdf)(ind, 0) - expf((*fx)(ind, 0)) * z;
+    (mat(dEdxi))(ind, 0) += (mat(dEdf))(ind, 0) - expf((mat(fx))(ind, 0)) * z;
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(RestrictedLogSoftmax)
@@ -326,8 +327,8 @@ void Sparsemax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
       maxsum = sum;
     }
     float tau = (maxsum - 1) / k;
-    auto y = *fx;
-    fx.tvec() = (xs[0]->tvec() - tau).cwiseMax(0.f);
+    auto y = mat(fx);
+    tvec(fx) = (tvec(*xs[0]) - tau).cwiseMax(0.f);
     int c = 1;
     int *cc = static_cast<int*>(aux_mem);
     for (unsigned i = 0; i < rows; ++i)
@@ -352,12 +353,12 @@ void Sparsemax::backward_dev_impl(const MyDevice & dev,
   const int ssize = static_cast<int*>(aux_mem)[0];
   int *support = static_cast<int*>(aux_mem) + 1;
   float dhat = 0;
-  auto& d = *dEdf;
+  auto& d = mat(dEdf);
   for (int i = 0; i < ssize; ++i)
     dhat += d(support[i], 0);
   dhat /= ssize;
   for (int i = 0; i < ssize; ++i)
-    (*dEdxi)(support[i], 0) += d(support[i], 0) - dhat;
+    (mat(dEdxi))(support[i], 0) += d(support[i], 0) - dhat;
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(Sparsemax)
@@ -409,12 +410,12 @@ void SparsemaxLoss::forward_dev_impl(const MyDevice & dev, const vector<const Te
     }
     float tau = (maxsum - 1) / k;
     Tensor tsm(xs[0]->d, (float*)aux_mem, xs[0]->device, DeviceMempool::FXS);
-    tsm.t<1>() = (xs[0]->t<1>() - tau).cwiseMax(0.f);
-    fx.t<0>() = ( (tsm.t<1>() != 0.f).cast<float>() * (xs[0]->t<1>().square() - (tau * tau)) ).sum();
-    fx.t<0>() = ( fx.t<0>() + qprop * qprop * qsupport_size ) / 2.f;
+    t<1>(tsm) = (t<1>(*xs[0]) - tau).cwiseMax(0.f);
+    t<0>(fx) = ( (t<1>(tsm) != 0.f).cast<float>() * (t<1>(*xs[0]).square() - (tau * tau)) ).sum();
+    t<0>(fx) = ( t<0>(fx) + qprop * qprop * qsupport_size ) / 2.f;
     for (unsigned i = 0; i < qsupport_size; ++i)
-      fx.t<0>() = fx.t<0>() - xs[0]->t<1>().chip<0>((*pq)[i]) * qprop;
-    fx.t<0>() = fx.t<0>().cwiseMax(0.f);
+      t<0>(fx) = t<0>(fx) - t<1>(*xs[0]).chip<0>((*pq)[i]) * qprop;
+    t<0>(fx) = t<0>(fx).cwiseMax(0.f);
 #endif
   } else {
     DYNET_RUNTIME_ERR("SparsemaxLoss not yet implemented for multiple columns");
@@ -435,12 +436,148 @@ void SparsemaxLoss::backward_dev_impl(const MyDevice & dev,
   float* psm = static_cast<float*>(aux_mem);
   float dqprop = d / pq->size();
   Tensor tsm(xs[0]->d, psm, xs[0]->device, DeviceMempool::FXS);
-  auto sm = *tsm;  // sparsemax(z)
-  *dEdxi += sm * d;
+  auto sm = mat(tsm);  // sparsemax(z)
+  mat(dEdxi) += sm * d;
   for (unsigned i = 0; i < pq->size(); ++i)
-    (*dEdxi)((*pq)[i], 0) -= dqprop;
+    (mat(dEdxi))((*pq)[i], 0) -= dqprop;
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(SparsemaxLoss)
+
+// ************* Constrained softmax *************
+
+#ifndef __CUDACC__
+
+string ConstrainedSoftmax::as_string(const vector<string>& arg_names) const {
+  ostringstream s;
+  s << "constrained_softmax(" << arg_names[0] << ")";
+  return s.str();
+}
+
+Dim ConstrainedSoftmax::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 2 && LooksLikeVector(xs[0]) &&
+                  LooksLikeVector(xs[1]),
+                  "Bad input dimensions in ConstrainedSoftmax: " << xs);
+  return xs[0];
+}
+
+size_t ConstrainedSoftmax::aux_storage_size() const {
+  // Need some extra allocation for the forward step.
+  const unsigned rows = dim.size();
+  return rows * sizeof(float) + rows * sizeof(int);
+}
+
+#endif
+
+template<class MyDevice>
+void ConstrainedSoftmax::forward_dev_impl(const MyDevice & dev,
+                                          const vector<const Tensor*>& xs,
+                                          Tensor& fx) const {
+  // The first input contains the log-potentials z.
+  // The second input contains the upper bound constraints u.
+  if (xs[0]->d.cols() == 1 && xs[1]->d.cols() == 1) {
+#ifdef __CUDACC__
+    DYNET_NO_CUDA_IMPL_ERROR("ConstrainedSoftmax forward");
+#else
+    // Total allocated memory is rows*sizeof(float) + rows*sizeof(int).
+    float max;
+    const unsigned rows = xs[0]->d.rows();
+    for (unsigned k = 0; k < rows; ++k) {
+      if (k == 0 || xs[0]->v[k] > max) max =  xs[0]->v[k];
+    }
+    float *q = static_cast<float*>(aux_mem);
+    for (unsigned k = 0; k < rows; ++k) {
+      q[k] = exp(xs[0]->v[k] - max);
+    }
+    float *u = xs[1]->v;
+    float mass = 0.0;
+    int *indices = reinterpret_cast<int*>(static_cast<char*>(aux_mem) +
+                                          rows*sizeof(float));
+    for (unsigned k = 0; k < rows; ++k) {
+      indices[k] = k;
+    }
+    unsigned num_active = rows;
+    auto p = mat(fx);
+    tvec(fx) = tvec(*xs[0]); // Initialize the vector with the right size.
+    bool found = true;
+    while (found) {
+      float sum = 0.0;
+      for (unsigned k = 0; k < num_active; ++k) {
+        sum += q[indices[k]];
+      }
+      for (unsigned k = 0; k < num_active; ++k) {
+        int i = indices[k];
+        p(i, 0) = q[i] * (1.0 - mass) / sum;
+      }
+      found = false;
+      unsigned j = 0;
+      for (unsigned k = 0; k < num_active; ++k) {
+        int i = indices[k];
+        if (p(i, 0) > u[i]) {
+          p(i, 0) = u[i];
+          mass += u[i];
+          found = true;
+        } else {
+          indices[j] = i;
+          ++j;
+        }
+      }
+      num_active = j;
+    }
+    // Write a 0/1 at each position to indicate if the variable is active.
+    int *cc = static_cast<int*>(aux_mem);
+    for (unsigned k = 0; k < rows; ++k) {
+      cc[k] = 0;
+    }
+    for (unsigned k = 0; k < num_active; ++k) {
+      cc[indices[k]] = 1;
+    }
+    float *m = reinterpret_cast<float*>(static_cast<char*>(aux_mem) +
+                                        rows*sizeof(int));
+    *m = mass;
+#endif
+  } else {
+    DYNET_RUNTIME_ERR("ConstrainedSoftmax not yet implemented for multiple columns");
+  }
+}
+
+template<class MyDevice>
+void ConstrainedSoftmax::backward_dev_impl(const MyDevice & dev,
+                                           const vector<const Tensor*>& xs,
+                                           const Tensor& fx,
+                                           const Tensor& dEdf,
+                                           unsigned i,
+                                           Tensor& dEdxi) const {
+  assert(i < xs.size());
+#ifdef __CUDACC__
+  DYNET_NO_CUDA_IMPL_ERROR("ConstrainedSoftmax backward");
+#else
+  const unsigned rows = xs[0]->d.rows();
+  int *active = static_cast<int*>(aux_mem);
+  float mass =  reinterpret_cast<float*>(static_cast<char*>(aux_mem) +
+                                         rows*sizeof(int))[0];
+  float dhat = 0;
+  auto& d = mat(dEdf);
+  auto& p = mat(fx);
+  for (unsigned k = 0; k < rows; ++k) {
+    if (active[k]) dhat += p(k, 0) * d(k, 0);
+  }
+  dhat /= (1 - mass);
+  for (unsigned k = 0; k < rows; ++k) {
+    if (active[k]) {
+      if (i == 0) {
+        // Gradient wrt log-potentials z.
+        mat(dEdxi)(k, 0) +=  p(k, 0) * (d(k, 0) - dhat);
+      }
+    } else {
+      if (i == 1) {
+        // Gradient wrt upper bound constraints u.
+        mat(dEdxi)(k, 0) +=  d(k, 0) - dhat;
+      }
+    }
+  }
+#endif
+}
+DYNET_NODE_INST_DEV_IMPL(ConstrainedSoftmax)
 
 }

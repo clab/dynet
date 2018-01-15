@@ -1,10 +1,11 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-contract.h"
 
 #include <limits>
 #include <cmath>
 #include <stdexcept>
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 // This file takes a long time to compile on GPU. Uncomment this line to skip it.
 #define DYNET_SKIP_CUDA_CONTRACTIONS
@@ -61,9 +62,9 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
   Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
   // Handle hypothetical bias
   if (xs.size() == 3) {
-    auto C = xs[2]->tb<2>();
+    auto C = tb<2>(*xs[2]);
     Eigen::array<int, 3> bcast_C = {1, 1, (int)(xs[2]->d.bd == 1 ? fx.d.bd : 1)};
-    fx.tb<2>().device(*dev.edevice) = C.broadcast(bcast_C);
+    tb<2>(fx).device(*dev.edevice) = C.broadcast(bcast_C);
   }
 #if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
   // Use CUDA if accessible
@@ -81,21 +82,21 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
   if (xs[0]->d.bd == 1) {
     // A is a 3 tensor
     Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
-    auto b = xs[1]->tb<1>();
-    auto A = xs[0]->t<3>();
-    fx.tb<2>().device(*dev.edevice) += A.contract(b.broadcast(bcast_b), dims);
+    auto b = tb<1>(*xs[1]);
+    auto A = t<3>(*xs[0]);
+    tb<2>(fx).device(*dev.edevice) += A.contract(b.broadcast(bcast_b), dims);
   } else {
     // A is a 4 tensor : loop over the batch dimension
-    auto A = xs[0]->tb<3>();
+    auto A = tb<3>(*xs[0]);
     if (xs[1]->d.bd == 1) { // b is a 1 tensor
-      auto b = xs[1]->t<1>();
-      fx.tb<2>().device(*dev.edevice) += A.contract(b, dims);
+      auto b = t<1>(*xs[1]);
+      tb<2>(fx).device(*dev.edevice) += A.contract(b, dims);
     } else {
       // If both A and b are batched loop over batches
-      auto b = xs[1]->tb<1>();
+      auto b = tb<1>(*xs[1]);
       for (unsigned i = 0; i < fx.d.bd; ++i) {
         auto b_ = b.chip<1>(i);
-        fx.tb<2>().chip<2>(i).device(*dev.edevice) += A.chip<3>(i).contract(b_, dims);
+        tb<2>(fx).chip<2>(i).device(*dev.edevice) += A.chip<3>(i).contract(b_, dims);
       }
     }
   }
@@ -113,7 +114,7 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(DYNET_SKIP_CUDA_CONTRACTIONS)
   throw std::runtime_error("InnerProduct3D_1D::backward_dev_impl disabled on CUDA. Comment out DYNET_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
-  auto tdEdf = dEdf.tb<2>();  // 2 tensor
+  auto tdEdf = tb<2>(dEdf);  // 2 tensor
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
 
   if (i == 0) { // dEdA
@@ -147,24 +148,24 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
 #else
     if (xs[0]->d.bd == 1) { // A is a 3 tensor
       // tensor product
-      auto b = xs[1]->tb<1>();
+      auto b = tb<1>(*xs[1]);
       Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
       Eigen::array<DimPair, 1> dims({{DimPair(2, 1)}});
-      dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(b.broadcast(bcast_b), dims);
+      t<3>(dEdxi).device(*dev.edevice) += tdEdf.contract(b.broadcast(bcast_b), dims);
     } else {
       // For now if A is batched the CUDA version is not implemented
       if (xs[1]->d.bd == 1) {
-        // auto b = xs[1]->t<1>();
+        // auto b = t<1>(*xs[1]);
         // Eigen::array<int, 4> morph {dEdf.d[0], dEdf.d[1], xs[1]->d[0], dEdf.d.bd};
-        // dEdxi.tb<3>().device(*dev.edevice) += tdEdf.contract(b, Eigen::array<DimPair, 0> {{}}).reshape(morph);
-        auto b = xs[1]->t<1>();
+        // tb<3>(dEdxi).device(*dev.edevice) += tdEdf.contract(b, Eigen::array<DimPair, 0> {{}}).reshape(morph);
+        auto b = t<1>(*xs[1]);
         for (unsigned i = 0; i < fx.d.bd; ++i) {
-          dEdxi.tb<3>().chip<3>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(b, Eigen::array<DimPair, 0> {{}});
+          tb<3>(dEdxi).chip<3>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(b, Eigen::array<DimPair, 0> {{}});
         }
       } else {
-        auto b = xs[1]->tb<1>();
+        auto b = tb<1>(*xs[1]);
         for (unsigned i = 0; i < fx.d.bd; ++i) {
-          dEdxi.tb<3>().chip<3>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(b.chip<1>(i), Eigen::array<DimPair, 0> {{}});
+          tb<3>(dEdxi).chip<3>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(b.chip<1>(i), Eigen::array<DimPair, 0> {{}});
         }
 
       }
@@ -209,25 +210,25 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
     // When on CPU we use Eigen contractions
     if (xs[1]->d.bd == 1) { // b is a 1 tensor
       if (xs[0]->d.bd == 1) {
-        auto A = xs[0]->t<3>();  // A is 3 tensor
+        auto A = t<3>(*xs[0]);  // A is 3 tensor
         Eigen::array<int, 1> red_axis; red_axis[0] = 0;
         Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
-        dEdxi.t<1>().device(*dev.edevice) += tdEdf.contract(A, dims).sum(red_axis);
+        t<1>(dEdxi).device(*dev.edevice) += tdEdf.contract(A, dims).sum(red_axis);
       } else {
-        auto A = xs[0]->tb<3>();  // A is 4 tensor
+        auto A = tb<3>(*xs[0]);  // A is 4 tensor
         Eigen::array<DimPair, 3> dims({{DimPair(0, 0), DimPair(1, 1), DimPair(2, 3)}});
-        dEdxi.t<1>().device(*dev.edevice) += tdEdf.contract(A, dims);
+        t<1>(dEdxi).device(*dev.edevice) += tdEdf.contract(A, dims);
       }
     } else { // b is a 2 tensor
       if (xs[0]->d.bd == 1) {
-        auto A = xs[0]->t<3>();  // A is 3 tensor
+        auto A = t<3>(*xs[0]);  // A is 3 tensor
         Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
-        dEdxi.tb<1>().device(*dev.edevice) += A.contract(tdEdf, dims);
+        tb<1>(dEdxi).device(*dev.edevice) += A.contract(tdEdf, dims);
       } else {
-        auto A = xs[0]->tb<3>();  // A is 4 tensor
+        auto A = tb<3>(*xs[0]);  // A is 4 tensor
         Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
         for (unsigned i = 0; i < fx.d.bd; ++i) {
-          dEdxi.tb<1>().chip<1>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(A.chip<3>(i), dims);
+          tb<1>(dEdxi).chip<1>(i).device(*dev.edevice) += tdEdf.chip<2>(i).contract(A.chip<3>(i), dims);
         }
       }
     }
@@ -235,9 +236,9 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
   } else if (i == 2) { // dEdC
     if (xs[2]->d.bd == 1) {
       Eigen::array<int, 1> red_axis; red_axis[0] = 2;
-      dEdxi.t<2>().device(*dev.edevice) += tdEdf.sum(red_axis);
+      t<2>(dEdxi).device(*dev.edevice) += tdEdf.sum(red_axis);
     } else {
-      dEdxi.tb<2>().device(*dev.edevice) += tdEdf;
+      tb<2>(dEdxi).device(*dev.edevice) += tdEdf;
     }
   } else {
     throw std::runtime_error("Illegal configuration in InnerProduct3D");
@@ -284,17 +285,17 @@ void InnerProduct3D_1D_1D::forward_dev_impl(const MyDevice & dev, const vector<c
 #if defined(__CUDACC__) && defined(DYNET_SKIP_CUDA_CONTRACTIONS)
   throw std::runtime_error("InnerProduct3D_1D_1D::forward_dev_impl disabled on CUDA. Comment out DYNET_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
-  auto A = xs[0]->t<3>();
-  auto b = xs[1]->t<1>();
-  auto c = xs[2]->t<1>();
+  auto A = t<3>(*xs[0]);
+  auto b = t<1>(*xs[1]);
+  auto c = t<1>(*xs[2]);
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
   Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
   Eigen::array<DimPair, 1> dims2({{DimPair(1, 0)}});
   if (xs.size() == 3) {
-    fx.t<1>().device(*dev.edevice) = A.contract(b, dims).contract(c, dims2);
+    t<1>(fx).device(*dev.edevice) = A.contract(b, dims).contract(c, dims2);
   } else {
-    auto d = xs[3]->t<1>();
-    fx.t<1>().device(*dev.edevice) = A.contract(b, dims).contract(c, dims2) + d;
+    auto d = t<1>(*xs[3]);
+    t<1>(fx).device(*dev.edevice) = A.contract(b, dims).contract(c, dims2) + d;
   }
 #endif
 }
@@ -309,13 +310,13 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
 #if defined(__CUDACC__) && defined(DYNET_SKIP_CUDA_CONTRACTIONS)
   throw std::runtime_error("InnerProduct3D_1D_1D::backward_dev_impl disabled on CUDA. Comment out DYNET_SKIP_CUDA_CONTRACTIONS in nodes-contract.cc to enable this function.");
 #else
-  auto tdEdf = dEdf.t<1>();  // vector
+  auto tdEdf = t<1>(dEdf);  // vector
   typedef Eigen::Tensor<float, 1>::DimensionPair DimPair;
   if (i == 0) { // 3 tensor
     // tensor product
-    auto b = xs[1]->t<1>();
-    auto c = xs[2]->t<1>();
-    dEdxi.t<3>().device(*dev.edevice) += tdEdf.contract(c, Eigen::array<DimPair, 0> {{}}).contract(b, Eigen::array<DimPair, 0> {{}});
+    auto b = t<1>(*xs[1]);
+    auto c = t<1>(*xs[2]);
+    t<3>(dEdxi).device(*dev.edevice) += tdEdf.contract(c, Eigen::array<DimPair, 0> {{}}).contract(b, Eigen::array<DimPair, 0> {{}});
   } else if (i == 1) { // vector 1
     // TODO these should be reorganized so the contraction is first with tdEdf and then with c or b.
     // in theory, that intermediate result could be cached (although DYNET doesn't support this). the fact that it
@@ -323,17 +324,17 @@ void InnerProduct3D_1D_1D::backward_dev_impl(const MyDevice & dev,
     // (or maybe it's the contract implementation?)
     Eigen::array<DimPair, 1> dims({{DimPair(1, 0)}});
     Eigen::array<DimPair, 1> dims2({{DimPair(0, 0)}});
-    auto A = xs[0]->t<3>();
-    auto c = xs[2]->t<1>();
-    dEdxi.t<1>().device(*dev.edevice) += A.contract(c, dims).contract(tdEdf, dims2);
+    auto A = t<3>(*xs[0]);
+    auto c = t<1>(*xs[2]);
+    t<1>(dEdxi).device(*dev.edevice) += A.contract(c, dims).contract(tdEdf, dims2);
   } else if (i == 2) { // vector 2
     Eigen::array<DimPair, 1> dims({{DimPair(2, 0)}});
     Eigen::array<DimPair, 1> dims2({{DimPair(0, 0)}});
-    auto A = xs[0]->t<3>();
-    auto b = xs[1]->t<1>();
-    dEdxi.t<1>().device(*dev.edevice) += A.contract(b, dims).contract(tdEdf, dims2);
+    auto A = t<3>(*xs[0]);
+    auto b = t<1>(*xs[1]);
+    t<1>(dEdxi).device(*dev.edevice) += A.contract(b, dims).contract(tdEdf, dims2);
   } else if (i == 3) { // vector bias
-    dEdxi.t<1>().device(*dev.edevice) += tdEdf;
+    t<1>(dEdxi).device(*dev.edevice) += tdEdf;
   } else {
     throw std::runtime_error("Illegal configuration in InnerProduct3D");
   }

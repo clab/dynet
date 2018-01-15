@@ -48,7 +48,7 @@ cdef extern from "dynet/tensor.h" namespace "dynet":
     float c_as_scalar "dynet::as_scalar" (CTensor& t)
     vector[float] c_as_vector "dynet::as_vector" (CTensor& t)
 
-cdef extern from "dynet/tensor.h" namespace "dynet":
+cdef extern from "dynet/index-tensor.h" namespace "dynet":
     cdef cppclass CIndexTensor "dynet::IndexTensor": 
         CDim d
         pass
@@ -104,6 +104,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CModel()
         #float gradient_l2_norm() const
         CParameters add_parameters(CDim& d)
+        CParameters set_weight_decay_lambda(float lam)
         CParameters add_parameters(CDim& d, CParameterInit initializer, string name) except +
         CParameters add_parameters(CDim& d, CParameterInit initializer, string name, CDevice *device) except +
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
@@ -298,7 +299,18 @@ cdef extern from "dynet/expr.h" namespace "dynet":
 
     CExpression c_colwise_add "dynet::colwise_add" (CExpression& x, CExpression& bias) except + #
 
+    CExpression c_sin "dynet::sin" (CExpression& x) except + #
+    CExpression c_cos "dynet::cos" (CExpression& x) except + #
+    CExpression c_tan "dynet::tan" (CExpression& x) except + #
+    CExpression c_asin "dynet::asin" (CExpression& x) except + #
+    CExpression c_acos "dynet::acos" (CExpression& x) except + #
+    CExpression c_atan "dynet::atan" (CExpression& x) except + #
+    CExpression c_sinh "dynet::sinh" (CExpression& x) except + #
+    CExpression c_cosh "dynet::cosh" (CExpression& x) except + #
     CExpression c_tanh "dynet::tanh" (CExpression& x) except + #
+    CExpression c_asinh "dynet::asinh" (CExpression& x) except + #
+    CExpression c_acosh "dynet::acosh" (CExpression& x) except + #
+    CExpression c_atanh "dynet::atanh" (CExpression& x) except + #
     CExpression c_exp "dynet::exp" (CExpression& x) except + #
     CExpression c_square "dynet::square" (CExpression& x) except + #
     CExpression c_sqrt "dynet::sqrt" (CExpression& x) except + #
@@ -318,6 +330,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_softmax "dynet::softmax" (CExpression& x, unsigned d) except + #
     CExpression c_sparsemax "dynet::sparsemax" (CExpression& x) except + #
     CExpression c_softsign "dynet::softsign" (CExpression& x) except + #
+    CExpression c_constrained_softmax "dynet::constrained_softmax" (CExpression& x, CExpression &y) except + #
     CExpression c_pow "dynet::pow" (CExpression& x, CExpression& y) except + #
     CExpression c_bmin "dynet::min" (CExpression& x, CExpression& y) except + #
     CExpression c_bmax "dynet::max" (CExpression& x, CExpression& y) except + #
@@ -337,6 +350,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_trace_of_product "dynet::trace_of_product" (CExpression& x, CExpression& y) except +;
 
     CExpression c_dot_product "dynet::dot_product" (CExpression& x, CExpression& y) except + #
+    CExpression c_circ_conv "dynet::circ_conv" (CExpression& u, CExpression& v) except + #
+    CExpression c_circ_corr "dynet::circ_corr" (CExpression& u, CExpression& v) except + #
     CExpression c_squared_distance "dynet::squared_distance" (CExpression& x, CExpression& y) except + #
     CExpression c_squared_norm "dynet::squared_norm" (CExpression& x) except + #
     CExpression c_l2_norm "dynet::l2_norm" (CExpression& x) except + #

@@ -1,4 +1,5 @@
-#include "aligned-mem-pool.h"
+#include "dynet/aligned-mem-pool.h"
+#include "dynet/devices.h"
 
 #include <sstream>
 
@@ -40,6 +41,7 @@ void* AlignedMemoryPool::allocate(size_t n) {
     current++;
     res = pools[current]->allocate(n);
   }
+  if (res == nullptr) show_pool_mem_info();
   return res;
 }
 
@@ -81,4 +83,8 @@ void AlignedMemoryPool::set_used(size_t s) {
   // // s <= pools[c]->used
   // pools[c]->used = s;
   // current = c;
+}
+
+size_t AlignedMemoryPool::get_cap() {
+  return cap;
 }

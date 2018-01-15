@@ -5,7 +5,6 @@
  */
 
 #include "attention.h"
-#include "dynet/dynet.h"
 #include "dynet/training.h"
 #include "dynet/lstm.h"
 #include <map>

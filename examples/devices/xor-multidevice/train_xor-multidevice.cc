@@ -4,6 +4,7 @@
 #include "dynet/expr.h"
 #include "dynet/io.h"
 #include "dynet/model.h"
+#include "dynet/devices.h"
 
 using namespace std;
 using namespace dynet;

@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-minmax.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
 
 using namespace std;
@@ -31,8 +32,8 @@ size_t Min::aux_storage_size() const {
 template<class MyDevice>
 void Min::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor t(fx.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
-  t.tvec().device(*dev.edevice) = (xs[0]->tvec() < xs[1]->tvec()).cast<float>();
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().cwiseMin(xs[1]->tvec());
+  tvec(t).device(*dev.edevice) = (tvec(*xs[0]) < tvec(*xs[1])).cast<float>();
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).cwiseMin(tvec(*xs[1]));
 }
 
 template<class MyDevice>
@@ -45,9 +46,9 @@ void Min::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(i < 2, "Failed dimension check in Min::backward");
   const Tensor t(dEdxi.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
   if (i == 0) {
-    dEdxi.tvec().device(*dev.edevice) += t.tvec() * dEdf.tvec();
+    tvec(dEdxi).device(*dev.edevice) += tvec(t) * tvec(dEdf);
   } else {
-    dEdxi.tvec().device(*dev.edevice) += t.tvec().binaryExpr(dEdf.tvec(), FMaxBackwardInv());
+    tvec(dEdxi).device(*dev.edevice) += tvec(t).binaryExpr(tvec(dEdf), FMaxBackwardInv());
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Min)
@@ -76,8 +77,8 @@ size_t Max::aux_storage_size() const {
 template<class MyDevice>
 void Max::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor t(fx.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
-  t.tvec().device(*dev.edevice) = (xs[0]->tvec() > xs[1]->tvec()).cast<float>();
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().cwiseMax(xs[1]->tvec());
+  tvec(t).device(*dev.edevice) = (tvec(*xs[0]) > tvec(*xs[1])).cast<float>();
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).cwiseMax(tvec(*xs[1]));
 }
 
 template<class MyDevice>
@@ -90,9 +91,9 @@ void Max::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(i < 2, "Failed dimension check in Max::backward");
   const Tensor t(dEdxi.d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
   if (i == 0) {
-    dEdxi.tvec().device(*dev.edevice) += t.tvec() * dEdf.tvec();
+    tvec(dEdxi).device(*dev.edevice) += tvec(t) * tvec(dEdf);
   } else {
-    dEdxi.tvec().device(*dev.edevice) += t.tvec().binaryExpr(dEdf.tvec(), FMaxBackwardInv());
+    tvec(dEdxi).device(*dev.edevice) += tvec(t).binaryExpr(tvec(dEdf), FMaxBackwardInv());
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Max)
@@ -132,8 +133,8 @@ void MinDimension::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   const unsigned second_dim_size = dim[1];
   Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>> locs(minmap, first_dim_size, second_dim_size, batch_size);
   const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {reduced_dim};
-  locs.device(*dev.edevice) = xs[0]->tb<3>().argmin(reduced_dim);
-  fx.tb<2>().device(*dev.edevice) = xs[0]->tb<3>().minimum(reduction_axis);
+  locs.device(*dev.edevice) = tb<3>(*xs[0]).argmin(reduced_dim);
+  tb<2>(fx).device(*dev.edevice) = tb<3>(*xs[0]).minimum(reduction_axis);
 }
 
 template<class MyDevice>
@@ -159,14 +160,14 @@ void MinDimension::backward_dev_impl(const MyDevice & dev,
     for(unsigned j = 0; j < second_dim_size; ++j){
       for(unsigned i = 0; i < first_dim_size; ++i){
         if (reduced_dim > second_dim)
-          dEdxi.tb<3>().chip<3>(b).chip(locs(i, j, b), reduced_dim).chip(j, second_dim).chip(i, first_dim).device(*dev.edevice) 
-            += dEdf.tb<2>().chip<2>(b).chip<1>(j).chip<0>(i);
+          tb<3>(dEdxi).chip<3>(b).chip(locs(i, j, b), reduced_dim).chip(j, second_dim).chip(i, first_dim).device(*dev.edevice)
+            += tb<2>(dEdf).chip<2>(b).chip<1>(j).chip<0>(i);
         else if (reduced_dim > first_dim)
-          dEdxi.tb<3>().chip<3>(b).chip(j, second_dim).chip(locs(i, j, b), reduced_dim).chip(i, first_dim).device(*dev.edevice) 
-            += dEdf.tb<2>().chip<2>(b).chip<1>(j).chip<0>(i);
+          tb<3>(dEdxi).chip<3>(b).chip(j, second_dim).chip(locs(i, j, b), reduced_dim).chip(i, first_dim).device(*dev.edevice)
+            += tb<2>(dEdf).chip<2>(b).chip<1>(j).chip<0>(i);
         else
-          dEdxi.tb<3>().chip<3>(b).chip(j, second_dim).chip(i, first_dim).chip(locs(i, j, b), reduced_dim).device(*dev.edevice) 
-            += dEdf.tb<2>().chip<2>(b).chip<1>(j).chip<0>(i);
+          tb<3>(dEdxi).chip<3>(b).chip(j, second_dim).chip(i, first_dim).chip(locs(i, j, b), reduced_dim).device(*dev.edevice)
+            += tb<2>(dEdf).chip<2>(b).chip<1>(j).chip<0>(i);
       }
     }
   }
@@ -208,8 +209,8 @@ void MaxDimension::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   const unsigned second_dim_size = dim[1];
   Eigen::TensorMap<Eigen::Tensor<Eigen::DenseIndex, 3>> locs(maxmap, first_dim_size, second_dim_size, batch_size);
   const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {reduced_dim};
-  locs.device(*dev.edevice) = xs[0]->tb<3>().argmax(reduced_dim);
-  fx.tb<2>().device(*dev.edevice) = xs[0]->tb<3>().maximum(reduction_axis);
+  locs.device(*dev.edevice) = tb<3>(*xs[0]).argmax(reduced_dim);
+  tb<2>(fx).device(*dev.edevice) = tb<3>(*xs[0]).maximum(reduction_axis);
 }
 
 template<class MyDevice>
@@ -235,14 +236,14 @@ void MaxDimension::backward_dev_impl(const MyDevice & dev,
     for(unsigned j = 0; j < second_dim_size; ++j){
       for(unsigned i = 0; i < first_dim_size; ++i){
         if (reduced_dim > second_dim)
-          dEdxi.tb<3>().chip<3>(b).chip(locs(i, j, b), reduced_dim).chip(j, second_dim).chip(i, first_dim).device(*dev.edevice) 
-            += dEdf.tb<2>().chip<2>(b).chip<1>(j).chip<0>(i);
+          tb<3>(dEdxi).chip<3>(b).chip(locs(i, j, b), reduced_dim).chip(j, second_dim).chip(i, first_dim).device(*dev.edevice)
+            += tb<2>(dEdf).chip<2>(b).chip<1>(j).chip<0>(i);
         else if (reduced_dim > first_dim)
-          dEdxi.tb<3>().chip<3>(b).chip(j, second_dim).chip(locs(i, j, b), reduced_dim).chip(i, first_dim).device(*dev.edevice) 
-            += dEdf.tb<2>().chip<2>(b).chip<1>(j).chip<0>(i);
+          tb<3>(dEdxi).chip<3>(b).chip(j, second_dim).chip(locs(i, j, b), reduced_dim).chip(i, first_dim).device(*dev.edevice)
+            += tb<2>(dEdf).chip<2>(b).chip<1>(j).chip<0>(i);
         else
-          dEdxi.tb<3>().chip<3>(b).chip(j, second_dim).chip(i, first_dim).chip(locs(i, j, b), reduced_dim).device(*dev.edevice) 
-            += dEdf.tb<2>().chip<2>(b).chip<1>(j).chip<0>(i);
+          tb<3>(dEdxi).chip<3>(b).chip(j, second_dim).chip(i, first_dim).chip(locs(i, j, b), reduced_dim).device(*dev.edevice)
+            += tb<2>(dEdf).chip<2>(b).chip<1>(j).chip<0>(i);
       }
     }
   }

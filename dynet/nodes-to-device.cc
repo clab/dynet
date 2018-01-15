@@ -1,10 +1,11 @@
+#include "dynet/tensor-eigen.h"
 #include <vector>
 #include <string>
 
 #include "dynet/nodes-to-device.h"
 #include "dynet/tensor.h"
 #include "dynet/dim.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
 
 using namespace std;

@@ -1,5 +1,3 @@
-#include "dynet/nodes.h"
-#include "dynet/dynet.h"
 #include "dynet/training.h"
 #include "dynet/timing.h"
 #include "dynet/expr.h"
@@ -8,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <cassert>
 
 using namespace std;
 using namespace dynet;

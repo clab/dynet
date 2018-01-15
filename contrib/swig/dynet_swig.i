@@ -61,6 +61,7 @@
 #include "lstm.h"
 #include "gru.h"
 #include "fast-lstm.h"
+#include "treelstm.h"
 #include "io.h"
 #include "mem.h"
 #include "aligned-mem-pool.h"
@@ -1135,6 +1136,81 @@ struct FastLSTMBuilder : public RNNBuilder {
   std::vector<Expression> c0;
   unsigned layers;
 };
+
+
+/////////////////////////////////////////
+// declarations from dynet/treelstm.h  //
+/////////////////////////////////////////
+
+%nodefaultctor TreeLSTMBuilder;
+struct TreeLSTMBuilder : public RNNBuilder {
+  virtual void set_num_elements(int num) = 0;
+  Expression add_input(int id, std::vector<int> children, const Expression& x);
+  std::vector<Expression> final_h() const override;
+  virtual std::vector<Expression> final_s() const override;
+  std::vector<Expression> get_h(RNNPointer i) const override;
+  std::vector<Expression> get_s(RNNPointer i) const override;
+ virtual unsigned num_h0_components() const override;
+ virtual void copy(const RNNBuilder & params) override;
+};
+
+struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
+  explicit NaryTreeLSTMBuilder(unsigned N, //Max branching factor
+                       unsigned layers,
+                       unsigned input_dim,
+                       unsigned hidden_dim,
+                       ParameterCollection& model);
+
+  virtual void set_num_elements(int num) override;
+  Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  void copy(const RNNBuilder & params) override;
+  ParameterCollection & get_parameter_collection() override;
+
+  // initial values of h and c at each layer
+  // - both default to zero matrix input
+  bool has_initial_state; // if this is false, treat h0 and c0 as 0
+  std::vector<Expression> h0;
+  std::vector<Expression> c0;
+  unsigned layers;
+  unsigned N; // Max branching factor
+
+};
+
+struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
+  UnidirectionalTreeLSTMBuilder() = default;
+  explicit UnidirectionalTreeLSTMBuilder(unsigned layers,
+                       unsigned input_dim,
+                       unsigned hidden_dim,
+                       ParameterCollection& model);
+
+  virtual void set_num_elements(int num) override;
+  Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  ParameterCollection & get_parameter_collection() override { return node_builder.get_parameter_collection(); }
+
+  ParameterCollection local_model;
+  LSTMBuilder node_builder;
+  std::vector<Expression> h;
+};
+
+
+struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
+  BidirectionalTreeLSTMBuilder() = default;
+  explicit BidirectionalTreeLSTMBuilder(unsigned layers,
+                       unsigned input_dim,
+                       unsigned hidden_dim,
+                       ParameterCollection& model);
+
+  virtual void set_num_elements(int num) override;
+  Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  ParameterCollection & get_parameter_collection() override;
+
+  LSTMBuilder fwd_node_builder;
+  LSTMBuilder rev_node_builder;
+  std::vector<Expression> h;
+  ParameterCollection local_model;
+
+};
+
 
 ////////////////////////////////////
 // declarations from dynet/init.h //

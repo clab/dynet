@@ -7,6 +7,8 @@
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/cuda.h"
 #include "dynet/globals.h"
+#include "dynet/device-structs.h"
+#include <unsupported/Eigen/CXX11/Tensor>
 
 namespace Eigen {
   struct DefaultDevice;
@@ -15,29 +17,6 @@ namespace Eigen {
 }
 
 namespace dynet {
-
-enum class DeviceType {CPU, GPU};
-
-/*
- * FXS   -> forward pass memory
- * DEDFS -> backward pass memory
- * PS    -> parameter memory
- * SCS   -> scratch memory (for use in temporary calculations)
- * NONE  -> when a memory pool has not been assigned yet
- */
-enum class DeviceMempool {FXS = 0, DEDFS = 1, PS = 2, SCS = 3, NONE = 4};
-
-struct ComputationGraph; // TODO is there a nicer way to resolve this cyclic dependency?
-struct Tensor;
-
-struct DeviceMempoolSizes {
-  size_t used[4];
-  DeviceMempoolSizes() = default;
-  DeviceMempoolSizes(size_t total_s);
-  DeviceMempoolSizes(size_t fxs_s, size_t dEdfs_s, size_t ps_s, size_t sc_s);
-  DeviceMempoolSizes(const std::string & descriptor);
-};
-
 
 class Device {
  protected:
@@ -113,6 +92,19 @@ class DeviceManager final {
 };
 
 DeviceManager* get_device_manager();
+
+inline void show_pool_mem_info() {
+  DeviceManager* device_manager = get_device_manager();
+  auto devs = device_manager->get_devices();
+  if (devs.size() == 0) return;
+  std::cerr << "\nMemory pool info for each devices:\n";
+  for (Device* dev : devs) {
+    std::cerr << " Device " << dev->name << " - FOR Memory " << (dev->pools[0]->get_cap() >> 20)
+        << "MB, BACK Memory " << (dev->pools[1]->get_cap() >> 20)
+        << "MB, PARAM Memory " << (dev->pools[2]->get_cap() >> 20)
+        << "MB, SCRATCH Memory " << (dev->pools[3]->get_cap() >> 20) << "MB." << std::endl;
+  }
+}
 
 } // namespace dynet
 

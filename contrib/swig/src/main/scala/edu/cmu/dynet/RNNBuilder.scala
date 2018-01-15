@@ -23,7 +23,7 @@ abstract class RnnBuilder(private[dynet] val _builder: internal.RNNBuilder) {
     new Expression(expr)
   }
 
-  def addInput(prev: Int, x: Expression) = {
+  def addInput(prev: Int, x: Expression): Expression = {
     val expr = _builder.add_input(prev, x.expr)
     new Expression(expr)
   }

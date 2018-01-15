@@ -117,7 +117,8 @@ set(dynet_library_HDRS
     nodes-logsumexp.h
     nodes-losses.h
     nodes-lstm.h
-    nodes-macros.h
+    nodes-def-macros.h
+    nodes-impl-macros.h
     nodes-matrixmultiply.h
     nodes-maxpooling2d.h
     nodes-minmax.h

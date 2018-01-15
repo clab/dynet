@@ -9,6 +9,7 @@ env:
 branches:
   only:
     - master
+    - /^[0-9.]*$/
 stages:
   - test
   - name: test_pip
@@ -158,6 +159,12 @@ jobs:
       python: 3.6
       before_script: pip install dynet
       script: python tests/python/test.py
+    - os: linux
+      language: python
+      python: 3.6
+      before_script: .travis/fix_version.sh
+      script: python setup.py sdist
+      if: tag IS present
 
 install:
   - travis_retry .travis/install_dependencies.sh

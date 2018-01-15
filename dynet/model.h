@@ -17,7 +17,7 @@
 
 #include "dynet/weight-decay.h"
 #include "dynet/tensor.h"
-#include "dynet/devices.h"
+// #include "dynet/devices.h"
 #include "dynet/globals.h"
 
 namespace dynet {

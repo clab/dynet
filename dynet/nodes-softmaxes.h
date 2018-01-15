@@ -2,7 +2,7 @@
 #define DYNET_NODES_SOFTMAXES_H_
 
 #include "dynet/dynet.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-def-macros.h"
 
 namespace dynet {
 
@@ -76,6 +76,17 @@ struct SparsemaxLoss : public Node {
   size_t aux_storage_size() const override;
   const std::vector<unsigned> q;
   const std::vector<unsigned>* pq;
+};
+
+// y = constrained_softmax(x, u)
+// y = arg min_{y<=u} KL(y || x)
+struct ConstrainedSoftmax : public Node {
+  explicit ConstrainedSoftmax(const std::initializer_list<VariableIndex>& a)
+      : Node(a) {
+    this->has_cuda_implemented = false;
+  }
+  DYNET_NODE_DEFINE_DEV_IMPL()
+  size_t aux_storage_size() const override;
 };
 
 }  // namespace dynet

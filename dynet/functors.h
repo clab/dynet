@@ -1,3 +1,10 @@
+// DEPRECATED FILE.
+// In general, you don't want to add anything to this file since following this
+// pattern will generate slow code on the CPU (since it will not generate SIMD
+// code). The preferred DyNet style is to use Eigen expression templates. If
+// these are not available, you should write SIMD-compatible functors (see
+// simd-functors.h).
+
 #ifndef DYNET_GPU_FUNCTORS_H
 #define DYNET_GPU_FUNCTORS_H
 
@@ -24,19 +31,6 @@
 
 namespace dynet {
 
-struct FHuberForward {
-  FHuberForward(float c) : c(c) {}
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    const float a = fabs(x);
-    return (a < c) ? x*x : c*(2*a - c);
-  }
-  const float c;
-};
-
-// template <typename T> int sgn(T val) {
-//   return ((T(0) < val) - (val < T(0)));
-// }
-
 struct FL1Backward {
   FL1Backward(float d) : d(d) {}
   DYNET_DEVICE_FUNC inline float operator()(float x) const {
@@ -45,102 +39,9 @@ struct FL1Backward {
   const float d;
 };
 
-struct FHuberBackward {
-  FHuberBackward(float c, float dEdf) : c(c), d(dEdf) {}
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    const float a = fabs(x);
-    return (2 * d) * ((a < c) ? x : c * ((0.f < x) - (x < 0.f)));
-  }
-  const float c;
-  const float d;
-};
-
-struct FProduct {
-  DYNET_DEVICE_FUNC inline float operator()(float a, float b) const {
-    return a * b;
-  }
-};
-
-struct FQuotient {
-  DYNET_DEVICE_FUNC inline float operator()(float a, float b) const {
-    return a / b;
-  }
-};
-
-struct FConstantPlus {
-  FConstantPlus(float c) : c(c) {}
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return c + x;
-  }
-  float c;
-};
-
-struct FConstantMinus {
-  FConstantMinus(float c) : c(c) {}
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return c - x;
-  }
-  float c;
-};
-
-struct FNegate {
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return -x;
-  }
-};
-
-struct FErf {
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return erff(x);
-  }
-};
-
-struct FTanh {
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-#ifdef FAST_TANH
-    float x2 = x * x;
-    float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
-    float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
-    return a / b;
-#else
-     return tanhf(x);
-#endif
-  }
-};
-
-struct FLog {
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return logf(x);
-  }
-};
-
 struct FMaxBackwardInv {
   DYNET_DEVICE_FUNC inline float operator()(float u, float d) const {
     return (1.f - u) * d;
-  }
-};
-
-struct FSqrtBackward {
-  DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return d / (2.f * t);
-  }
-};
-
-struct FErfBackward {
-  DYNET_DEVICE_FUNC inline float operator()(float x, float d) const {
-    return 1.1283791670955125738961589f * expf(-x * x) * d;
-  }
-};
-
-struct FTanhBackward {
-  DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return (1.f - t * t) * d;
-  }
-};
-
-struct FLogBackward {
-  DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return (1.f / t) * d;
   }
 };
 
@@ -153,81 +54,6 @@ struct FPairwiseRankLoss {
   float margin;
 };
 
-struct FRectifyBackward {
-  DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return (t) ? d : 0.f;
-  }
-};
-
-struct FRectifyNegateBackward {
-  DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return (t) ? -d : 0.f;
-  }
-};
-
-struct FSoftmaxNormalize {
-  explicit FSoftmaxNormalize(float logz) : logz(logz) {}
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return expf(x - logz);
-  }
-  float logz;
-};
-
-struct FSoftmaxBackward {
-  explicit FSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
-  DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return (off_diag_sum + d) * t;
-  }
-  float off_diag_sum;
-};
-
-struct FNegLogSoftmaxBackward {
-  FNegLogSoftmaxBackward(float lz, float err) : logz(lz), d(err) {}
-  DYNET_DEVICE_FUNC inline float operator()(float t) const {
-    return expf(t - logz) * d;
-  }
-  float logz;
-  float d;
-};
-
-struct FPtrNegLogSoftmaxBackward {
-  FPtrNegLogSoftmaxBackward(const float* lz, const float* err) : logz(lz), d(err) {}
-  DYNET_DEVICE_FUNC inline float operator()(float t) const {
-    return expf(t - *logz) * *d;
-  }
-  const float* logz;
-  const float* d;
-};
-
-struct FLogSoftmaxNormalize {
-  explicit FLogSoftmaxNormalize(float logz) : logz(logz) {}
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return x - logz;
-  }
-  float logz;
-};
-
-struct FWeightedError {
-  float operator()(float t, float d) const {
-    return expf(t) * d / expf(t);
-  }
-};
-
-struct FLogSoftmaxBackward {
-  explicit FLogSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
-  DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return off_diag_sum * expf(t) + d;
-    //return (off_diag_sum + d) * t;
-  }
-  float off_diag_sum;
-};
-
-struct FRectify {
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return (x > 0.f) ? x : 0.f;
-  }
-};
-
 struct FSoftSign {
   DYNET_DEVICE_FUNC inline float operator()(float x) const {
     return x / (1.f + (x < 0.f ? -x : x));
@@ -238,18 +64,6 @@ struct FSoftSignBackward {
   DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
     float a = 1.f - (t < 0.f ? -t : t);
     return a * a * d;
-  }
-};
-
-struct FLogisticSigmoid {
-  DYNET_DEVICE_FUNC inline float operator()(float x) const {
-    return 0.5 + 0.5 * tanh(x * 0.5);
-  }
-};
-
-struct FLogisticSigmoidBackward {
-  DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
-    return (1.f - t) * t * d;
   }
 };
 

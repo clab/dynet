@@ -97,20 +97,21 @@ cdef class DynetParams: # {{{
             shared_parameters([type]): [description] (default: None)
         """
         cpu_use = False
-        if '--dynet-gpu' in sys.argv:
-            sys.argv.remove('--dynet-gpu')
-            sys.argv.append('--dynet-gpus')
-            sys.argv.append('1')
-        elif not ('--dynet-gpus' in sys.argv or
-                  '--dynet-devices' in sys.argv or
-                  '--dynet-viz' in sys.argv):
+        sys_argv = list(sys.argv)
+        if '--dynet-gpu' in sys_argv:
+            sys_argv.remove('--dynet-gpu')
+            sys_argv.append('--dynet-gpus')
+            sys_argv.append('1')
+        elif not ('--dynet-gpus' in sys_argv or
+                  '--dynet-devices' in sys_argv or
+                  '--dynet-viz' in sys_argv):
             cpu_use = True
 
-        argv_count = int(len(sys.argv))
+        argv_count = int(len(sys_argv))
         cdef int argc = argv_count + 2 if cpu_use else argv_count
         cdef char** c_argv
         c_argv = <char**>malloc(sizeof(char*) * argc) # TODO check failure?
-        args = [bytearray(x, encoding="utf-8") for x in sys.argv]
+        args = [bytearray(x, encoding="utf-8") for x in sys_argv]
         for idx, s in enumerate(args):
             c_argv[idx] = s
         if cpu_use:
@@ -784,6 +785,11 @@ cdef class LookupParameters: # {{{
         rotated_shape = tuple([shape[-1]] + list(shape[:-1]))
         return rotated_shape
 
+    def __len__(self):
+        """Returns the number of items embedded"""
+        shape = c_dim_as_shape(self.thisptr.get_storage().all_dim)
+        return shape[-1]
+
     def __getitem__(self, int i):
         """
         Same as :code:`dynet.lookup`
@@ -1173,7 +1179,7 @@ cdef class ParameterCollection: # {{{
             p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
-
+        
     cpdef add_lookup_parameters(self, dim, PyInitializer init=None, name="", device=""):
         """Add a lookup parameter to the ParameterCollection
         
@@ -1233,6 +1239,15 @@ cdef class ParameterCollection: # {{{
             (dynet.ParameterCollection) a parameter collection.
         """
         return ParameterCollection.wrap(self.thisptr.add_subcollection((name or "").encode()), self)
+
+    cpdef set_weight_decay_lambda(self, lam):
+        """Set the weight decay coefficient.
+        
+        Args:
+            lam (float): Weight decay coefficient
+        """
+        assert(isinstance(lam,float))
+        self.thisptr.set_weight_decay_lambda(lam)
 
     cpdef name(self):
         """
@@ -2602,6 +2617,34 @@ cpdef Expression dot_product(Expression x, Expression y):
     """
     ensure_freshness(y); 
     return Expression.from_cexpr(x.cg_version, c_dot_product(x.c(), y.c()))
+cpdef Expression circ_conv(Expression u, Expression v):
+    """Circular convolution
+
+    Calculate the circular convolution :math:`[u * v]_k=\sum_i u_iv_{(k-i) \mod d}`
+
+    Args:
+        u (dynet.Expression): The first input expression
+        v (dynet.Expression): The second input expression
+
+    Returns:
+        dynet.Expression: :math:`u * v`
+    """
+    ensure_freshness(v);
+    return Expression.from_cexpr(u.cg_version, c_circ_conv(u.c(), v.c()))
+cpdef Expression circ_corr(Expression u, Expression v):
+    """Circular correlation
+
+    Calculate the circular correlation :math:`[u \star v]_k=\sum_i u_iv_{(i + k) \mod d}`
+
+    Args:
+        u (dynet.Expression): The first input expression
+        v (dynet.Expression): The second input expression
+
+    Returns:
+        dynet.Expression: :math:`u \star v`
+    """
+    ensure_freshness(v);
+    return Expression.from_cexpr(u.cg_version, c_circ_corr(u.c(), v.c()))
 cpdef Expression squared_norm(Expression x):
     """Squared norm
     
@@ -2810,7 +2853,103 @@ cpdef Expression maxpooling2d(Expression x, vector[unsigned] ksize, vector[unsig
     return Expression.from_cexpr(x.cg_version, c_maxpooling2d(x.c(), ksize, stride, is_valid))
 
 # unary-exp
-cpdef Expression tanh(Expression x): 
+cpdef Expression sin(Expression x):
+    """Sine
+
+    Elementwise calculation of the sine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\sin(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_sin(x.c()))
+cpdef Expression cos(Expression x):
+    """Cosine
+
+    Elementwise calculation of the cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cos(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_cos(x.c()))
+cpdef Expression tan(Expression x):
+    """Tangent
+
+    Elementwise calculation of the tangent
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\tan(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_tan(x.c()))
+cpdef Expression asin(Expression x):
+    """Inverse sine
+
+    Elementwise calculation of the inverse sine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\sin^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_asin(x.c()))
+cpdef Expression acos(Expression x):
+    """Inverse cosine
+
+    Elementwise calculation of the inverse cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cos^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_acos(x.c()))
+cpdef Expression atan(Expression x):
+    """Tangent
+
+    Elementwise calculation of the inverse tangent
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\tan^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_atan(x.c()))
+cpdef Expression sinh(Expression x):
+    """Hyperbolic sine
+
+    Elementwise calculation of the hyperbolic sine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\sinh(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_sinh(x.c()))
+cpdef Expression cosh(Expression x):
+    """Hyperbolic cosine
+
+    Elementwise calculation of the hyperbolic cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cosh(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_cosh(x.c()))
+cpdef Expression tanh(Expression x):
     """Hyperbolic tangent
     
     Elementwise calculation of the hyperbolic tangent
@@ -2822,7 +2961,43 @@ cpdef Expression tanh(Expression x):
         dynet.Expression: :math:`\\tanh(x)`
     """
     return Expression.from_cexpr(x.cg_version, c_tanh(x.c()))
-cpdef Expression exp(Expression x): 
+cpdef Expression asinh(Expression x):
+    """Inverse hyperbolic sine
+
+    Elementwise calculation of the inverse hyperbolic sine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\sinh^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_asinh(x.c()))
+cpdef Expression acosh(Expression x):
+    """Inverse hyperbolic cosine
+
+    Elementwise calculation of the inverse hyperbolic cosine
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\cosh^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_acosh(x.c()))
+cpdef Expression atanh(Expression x):
+    """Inverse hyperbolic tangent
+
+    Elementwise calculation of the inverse hyperbolic tangent
+
+    Args:
+        x (dynet.Expression): Input expression
+
+    Returns:
+        dynet.Expression: :math:`\\tanh^{-1}(x)`
+    """
+    return Expression.from_cexpr(x.cg_version, c_atanh(x.c()))
+cpdef Expression exp(Expression x):
     """Natural exponent
     
     Calculate elementwise :math:`y_i = e^{x_i}`
@@ -2834,7 +3009,7 @@ cpdef Expression exp(Expression x):
         dynet.Expression: :math:`e^{x}`
     """
     return Expression.from_cexpr(x.cg_version, c_exp(x.c()))
-cpdef Expression square(Expression x): 
+cpdef Expression square(Expression x):
     """Square
     
     Calculate elementwise :math:`y_i = x_i^2`
@@ -3072,6 +3247,23 @@ cpdef Expression softsign(Expression x):
         dynet.Expression: :math:`y_i = \\frac{x_i}{1+\\vert x_i\\vert}`
     """
     return Expression.from_cexpr(x.cg_version, c_softsign(x.c()))
+
+cpdef Expression constrained_softmax(Expression x, Expression y):
+    """Constrained softmax function
+
+    The constrained softmax function (Martins and Kreutzer, 2017) is similar to softmax, but defines upper bounds for the resulting probabilities. **Note:** This function is not yet implemented on GPU.
+    
+    Args:
+        x (dynet.Expression): Input expression (scores)
+        y (dynet.Expression): Input expression (upper bounds)
+    
+    Returns:
+        dynet.Expression: The constrained softmax of the scores, satisfying the upper bound constraints
+
+    """
+    ensure_freshness(y);
+    return Expression.from_cexpr(x.cg_version,
+                                 c_constrained_softmax(x.c(), y.c()))
 
 cpdef Expression pow(Expression x, Expression y):
     """Power function
@@ -3874,6 +4066,7 @@ cpdef Expression esum(list xs):
     cvec = vector[CExpression]()
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for esum.'
         ensure_freshness(x)
         cvec.push_back(x.c())
     #print(cvec.size(), file=sys.stderr)
@@ -3895,6 +4088,7 @@ cpdef Expression logsumexp(list xs):
     cvec = vector[CExpression]()
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for logsumexp.'
         ensure_freshness(x)
         cvec.push_back(x.c())
     #print(cvec.size(), file=sys.stderr)
@@ -3930,6 +4124,7 @@ cpdef Expression average(list xs):
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs: 
+        assert x, 'Empty element for average.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_average(cvec))
@@ -3951,6 +4146,7 @@ cpdef Expression emax(list xs):
     c = xs[0]
     ensure_freshness(c) 
     for x in xs: 
+        assert x, 'Empty element for emax.'
         ensure_freshness(x) 
         c = Expression.from_cexpr(x.cg_version, c_bmax(x.c(),c.c()))
     return c
@@ -3967,10 +4163,11 @@ cpdef Expression concatenate_cols(list xs):
     Returns:
         dynet.Expression: The expression with the columns concatenated
     """
-    assert xs, 'List is empty, nothing to concatenate.'
+    assert xs, 'List is empty, nothing to concatenate_cols.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for concatenate_cols.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat_cols(cvec))
@@ -3992,6 +4189,7 @@ cpdef Expression concatenate(list xs, unsigned d=0):
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for concatenate.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat(cvec, d))
@@ -4007,10 +4205,11 @@ cpdef Expression concatenate_to_batch(list xs):
     Returns:
         dynet.Expression: The expression with the batch dimensions concatenated
     """
-    assert xs, 'List is empty, nothing to concatenate.'
+    assert xs, 'List is empty, nothing to concatenate_to_batch.'
     cdef vector[CExpression] cvec
     cdef Expression x
     for x in xs:
+        assert x, 'Empty element for concatenate_to_batch.'
         ensure_freshness(x) 
         cvec.push_back(x.c())
     return Expression.from_cexpr(x.cg_version, c_concat_to_batch(cvec))
@@ -4030,6 +4229,7 @@ cpdef Expression affine_transform(list exprs):
     cdef Expression e
     cdef vector[CExpression] ves
     for e in exprs:
+        assert e, 'Empty element for affine_transform.'
         ensure_freshness(e) 
         ves.push_back(e.c())
     return Expression.from_cexpr(e.cg_version, c_affine_transform(ves))
