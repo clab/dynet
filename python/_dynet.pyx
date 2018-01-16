@@ -572,7 +572,7 @@ cdef class Parameters: # {{{
         del saver
 
     # TODO docs
-    def populate_from_textfile(self, string fname, string key=""):
+    def populate_from_textfile(self, fname, key=""):
         cdef CTextFileLoader *loader
         cdef string _fname = <string> fname.encode("utf8")
         cdef string _key = <string> key.encode("utf8")
