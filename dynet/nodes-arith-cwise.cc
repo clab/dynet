@@ -49,7 +49,7 @@ std::vector<int> CwiseSum::autobatch_concat(const ComputationGraph & cg) const {
 
 template<class MyDevice>
 void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseMultiply::forward (cmult)");
+  DYNET_ASSERT(xs.size() == 2, "Failed dimension check in CwiseSum::forward (+)");
   size_t i;
   for(i = 0; i < fx.d.nd && xs[0]->d[i] == xs[1]->d[i]; ++i);
   // No broadcasting over dims, just batches

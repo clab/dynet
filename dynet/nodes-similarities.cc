@@ -90,9 +90,12 @@ Dim HuberDistance::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void HuberDistance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "HuberDistance::forward dimension check failed");
-  auto x = tvec(*xs[0]) - tvec(*xs[1]);
-  auto dist = (x.abs() < d).select(x.square(), d * (2 * x.abs() - d));
-  t<0>(fx).device(*dev.edevice) = dist.sum();
+  AlignedMemoryPool* scratch_allocator = xs[0]->device->pools[(int)DeviceMempool::SCS];
+  Tensor diff(xs[0]->d, nullptr, xs[0]->device, xs[0]->mem_pool);
+  diff.v = static_cast<float*>(scratch_allocator->allocate(diff.d.size() * sizeof(float)));
+  tvec(diff).device(*dev.edevice) = tvec(*xs[0]) - tvec(*xs[1]);
+  t<0>(fx).device(*dev.edevice) = (tvec(diff).abs() < d).select(tvec(diff).square(), d * (2 * tvec(diff).abs() - d)).sum();
+  scratch_allocator->free();
 }
 
 template<class MyDevice>
@@ -103,12 +106,13 @@ void HuberDistance::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "HuberDistance::backward dimension check failed");
-  auto scale = 2 * as_scalar(dEdf);
-  auto c = d;
-  auto x = tvec(*xs[i]) - tvec(*xs[1-i]);
-  auto a = x.abs();
-  auto r = scale * (a < c).select(x, c * ((x > 0.f).cast<float>() - (x < 0.f).cast<float>()));
-  tvec(dEdxi).device(*dev.edevice) += r;
+  AlignedMemoryPool* scratch_allocator = xs[i]->device->pools[(int)DeviceMempool::SCS];
+  Tensor diff(xs[i]->d, nullptr, xs[i]->device, xs[i]->mem_pool);
+  diff.v = static_cast<float*>(scratch_allocator->allocate(diff.d.size() * sizeof(float)));
+  tvec(diff).device(*dev.edevice) = tvec(*xs[i]) - tvec(*xs[1-i]);
+  float scale = 2 * as_scalar(dEdf);
+  tvec(dEdxi).device(*dev.edevice) += scale * (tvec(diff).abs() < d).select(tvec(diff), d * ((tvec(diff) > 0.f).cast<float>() - (tvec(diff) < 0.f).cast<float>()));
+  scratch_allocator->free();
 }
 DYNET_NODE_INST_DEV_IMPL(HuberDistance)
 

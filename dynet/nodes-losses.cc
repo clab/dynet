@@ -41,11 +41,10 @@ void PairwiseRankLoss::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  auto mask = tvec(fx).cast<bool>().cast<float>();
   if (i == 0) {
-    tvec(dEdxi).device(*dev.edevice) -= mask * tvec(dEdf);
+    tvec(dEdxi).device(*dev.edevice) -= tvec(fx).cast<bool>().cast<float>() * tvec(dEdf);
   } else {
-    tvec(dEdxi).device(*dev.edevice) += mask * tvec(dEdf);
+    tvec(dEdxi).device(*dev.edevice) += tvec(fx).cast<bool>().cast<float>() * tvec(dEdf);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PairwiseRankLoss)
