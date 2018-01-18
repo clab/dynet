@@ -171,14 +171,14 @@ struct RNNBuilder {
    *
    * \param d Dropout rate
    */
-  void set_dropout(float d) { dropout_rate = d; }
+  virtual void set_dropout(float d) { dropout_rate = d; }
 
   /**
    *
    * \brief Disable Dropout
    * \details In general, you should disable dropout at test time
    */
-  void disable_dropout() { dropout_rate = 0; }
+  virtual void disable_dropout() { dropout_rate = 0; }
 
   /**
    *
@@ -319,7 +319,7 @@ public:
    * \details This has the same effect as `set_dropout(d,d_h)` except that all the dropout rates are set to the same value.
    * \param d Dropout rate to be applied on all of \f$x,h\f$
    */
-  void set_dropout(float d);
+  virtual void set_dropout(float d) override;
 
   /**
    * \param d Dropout rate
@@ -337,6 +337,8 @@ public:
    * \param d Dropout rate \f$d\f$ for the input \f$x_t\f$
    */
   void set_dropout(float d, float d_h);
+
+  virtual void disable_dropout() override;
 
   /**
    * \brief Set dropout masks at the beginning of a sequence for a specific bathc size

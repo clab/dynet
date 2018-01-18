@@ -93,6 +93,10 @@ void SimpleRNNBuilder::set_dropout(float d, float d_h){
   dropout_rate_h = d_h;
 }
 
+void SimpleRNNBuilder::disable_dropout(){
+  dropout_rate = dropout_rate_h = 0.f;
+}
+
 void SimpleRNNBuilder::set_dropout_masks(unsigned batch_size){
   masks.clear();
   for (unsigned i = 0; i < layers; ++i) {

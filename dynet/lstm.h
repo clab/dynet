@@ -84,7 +84,7 @@ struct CoupledLSTMBuilder : public RNNBuilder {
    * \details This has the same effect as `set_dropout(d,d_h,d_c)` except that all the dropout rates are set to the same value.
    * \param d Dropout rate to be applied on all of \f$x,h,c\f$
    */
-  void set_dropout(float d);
+  virtual void set_dropout(float d) override;
   /**
    * \brief Set the dropout rates
    * \details The dropout implemented here is an adaptation of the variational dropout with tied weights introduced in [Gal, 2016](http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks)
@@ -113,7 +113,7 @@ struct CoupledLSTMBuilder : public RNNBuilder {
    * \details This is equivalent to `set_dropout(0)` or `set_dropout(0,0,0)`
    *
    */
-  void disable_dropout();
+  virtual void disable_dropout() override;
   /**
    * \brief Set dropout masks at the beginning of a sequence for a specific bathc size
    * \details If this function is not called on batched input, the same mask will be applied across
@@ -230,7 +230,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \details This has the same effect as `set_dropout(d,d_h)` except that all the dropout rates are set to the same value.
    * \param d Dropout rate to be applied on all of \f$x,h\f$
    */
-  void set_dropout(float d);
+  virtual void set_dropout(float d) override;
   /**
    * \brief Set the dropout rates
    * \details The dropout implemented here is the variational dropout with tied weights introduced in [Gal, 2016](http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks)
@@ -258,7 +258,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \details This is equivalent to `set_dropout(0)` or `set_dropout(0,0,0)`
    *
    */
-  void disable_dropout();
+  virtual void disable_dropout() override;
   /**
    * \brief Set dropout masks at the beginning of a sequence for a specific batch size
    * \details If this function is not called on batched input, the same mask will be applied across
@@ -374,7 +374,7 @@ struct CompactVanillaLSTMBuilder : public RNNBuilder {
    * \details This has the same effect as `set_dropout(d,d_h)` except that all the dropout rates are set to the same value.
    * \param d Dropout rate to be applied on all of \f$x,h\f$
    */
-  void set_dropout(float d);
+  virtual void set_dropout(float d) override;
   /**
    * \brief Set the dropout rates
    * \details The dropout implemented here is the variational dropout with tied weights introduced in [Gal, 2016](http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks)
@@ -402,7 +402,7 @@ struct CompactVanillaLSTMBuilder : public RNNBuilder {
    * \details This is equivalent to `set_dropout(0)` or `set_dropout(0,0,0)`
    *
    */
-  void disable_dropout();
+  virtual void disable_dropout() override;
   /**
    * \brief Set dropout masks at the beginning of a sequence for a specific batch size
    * \details If this function is not called on batched input, the same mask will be applied across
