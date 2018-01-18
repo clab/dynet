@@ -462,6 +462,9 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
         CSimpleRNNBuilder()
         CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
 
+        void set_dropout(float d, float d_h)
+        void set_dropout_masks(unsigned batch_size)
+
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
 
