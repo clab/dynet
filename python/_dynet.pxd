@@ -104,6 +104,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         CModel()
         #float gradient_l2_norm() const
         CParameters add_parameters(CDim& d)
+        CParameters set_weight_decay_lambda(float lam)
         CParameters add_parameters(CDim& d, CParameterInit initializer, string name) except +
         CParameters add_parameters(CDim& d, CParameterInit initializer, string name, CDevice *device) except +
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
@@ -460,6 +461,9 @@ cdef extern from "dynet/rnn.h" namespace "dynet":
     cdef cppclass CSimpleRNNBuilder  "dynet::SimpleRNNBuilder" (CRNNBuilder):
         CSimpleRNNBuilder()
         CSimpleRNNBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)
+
+        void set_dropout(float d, float d_h)
+        void set_dropout_masks(unsigned batch_size)
 
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
