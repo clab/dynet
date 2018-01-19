@@ -2492,7 +2492,7 @@ cpdef Expression nobackprop(Expression x):
     """
     return Expression.from_cexpr(x.cg_version, c_nobackprop(x.c()))
 cpdef Expression flip_gradient(Expression x, float lambd = 1.0):
-    """Negative backprop
+    """Flip gradient
     
     This node has no effect on the forward pass, but takes negative on backprop process. This operation is widely used in adversarial networks.
     
@@ -2502,7 +2502,21 @@ cpdef Expression flip_gradient(Expression x, float lambd = 1.0):
     Returns:
         dynet.Expression: An output expression containing the same as input (only effects on backprop process)
     """
-    return Expression.from_cexpr(x.cg_version, c_flip_gradient(x.c(), lambd))
+    return Expression.from_cexpr(x.cg_version, c_flip_gradient(x.c()))
+
+cpdef Expression scale_gradient(Expression x, float lambd = 1.0):
+    """Scale gradient
+    
+    This node scales the gradient by a constant on backprop, with no effect on the forward pass.
+    
+    Args:
+        x (dynet.Expression): Input expression
+        lambd (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: An output expression containing the same as input (only effects on backprop process)
+    """
+    return Expression.from_cexpr(x.cg_version, c_scale_gradient(x.c(), lambd))
 
 # binary-exp
 cpdef Expression cdiv(Expression x, Expression y):

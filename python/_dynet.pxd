@@ -277,10 +277,9 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_random_uniform "dynet::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) except + #
     CExpression c_random_gumbel "dynet::random_gumbel" (CComputationGraph& g, CDim& d, float left, float right) except + #
 
-    # identity function, but derivative is not propagated through it
     CExpression c_nobackprop "dynet::nobackprop" (CExpression& x) except + #
-    # identity function, but derivative takes negative as propagated through it
-    CExpression c_flip_gradient "dynet::flip_gradient" (CExpression& x, float lambd) except + #
+    CExpression c_flip_gradient "dynet::flip_gradient" (CExpression& x) except + #
+    CExpression c_scale_gradient "dynet::scale_gradient" (CExpression& x, float lambd) except + #
     
     CExpression c_op_neg "dynet::operator-" (CExpression& x) except + #
     CExpression c_op_add "dynet::operator+" (CExpression& x, CExpression& y) except + #

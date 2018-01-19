@@ -32,9 +32,9 @@ struct NoBackprop : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
-// y = x_1, dy/dx is set to negative. 
-struct FlipGradient : public Node {
-  explicit FlipGradient(const std::initializer_list<VariableIndex>& a, const float lambd) : Node(a), lambd(lambd) {}
+// y = x_1, dy/dx is multiplied by lambda 
+struct ScaleGradient : public Node {
+  explicit ScaleGradient(const std::initializer_list<VariableIndex>& a, const float lambd) : Node(a), lambd(lambd) {}
   virtual bool supports_multibatch() const override { return true; }
   virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::flipgradient); return sm.get_idx(s); }
   virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }  
