@@ -281,14 +281,11 @@ class TestBatchManipulation(unittest.TestCase):
         self.assertTrue(np.allclose(w.npvalue(), self.pval.T))
 
 
-class TestIO_1(unittest.TestCase):
-
+class TestIOEntireModel(unittest.TestCase):
     def setUp(self):
         self.file = "bilstm.model"
-        # create models
         self.m = dy.ParameterCollection()
         self.m2 = dy.ParameterCollection()
-        # Create birnn
         self.b = dy.BiRNNBuilder(2, 10, 10, self.m, dy.LSTMBuilder)
 
     def test_save_load(self):
@@ -297,8 +294,24 @@ class TestIO_1(unittest.TestCase):
         self.m2.populate(self.file)
 
 
-class TestIO_2(unittest.TestCase):
+class TestIOPartial(unittest.TestCase):
+    def setUp(self):
+        self.file = "tmp.model"
+        self.m = dy.ParameterCollection()
+        self.m2 = dy.ParameterCollection()
+        self.L = self.m.add_lookup_parameters((10, 2), name="la")
+        self.a = self.m.add_parameters(10, name="a")
 
+    def test_save_load(self):
+        self.L.save(self.file, "/X")
+        self.a.save(self.file, append=True)
+        a = self.m2.add_parameters(10)
+        L = self.m2.add_lookup_parameters((10, 2))
+        L.populate(self.file, "/X")
+        a.populate(self.file, "/a")
+
+
+class TestIOHighLevelAPI(unittest.TestCase):
     def setUp(self):
         self.file = "bilstm.model"
         # create models

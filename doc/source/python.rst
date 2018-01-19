@@ -207,6 +207,8 @@ If it doesn't work and you get an error similar to the following:
 
 then you may need to run the following (and add it to your shell init files):
 
+.. code:: bash
+
     # OSX 
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
     # Linux

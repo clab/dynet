@@ -407,9 +407,13 @@ template<class MyDevice>
 void CircularCorrelation::forward_dev_impl(
     const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
 #ifdef __CUDACC__
+  // Eigen's FFT doesn't seem to work on GPU (although it does compile), the
+  // TF implementation of FFT uses Eigen only on CPU and calls cuFFT for the
+  // GPU impl. We should do something similar here to support GPU.
+  // See
+  // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/kernels/fft_ops.cc
   DYNET_NO_CUDA_IMPL_ERROR("CircularCorrelation forward");
 #else
-  // TODO this should work on GPU, double check this.
   // TODO implement batched version of this
   auto a = t<1>(*xs[0]);
   auto b = t<1>(*xs[1]);
@@ -536,8 +540,10 @@ void CircularConvolution::forward_dev_impl(
 
   // do FFTs
   const Eigen::array<ptrdiff_t, 1> fft {0};
-  a_fft = a.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
-  b_fft = b.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
+  a_fft.device(*dev.edevice) =
+      a.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
+  b_fft.device(*dev.edevice) =
+      b.template fft<Eigen::BothParts, Eigen::FFT_FORWARD>(fft);
 
   // this is circular convolution:
   auto ab_fft = a_fft * b_fft;

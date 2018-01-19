@@ -42,9 +42,9 @@ void PairwiseRankLoss::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   if (i == 0) {
-    tvec(dEdxi).device(*dev.edevice) -= tvec(fx).binaryExpr(tvec(dEdf), FRectifyBackward());
+    tvec(dEdxi).device(*dev.edevice) -= tvec(fx).cast<bool>().cast<float>() * tvec(dEdf);
   } else {
-    tvec(dEdxi).device(*dev.edevice) += tvec(fx).binaryExpr(tvec(dEdf), FRectifyBackward());
+    tvec(dEdxi).device(*dev.edevice) += tvec(fx).cast<bool>().cast<float>() * tvec(dEdf);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PairwiseRankLoss)

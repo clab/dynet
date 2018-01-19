@@ -171,13 +171,14 @@ struct RNNBuilder {
    *
    * \param d Dropout rate
    */
-  void set_dropout(float d) { dropout_rate = d; }
+  virtual void set_dropout(float d) { dropout_rate = d; }
+
   /**
    *
    * \brief Disable Dropout
    * \details In general, you should disable dropout at test time
    */
-  void disable_dropout() { dropout_rate = 0; }
+  virtual void disable_dropout() { dropout_rate = 0; }
 
   /**
    *
@@ -312,6 +313,42 @@ public:
   std::vector<Expression> get_s(RNNPointer i) const override { return get_h(i); }
   void copy(const RNNBuilder & params) override;
 
+
+  /**
+   * \brief Set the dropout rates to a unique value
+   * \details This has the same effect as `set_dropout(d,d_h)` except that all the dropout rates are set to the same value.
+   * \param d Dropout rate to be applied on all of \f$x,h\f$
+   */
+  virtual void set_dropout(float d) override;
+
+  /**
+   * \param d Dropout rate
+   * \details The dropout implemented here is the variational dropout introduced in [Gal, 2016](http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks)
+   * More specifically, dropout masks \f$\mathbf{z_x}\sim \mathrm{Bernoulli}(1-d_x)\f$ and \f$\mathbf{z_h}\sim \mathrm{Bernoulli}(1-d_h)\f$ are sampled at the start of each sequence.
+   * The dynamics of the cell are then modified to :
+   *
+   * \f$
+   * \begin{split}
+    h_t & =\tanh(W_{x}(\frac 1 {1-d}\mathbf{z_x} \circ x_t)+W_{h}(\frac 1 {1-d}\mathbf{z_h} \circ h_{t-1})+b)\\
+   \end{split}
+   * \f$
+   *
+   * For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+   * \param d Dropout rate \f$d\f$ for the input \f$x_t\f$
+   */
+  void set_dropout(float d, float d_h);
+
+  virtual void disable_dropout() override;
+
+  /**
+   * \brief Set dropout masks at the beginning of a sequence for a specific bathc size
+   * \details If this function is not called on batched input, the same mask will be applied across
+   * all batch elements. Use this to apply different masks to each batch element
+   *
+   * \param batch_size Batch size
+   */
+  void set_dropout_masks(unsigned batch_size = 1);
+
   unsigned num_h0_components() const override { return layers; }
 
   ParameterCollection & get_parameter_collection() override;
@@ -323,17 +360,28 @@ public:
   std::vector<std::vector<Expression>> param_vars;
 
 private:
+
   ParameterCollection local_model;
 
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h;
+
+  // first index is layer, second specifies W_i, W_u
+  std::vector<std::vector<Expression>> masks;
 
   // initial value of h
   // defaults to zero matrix input
   std::vector<Expression> h0;
 
   unsigned layers;
+  unsigned input_dim_, hidden_dim_;
   bool lagging;
+
+
+  float dropout_rate_h;
+  bool dropout_masks_valid;
+
+  ComputationGraph * _cg;
 
 };
 
