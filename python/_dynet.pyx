@@ -1995,6 +1995,22 @@ cdef class _inputExpression(Expression):
 def scalarInput(float s, device=""):
     return _cg.inputValue(s, device)
 
+cdef class _immutableVecInputExpression(Expression):
+    cdef vector[float] val
+    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None,batch_size=1,device=""):
+        self.val = val
+        if dim is None: dim = self.val.size()
+        self.cg_version = g.version()
+        cdef CExpression e
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val, dev)
+        else:
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val)
+        self.vindex = e.i
+        g._inputs.append(self)
+
 cdef class _vecInputExpression(Expression):
     """Subclass of Expression corresponding to any non-scalar input expressions
     
@@ -2119,7 +2135,7 @@ def inputMatrix(vector[float] v, tuple d):
     """
     raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
-def inputTensor(arr,batched=False,device=""):
+def inputTensor(arr,batched=False,device="",reusable_expr=False):
     """Creates a tensor expression based on a numpy array or a list.
     
     The dimension is inferred from the shape of the input.
@@ -2154,7 +2170,10 @@ def inputTensor(arr,batched=False,device=""):
         dim = arr.shape
         batch_size= 1
     arr = arr.flatten(order='F')
-    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size,device=device)
+    if reusable_expr:
+      return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size,device=device)
+    else:
+      return _immutableVecInputExpression(_cg, arr, dim, batch_size=batch_size, device=device)
 
 
 def sparse_inputTensor(idxs, values, shape, batched=False, defval=0,device=""):
