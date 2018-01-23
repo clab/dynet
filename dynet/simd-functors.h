@@ -75,12 +75,12 @@ template<typename Scalar> struct scalar_logistic_sigmoid_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_logistic_sigmoid_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
     using std::exp;
-    using std::fmin;
-    using std::fmax;
     const Scalar one = Scalar(1.0);
-    const Scalar half = Scalar(0.5);
-    return fmin(half, one / (one + exp(-x))) 
-         + fmax(half, exp(x) / (one + exp(x))) - half;
+    if (x >= 0.0){
+        return one / (one + exp(-x));
+    }else{
+        return exp(x) / (one + exp(x));
+    }
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
