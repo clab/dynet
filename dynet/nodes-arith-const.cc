@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-arith-const.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
 #include "dynet/simd-functors.h"
 
@@ -27,7 +28,7 @@ Dim ConstantMinusX::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void ConstantMinusX::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(const_minus_op<float>(c));
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).unaryExpr(const_minus_op<float>(c));
 }
 
 template<class MyDevice>
@@ -37,7 +38,7 @@ void ConstantMinusX::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec();
+  tvec(dEdxi).device(*dev.edevice) -= tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(ConstantMinusX)
 
@@ -60,7 +61,7 @@ Dim ConstantPlusX::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void ConstantPlusX::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().unaryExpr(const_add_op<float>(c));
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).unaryExpr(const_add_op<float>(c));
 }
 
 template<class MyDevice>
@@ -70,7 +71,7 @@ void ConstantPlusX::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+  tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(ConstantPlusX)
 
@@ -93,7 +94,7 @@ Dim ConstScalarMultiply::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void ConstScalarMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec() * alpha;
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]) * alpha;
 }
 
 template<class MyDevice>
@@ -104,7 +105,7 @@ void ConstScalarMultiply::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i == 0, "Failed dimension check in ConstScalarMultiply");
-  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * alpha;
+  tvec(dEdxi).device(*dev.edevice) += tvec(dEdf) * alpha;
 }
 DYNET_NODE_INST_DEV_IMPL(ConstScalarMultiply)
 

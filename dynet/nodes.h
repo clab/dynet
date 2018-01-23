@@ -15,7 +15,6 @@
 #include "dynet/nodes-linalg.h"
 #include "dynet/nodes-logsumexp.h"
 #include "dynet/nodes-losses.h"
-#include "dynet/nodes-macros.h"
 #include "dynet/nodes-matrixmultiply.h"
 #include "dynet/nodes-maxpooling2d.h"
 #include "dynet/nodes-minmax.h"

@@ -5,6 +5,7 @@
 
 #include "dynet/dynet.h"
 #include "dynet/virtual-cudnn.h"
+#include "tensor-eigen.h"
 #include "dynet/cudnn-ops.h"
 
 using namespace cudnn;
@@ -81,7 +82,7 @@ void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Te
       paddings[1] = std::make_pair(0, static_cast<int>(w_odd));
       paddings[2] = std::make_pair(0, 0);
       paddings[3] = std::make_pair(0, 0);
-      padded_x.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().pad(paddings);
+      tb<3>(padded_x).device(*dev.edevice) = tb<3>(*xs[0]).pad(paddings);
       // re-point x to the padded input
       XH = new_XH;
       XW = new_XW;
@@ -167,7 +168,7 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
       paddings[1] = std::make_pair(0, static_cast<int>(w_odd));
       paddings[2] = std::make_pair(0, 0);
       paddings[3] = std::make_pair(0, 0);
-      padded_x.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().pad(paddings);
+      tb<3>(padded_x).device(*dev.edevice) = tb<3>(*xs[0]).pad(paddings);
       // re-point x to the padded input
       XH = new_XH;
       XW = new_XW;
@@ -201,7 +202,7 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
       Tensor padded_dx = Tensor(Dim({XH, XW, XC}, XN), static_cast<float*>(dxi), xs[0]->device, DeviceMempool::FXS);
       Eigen::array<int, 4> offsets = {0, 0, 0, 0};
       Eigen::array<int, 4> extents = {static_cast<int>(XH - h_odd), static_cast<int>(XW - w_odd), static_cast<int>(XC), static_cast<int>(XN)};
-      dEdxi.tb<3>().device(*dev.edevice) += padded_dx.tb<3>().slice(offsets, extents);
+      tb<3>(dEdxi).device(*dev.edevice) += tb<3>(padded_dx).slice(offsets, extents);
     } break;
     case 1: {// grad w.r.t. filters
       dxi = scratch_allocator->allocate(sizeof(float) * FYC * FXC * FW * FH);
@@ -219,7 +220,7 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
                   &beta, filter_desc_, dxi));
       //accumlate the gradient
       Tensor dxi_tensor = Tensor(Dim({FH, FW, FXC}, FYC), static_cast<float*>(dxi), xs[1]->device, DeviceMempool::FXS);
-      dEdxi.t<4>().device(*dev.edevice) += dxi_tensor.t<4>();
+      t<4>(dEdxi).device(*dev.edevice) += t<4>(dxi_tensor);
     } break;
     case 2: {// grad w.r.t. bias
       dxi = scratch_allocator->allocate(sizeof(float) * FYC);

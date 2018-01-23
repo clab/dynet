@@ -1,5 +1,6 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-linalg.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/except.h"
 
 using namespace std;
@@ -34,12 +35,12 @@ Dim Transpose::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void Transpose::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (dim.num_nonone_dims() <= 1) {
-    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+    tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
   } else {
     Eigen::array<ptrdiff_t, 5> order;
     for(size_t i = 0; i < 5; ++i)
       order[i] = (i >= dims.size() ? i : dims[i]);
-    fx.tb<4>().device(*dev.edevice) = xs[0]->tb<4>().shuffle(order);
+    tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]).shuffle(order);
   }
 }
 
@@ -53,7 +54,7 @@ void Transpose::backward_dev_impl(const MyDevice & dev,
   Eigen::array<ptrdiff_t, 5> order;
   for(size_t i = 0; i < 5; ++i)
     order[(i >= dims.size() ? i : dims[i])] = i;
-  dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>().shuffle(order);
+  tb<4>(dEdxi).device(*dev.edevice) += tb<4>(dEdf).shuffle(order);
 }
 DYNET_NODE_INST_DEV_IMPL(Transpose)
 
@@ -79,11 +80,11 @@ void MatrixInverse::forward_dev_impl(const MyDevice & dev, const vector<const Te
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("MatrixInverse forward");
 #else
-  auto x = **xs[0];
-  auto y = *fx;
+  auto x = mat(*xs[0]);
+  auto y = mat(fx);
   y = x.inverse();
   // TODO: Change into tensors after resolving test errors
-  //fx.t<2>().device(*dev.edevice) = xs[0]->t<2>().inverse();
+  //t<2>(fx).device(*dev.edevice) = t<2>(*xs[0]).inverse();
 #endif
 }
 
@@ -98,9 +99,9 @@ void MatrixInverse::backward_dev_impl(const MyDevice & dev,
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("MatrixInverse backward");
 #else
-  auto d = *dEdf;
-  auto y = *fx;
-  (*dEdxi).noalias() -= y.transpose() * d * y.transpose();
+  auto d = mat(dEdf);
+  auto y = mat(fx);
+  (mat(dEdxi)).noalias() -= y.transpose() * d * y.transpose();
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(MatrixInverse)
@@ -155,7 +156,7 @@ void LogDet::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("LogDet forward");
 #else
-  fx.v[0] = logdet(**xs[0], false);
+  fx.v[0] = logdet(mat(*xs[0]), false);
 #endif
 }
 
@@ -169,8 +170,8 @@ void LogDet::backward_dev_impl(const MyDevice & dev,
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("LogDet backward");
 #else
-  auto trans = (**xs[0]).transpose();
-  (*dEdxi) += (dEdf.v[0]) * trans.inverse();
+  auto trans = (mat(*xs[0])).transpose();
+  (mat(dEdxi)) += (dEdf.v[0]) * trans.inverse();
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(LogDet)
@@ -197,8 +198,8 @@ void TraceOfProduct::forward_dev_impl(const MyDevice & dev, const vector<const T
 #ifdef __CUDACC__
   DYNET_NO_CUDA_IMPL_ERROR("TraceOfProduct forward");
 #else
-  auto x1 = **xs[0];
-  auto x2 = **xs[1];
+  auto x1 = mat(*xs[0]);
+  auto x2 = mat(*xs[1]);
   fx.v[0] = (x1 * x2.transpose()).trace();
 #endif
 }
@@ -215,8 +216,8 @@ void TraceOfProduct::backward_dev_impl(const MyDevice & dev,
   DYNET_NO_CUDA_IMPL_ERROR("TraceOfProduct backward");
 #else
   const float d = dEdf.v[0];
-  auto xother = **xs[1 - i];
-  *dEdxi += d * xother;
+  auto xother = mat(*xs[1 - i]);
+  mat(dEdxi) += d * xother;
 #endif
 }
 DYNET_NODE_INST_DEV_IMPL(TraceOfProduct)

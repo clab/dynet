@@ -48,7 +48,13 @@ DyNet is installed):
 
     git+https://github.com/clab/dynet#egg=dynet
 
-In case installation using `pip` fails, if you copy-and-paste the entire log that you
+You can also manually set the directory of the cuDNN library as follows:
+
+.. code:: bash
+
+    CUDNN_ROOT=/path/to/cudnn BACKEND=cuda pip install git+https://github.com/clab/dynet#egg=dynet
+
+If installation using `pip` fails, if you copy-and-paste the entire log that you
 get after running the `pip` command into a `github issue <https://github.com/clab/dynet/issues>`_,
 we will help you debug. You can also try to install DyNet manually as listed below.
 
@@ -201,6 +207,8 @@ If it doesn't work and you get an error similar to the following:
 
 then you may need to run the following (and add it to your shell init files):
 
+.. code:: bash
+
     # OSX 
     export DYLD_LIBRARY_PATH=/path/to/dynet/build/dynet/:$DYLD_LIBRARY_PATH
     # Linux
@@ -241,7 +249,8 @@ using a Python distribution that already has Cython installed. The following has
 4) Open dynet.sln from this command prompt and build the "Release" version of the solution.
 5) Follow the rest of the instructions above for testing the build and installing it for other users
 
-Note, currently only the Release version works.
+Note, currently only the Release version works. Also, if you compile with CUDA and/or cuDNN, ensure
+their respective DLLs are in your PATH environment variable when you run Python.
 
 GPU/MKL Support
 ---------------
@@ -259,9 +268,14 @@ The installation process is pretty much the same, while adding the
 
     cmake .. -DEIGEN3_INCLUDE_DIR=$PATH_TO_EIGEN -DPYTHON=$PATH_TO_PYTHON -DBACKEND=cuda
 
-(if CUDA is installed in a non-standard location and ``cmake`` cannot
+
+If you know the CUDA architecture supported by your GPU (e.g. by referencing
+`this page <http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/>`__)
+you can speed compilation significantly by adding ``-DCUDA_ARCH=XXX`` where
+``XXX`` is your architecture number.
+If CUDA is installed in a non-standard location and ``cmake`` cannot
 find it, you can specify also
-``-DCUDA_TOOLKIT_ROOT_DIR=/path/to/cuda``.)
+``-DCUDA_TOOLKIT_ROOT_DIR=/path/to/cuda``.
 
 Now, build the Python modules (as above, we assume Cython is installed):
 
@@ -270,6 +284,26 @@ After running ``make -j 2``, you should have the file ``_dynet.so`` in the ``bui
 As before, ``cd build/python`` followed by
 ``python ../../setup.py EIGEN3_INCLUDE_DIR=$PATH_TO_EIGEN build --build-dir=.. --skip-build install --user`` will install the module.
 
+cuDNN support
+~~~~~~~~~~~~~
+
+When running DyNet with CUDA on GPUs, some of DyNet's functionalities
+(e.g. conv2d) will depend on the `NVIDIA cuDNN libraries <https://developer.nvidia.com/cudnn>`__.
+CMake will automatically detect cuDNN in the suggested installation path 
+by NVIDIA (i.e. ``/usr/local/cuda``) and enable those functionalities 
+if detected.
+
+If CMake is unable to find cuDNN automatically, try setting `CUDNN_ROOT`, such as
+
+::
+
+    -DCUDNN_ROOT="/path/to/CUDNN"
+
+. However, if you don't have cuDNN installed, those dependend functionalities 
+will be automatically disabled and an error will be throwed during runtime if you try
+to use them.
+
+Currently, DyNet supports cuDNN v5.1, future versions will also be supported soon.
 
 
 Using the GPU from Python

@@ -12,6 +12,7 @@
 #include <cudnn.h>
 #endif
 #include "dynet/except.h"
+#include "dynet/devices.h"
 
 #define MAX_GPUS 256
 
@@ -20,6 +21,22 @@
     if (err != cudaSuccess) {                              \
       std::cerr << "CUDA failure in " << #stmt << std::endl\
                 << cudaGetErrorString(err) << std::endl;   \
+      if (err == cudaErrorMemoryAllocation) {              \
+        show_pool_mem_info();                              \
+        size_t free_bytes=0, total_bytes=0;                \
+        cudaMemGetInfo(&free_bytes, &total_bytes);         \
+        int devid=-1;                                      \
+        cudaGetDevice(&devid);                             \
+        std::cerr << "CUDA is unable to allocate enough "  \
+                  << "GPU memory on GPU:" << devid         \
+                  << ", at current stage only "            \
+                  << free_bytes/1024/1024 << " MB out of " \
+                  << total_bytes/1024/1024 << " MB is free"\
+                  << ". Note due to hardware limitations " \
+                  << "not all free memories can be "       \
+                  << "allocated."                          \
+                  << std::endl;                            \
+      }                                                    \
       throw dynet::cuda_exception(#stmt);                  \
     }                                                      \
   } while(0)
@@ -38,7 +55,7 @@
     cudnnStatus_t stat = (stmt);                           \
     if (stat != CUDNN_STATUS_SUCCESS){                     \
       std::cerr << "CUDNN failure in " << #stmt            \
-                << std::endl << cudnnGetErrorString(stat)       \
+                << std::endl << cudnnGetErrorString(stat)  \
                 << std::endl;                              \
       throw dynet::cuda_exception(#stmt);                  \
     }                                                      \
@@ -59,7 +76,7 @@ inline std::pair<int, int> SizeToBlockThreadPair(int n) {
   logn = 0;
   if (n > 2) {
     int localN = n - 1;
-    while (localN >>= 1) 
+    while (localN >>= 1)
       logn++;
   }
 #else

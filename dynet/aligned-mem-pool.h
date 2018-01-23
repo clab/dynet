@@ -57,6 +57,7 @@ class AlignedMemoryPool {
 
     size_t used();
     void set_used(size_t s);
+    size_t get_cap();
 
   private:
     std::string name;

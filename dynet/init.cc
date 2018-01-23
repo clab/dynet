@@ -1,9 +1,11 @@
 #include "dynet/init.h"
+
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet.h"
 #include "dynet/weight-decay.h"
 #include "dynet/globals.h"
 #include "dynet/str-util.h"
+#include "dynet/devices.h"
 
 #include <iostream>
 #include <random>
@@ -18,7 +20,7 @@ using namespace std;
 
 namespace dynet {
 
-DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), autobatch_debug(0),
+DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), profiling(0),
   shared_parameters(false), ngpus_requested(false), ids_requested(false), cpu_requested(false), requested_gpus(-1)
 {
 #if HAVE_CUDA
@@ -93,9 +95,10 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
         remove_args(argc, argv, argi, 2);
       }
     }
-    else if (arg == "--dynet-autobatch-debug" || arg == "--dynet_autobatch_debug") {
-      params.autobatch_debug = 1;
-        remove_args(argc, argv, argi, 1);
+    else if (arg == "--dynet-profiling" || arg == "--dynet_profiling") {
+      string a2 = argv[argi + 1];
+      istringstream c(a2); c >> params.profiling;
+      remove_args(argc, argv, argi, 2);
     }
 
 #if HAVE_CUDA
@@ -200,15 +203,20 @@ void initialize(DynetParams& params) {
     cerr << "[dynet] using autobatching" << endl;
   autobatch_flag = params.autobatch;
   
-  if(params.autobatch_debug)
-    cerr << "[dynet] using autobatching debugging" << endl;
-  autobatch_debug_flag = params.autobatch_debug;
+  if(params.profiling)
+    cerr << "[dynet] using profiling level " << params.profiling << endl;
+  profiling_flag = params.profiling;
 
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
   int default_index = 0;
 
-  Device *d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
+  Device *d;
+  if (gpudevices.size()) {
+    d = new Device_CPU(device_manager->num_devices(), std::string("128"), params.shared_parameters);
+  } else {
+    d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
+  }
   device_manager->add(d);
   default_device = device_manager->get(default_index);
 #if HAVE_CUDA

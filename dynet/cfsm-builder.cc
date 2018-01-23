@@ -109,7 +109,8 @@ void ClassFactoredSoftmaxBuilder::new_graph(ComputationGraph& cg, bool update) {
   pcg = &cg;
   const unsigned num_clusters = cdict.size();
   r2c = update ? parameter(cg, p_r2c) : const_parameter(cg, p_r2c);
-  cbias = update ? parameter(cg, p_cbias) : const_parameter(cg, p_cbias);
+  if (bias)
+    cbias = update ? parameter(cg, p_cbias) : const_parameter(cg, p_cbias);
   rc2ws.clear();
   rc2biases.clear();
   rc2ws.resize(num_clusters);
@@ -128,9 +129,10 @@ Expression ClassFactoredSoftmaxBuilder::neg_log_softmax(const Expression& rep, u
   // if there is only one word in the cluster, just return -log p(class | rep)
   // otherwise predict word too
   unsigned wordrow = widx2cwidx[classidx];
-  Expression& cwbias = get_rc2wbias(clusteridx);
+  // Expression& cwbias = get_rc2wbias(clusteridx);
   Expression& r2cw = get_rc2w(clusteridx);
-  Expression wscores = affine_transform({cwbias, r2cw, rep});
+  // Expression wscores = affine_transform({cwbias, r2cw, rep});
+  Expression wscores = (bias) ? affine_transform({get_rc2wbias(clusteridx), r2cw, rep}) : (r2cw * rep);
   Expression wnlp = pickneglogsoftmax(wscores, wordrow);
   return cnlp + wnlp;
 }

@@ -5,6 +5,7 @@ import zipfile
 import sys
 from distutils.command.build import build as _build
 from distutils.command.build_py import build_py as _build_py
+from distutils.command.install_data import install_data as _install_data
 from distutils.errors import DistutilsSetupError
 from distutils.spawn import find_executable
 from distutils.sysconfig import get_python_lib
@@ -16,7 +17,7 @@ import re
 from Cython.Distutils import build_ext as _build_ext
 from setuptools import setup
 from setuptools.extension import Extension
-from shutil import rmtree, copytree
+from shutil import rmtree, copytree, copy
 
 # urlretrieve has a different location in Python 2 and Python 3
 import urllib
@@ -101,7 +102,6 @@ BUILT_EXTENSIONS = False
 CMAKE_PATH = ENV.get("CMAKE", find_executable("cmake"))
 MAKE_PATH = ENV.get("MAKE", find_executable("make"))
 MAKE_FLAGS = ENV.get("MAKE_FLAGS", "-j %d" % cpu_count()).split()
-# HG_PATH = find_executable("hg")
 CC_PATH = ENV.get("CC", find_executable("gcc"))
 CXX_PATH = ENV.get("CXX", find_executable("g++"))
 INSTALL_PREFIX = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
@@ -161,10 +161,12 @@ else:
     if platform.system() == "Darwin":
         COMPILER_ARGS.extend(["-stdlib=libc++", "-mmacosx-version-min=10.7"])
         EXTRA_LINK_ARGS.append("-Wl,-rpath," + LIBS_INSTALL_DIR)
+        if "--skip-build" not in sys.argv:  # Include libdynet.dylib unless doing manual install
+            DATA_FILES += [os.path.join(LIBS_INSTALL_DIR, "lib%s.dylib" % lib) for lib in LIBRARIES]
     else:
         EXTRA_LINK_ARGS.append("-Wl,-rpath=%r" % LIBS_INSTALL_DIR + ",--no-as-needed")
 
-LIBRARY_DIRS.append(DYNET_LIB_DIR)
+LIBRARY_DIRS.insert(0, DYNET_LIB_DIR)
 
 INCLUDE_DIRS[:] = filter(None, [PROJECT_SOURCE_DIR, EIGEN3_INCLUDE_DIR])
 
@@ -207,7 +209,6 @@ class build(_build):
         log.info("CMAKE_PATH=%r" % CMAKE_PATH)
         log.info("MAKE_PATH=%r" % MAKE_PATH)
         log.info("MAKE_FLAGS=%r" % " ".join(MAKE_FLAGS))
-        # log.info("HG_PATH=%r" % HG_PATH)
         log.info("EIGEN3_INCLUDE_DIR=%r" % EIGEN3_INCLUDE_DIR)
         log.info("EIGEN3_DOWNLOAD_URL=%r" % EIGEN3_DOWNLOAD_URL)
         log.info("CC_PATH=%r" % CC_PATH)
@@ -216,9 +217,9 @@ class build(_build):
         log.info("BUILD_DIR=%r" % BUILD_DIR)
         log.info("INSTALL_PREFIX=%r" % INSTALL_PREFIX)
         log.info("PYTHON=%r" % PYTHON)
-        if CMAKE_PATH != None:
+        if CMAKE_PATH is not None:
             run_process([CMAKE_PATH, "--version"])
-        if CXX_PATH != None:
+        if CXX_PATH is not None:
             run_process([CXX_PATH, "--version"])
 
         # This will generally be called by the pip install
@@ -251,12 +252,18 @@ class build(_build):
                     log.info("Fetching Eigen...")
                     urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
                     log.info("Unpacking Eigen...")
-                    zfile = zipfile.ZipFile("eigen.zip", 'r')
-                    zfile.extractall('eigen')
                     #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
-                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen", os.listdir('eigen')[0])
+                    with zipfile.ZipFile("eigen.zip") as zfile:
+                        for zipinfo in zfile.infolist():
+                            try:
+                                i = zipinfo.filename.index("/")
+                                zipinfo.filename = zipinfo.filename[i+1:]
+                                zfile.extract(zipinfo, "eigen")
+                            except ValueError:
+                                pass
+                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
                 except:
-                    raise DistutilsSetupError("Could not download Eigen from " + EIGEN3_DOWNLOAD_URL)
+                    raise DistutilsSetupError("Could not download Eigen from %r" % EIGEN3_DOWNLOAD_URL)
 
             os.environ["CXX"] = CXX_PATH
             os.environ["CC"] = CC_PATH
@@ -269,7 +276,7 @@ class build(_build):
                 "-DEIGEN3_INCLUDE_DIR=%r" % EIGEN3_INCLUDE_DIR,
                 "-DPYTHON=%r" % PYTHON,
             ]
-            for env_var in ("BACKEND",):
+            for env_var in ("BACKEND", "CUDNN_ROOT"):
                 value = ENV.get(env_var)
                 if value is not None:
                     cmake_cmd.append("-D" + env_var + "=%r" % value)
@@ -287,10 +294,17 @@ class build(_build):
             if run_process(make_cmd) != 0:
                 raise DistutilsSetupError(" ".join(make_cmd))
 
+            if platform.system() == "Darwin":  # macOS
+                for filename in DATA_FILES:
+                    new_install_name = "@loader_path/" + os.path.basename(filename)
+                    install_name_tool_cmd = ["install_name_tool", "-id", new_install_name, filename]
+                    log.info("fixing install_name for %s to %r" % (filename, new_install_name))
+                    if run_process(install_name_tool_cmd) != 0:
+                        raise DistutilsSetupError(" ".join(install_name_tool_cmd))
+
         # This will generally be called by the manual install
-        else:    
-            if not os.path.isdir(EIGEN3_INCLUDE_DIR):
-                raise RuntimeError("Could not find Eigen in EIGEN3_INCLUDE_DIR={}. If doing manual install, please set the EIGEN3_INCLUDE_DIR variable with the absolute path to Eigen manually. If doing install via pip, please file an issue at the github site.".format(EIGEN3_INCLUDE_DIR))
+        elif not os.path.isdir(EIGEN3_INCLUDE_DIR):
+            raise RuntimeError("Could not find Eigen in EIGEN3_INCLUDE_DIR={}. If doing manual install, please set the EIGEN3_INCLUDE_DIR variable with the absolute path to Eigen manually. If doing install via pip, please file an issue on github.com/clab/dynet".format(EIGEN3_INCLUDE_DIR))
 
         BUILT_EXTENSIONS = True  # because make calls build_ext
         _build.run(self)
@@ -301,6 +315,17 @@ class build_py(_build_py):
         os.chdir(os.path.join(BUILD_DIR, "python"))
         log.info("Building Python files...")
         _build_py.run(self)
+
+
+class install_data(_install_data):
+    def run(self):
+        self.data_files = [(p, f) if self.is_wheel(p) else
+                           (get_python_lib(), f) if platform.system() == "Darwin" else
+                           (p, []) for p, f in self.data_files]
+        _install_data.run(self)
+
+    def is_wheel(self, path):
+        return os.path.basename(os.path.abspath(os.path.join(self.install_dir, path))) == "wheel"
 
 
 class build_ext(_build_ext):
@@ -327,6 +352,7 @@ class build_ext(_build_ext):
 try:
     import pypandoc
     long_description = pypandoc.convert("README.md", "rst")
+    long_description = "\n".join(line for line in long_description.splitlines() if "<#" not in line)
 except:
     long_description = ""
 
@@ -367,8 +393,8 @@ setup(
     url="https://github.com/clab/dynet",
     download_url="https://github.com/clab/dynet/releases",
     license="Apache 2.0",
-    cmdclass={"build": build, "build_py": build_py, "build_ext": build_ext},
+    cmdclass={"build": build, "build_py": build_py, "install_data": install_data, "build_ext": build_ext},
     ext_modules=TARGET,
     py_modules=["dynet", "dynet_viz", "dynet_config"],
-    data_files=[("../..", DATA_FILES)],
+    data_files=[(os.path.join("..", ".."), DATA_FILES)],
 )

@@ -2,7 +2,7 @@
 #define DYNET_NODES_CHANGE_DEVICES_H
 
 #include "dynet/dynet.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-def-macros.h"
 
 namespace dynet {
 

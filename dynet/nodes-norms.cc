@@ -1,7 +1,9 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-norms.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
+#include "dynet/simd-functors.h"
 
 using namespace std;
 
@@ -28,7 +30,7 @@ template<class MyDevice>
 void SquaredNorm::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in SquaredNorm::forward");
   Eigen::array<ptrdiff_t, 1> red_axis = {0};
-  fx.tb<0>().device(*dev.edevice) = xs[0]->tbvec().square().sum(red_axis);
+  tb<0>(fx).device(*dev.edevice) = tbvec(*xs[0]).square().sum(red_axis);
 }
 
 template<class MyDevice>
@@ -40,7 +42,7 @@ void SquaredNorm::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 1, "Failed dimension check in SquaredNorm::backward");
   Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
-  dEdxi.tbvec().device(*dev.edevice) += xs[0]->tbvec() * dEdf.tbvec().broadcast(bcast) * 2.0f;
+  tbvec(dEdxi).device(*dev.edevice) += tbvec(*xs[0]) * tbvec(dEdf).broadcast(bcast) * 2.0f;
 }
 DYNET_NODE_INST_DEV_IMPL(SquaredNorm)
 
@@ -65,8 +67,8 @@ template<class MyDevice>
 void L2Norm::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in L2Norm::forward");
   Eigen::array<ptrdiff_t, 1> red_axis = {0};
-  fx.tb<0>().device(*dev.edevice) =
-      (xs[0]->tbvec().square().sum(red_axis)).sqrt();
+  tb<0>(fx).device(*dev.edevice) =
+      (tbvec(*xs[0]).square().sum(red_axis)).sqrt();
 }
 
 template<class MyDevice>
@@ -78,9 +80,9 @@ void L2Norm::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 1, "Failed dimension check in L2Norm::backward");
   Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
-  dEdxi.tbvec().device(*dev.edevice) +=
-      xs[0]->tbvec() *
-      (2 * fx.tbvec().binaryExpr(dEdf.tbvec(),
+  tbvec(dEdxi).device(*dev.edevice) +=
+      tbvec(*xs[0]) *
+      (2 * tbvec(fx).binaryExpr(tbvec(dEdf),
                                  FSqrtBackward())).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(L2Norm)

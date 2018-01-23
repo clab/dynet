@@ -28,8 +28,8 @@ object Initialize {
     args.get("autobatch")
         .foreach(arg => params.setAutobatch(arg.asInstanceOf[Int]))
 
-    args.get("autobatch_debug")
-        .foreach(arg => params.setAutobatch_debug(arg.asInstanceOf[Int]))
+    args.get("profiling")
+        .foreach(arg => params.setProfiling(arg.asInstanceOf[Int]))
 
     initialize(params)
   }

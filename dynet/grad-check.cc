@@ -23,7 +23,7 @@ bool check_grad(ParameterCollection& m, Expression& expr, int verbosity) {
     pp->clear();
 
   // Perform forward and backward steps
-  float alpha = 5e-4;
+  float alpha = 5e-3;
   g.forward(expr);
   g.backward(expr);
 

@@ -6,6 +6,7 @@
 #include "dynet/cuda.h"
 #include "dynet/init.h"
 #include "dynet/globals.h"
+#include "dynet/devices.h"
 
 using namespace std;
 

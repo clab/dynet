@@ -2,7 +2,7 @@
 #define DYNET_NODES_NORMS_H_
 
 #include "dynet/dynet.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-def-macros.h"
 
 namespace dynet {
 
