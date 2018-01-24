@@ -2039,6 +2039,11 @@ cdef class _tensorInputExpression(Expression):
 
 
 cdef class inputTensorTranspose(Expression):
+    """
+    This allows inputting a raw numpy tensor in column-major format.
+    At input time, the numpy array can have only one dimension (it's possible to input a 1-d view on a multi-d tensor), while the expression dimensions can be controled using the dim and batch_size arguments.
+    """
+
     cdef vector[float] val
 
     @cython.boundscheck(False)
