@@ -115,38 +115,38 @@ void NoBackprop::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(NoBackprop)
 
-// ************* FlipGradient *************
+// ************* ScaleGradient *************
 
 #ifndef __CUDACC__
 
-string FlipGradient::as_string(const vector<string>& arg_names) const {
+string ScaleGradient::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "flip_gradient(" << arg_names[0] << ')';
   return s.str();
 }
 
-Dim FlipGradient::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in FlipGradient");
+Dim ScaleGradient::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in ScaleGradient");
   return xs[0];
 }
 
 #endif
 
 template<class MyDevice>
-void FlipGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+void ScaleGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
 }
 
 template<class MyDevice>
-void FlipGradient::backward_dev_impl(const MyDevice & dev,
+void ScaleGradient::backward_dev_impl(const MyDevice & dev,
                                    const vector<const Tensor*>& xs,
                                    const Tensor& fx,
                                    const Tensor& dEdf,
                                    unsigned i,
                                    Tensor& dEdxi) const {
-  // takes negative on backprop
-  tvec(dEdxi).device(*dev.edevice) -= tvec(dEdf);
+  // Scale gradient by lambda on backprop
+  tvec(dEdxi).device(*dev.edevice) += tvec(dEdf) * lambd;
 }
-DYNET_NODE_INST_DEV_IMPL(FlipGradient)
+DYNET_NODE_INST_DEV_IMPL(ScaleGradient)
 
 }

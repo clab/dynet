@@ -254,7 +254,7 @@ def max_dim(a, d=0): return GVExpr('max_dim', [a, d], make_dim(1, inferred=True)
 def min_dim(a, d=0): return GVExpr('min_dim', [a, d], make_dim(1, inferred=True))
 
 def nobackprop(x): return GVExpr('nobackprop', [x], copy_dim(x))
-def flip_gradient(x): return GVExpr('flip_gradient', [x], copy_dim(x))
+def flip_gradient(x, lambd=1.0): return GVExpr('flip_gradient', [x, lambd], copy_dim(x))
 
 # binary-exp
 def cdiv(x, y): return GVExpr('cdiv', [x,y], ensure_same_dim(x,y))
