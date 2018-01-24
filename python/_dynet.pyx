@@ -2190,7 +2190,6 @@ def inputMatrix(vector[float] v, tuple d):
     raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
 @cython.boundscheck(False)
-@cython.wraparound(False)
 def inputTensor(arr,batched=False,device="",reusable_expr=False):
     """Creates a tensor expression based on a numpy array or a list.
     
@@ -2221,7 +2220,7 @@ def inputTensor(arr,batched=False,device="",reusable_expr=False):
         raise TypeError("Input Tensor should be a numpy.ndarray or a valid list of floats")
     if batched:
         dim = arr.shape[:-1] if len(arr.shape) > 1 else (1,)
-        batch_size= arr.shape[-1]
+        batch_size = arr.shape[-1]
     else:
         dim = arr.shape
         batch_size= 1
