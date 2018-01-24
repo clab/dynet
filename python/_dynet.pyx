@@ -649,7 +649,8 @@ cdef class Parameters: # {{{
             arr = np.asarray(arr)
         shape = arr.shape
         if self.shape() != shape:
-            raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
+            raise ValueError("Shape of values and parameter don't match in Parameters.set_value: "
+                             "%s != %s" % (shape, self.shape()))
         arr = arr.flatten(order='F')
         self.thisptr.set_value(arr)
 
@@ -1190,7 +1191,7 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.Parameters): Created Parameter
         """
-        assert(isinstance(dim,(tuple,int)))
+        assert isinstance(dim,(tuple,int)), "Parameter dimension must be tuple or int: %s" % dim
         cdef CParameters p
         cdef CParameterInit *initializer
         cdef CDevice *dev
@@ -1220,7 +1221,7 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.LookupParameters): Created LookupParameter
         """
-        assert(isinstance(dim, tuple))
+        assert isinstance(dim, tuple), "Lookup parameter dimension must be tuple: %s" % dim
         cdef CDevice *dev
         cdef CLookupParameters p
         cdef int nids = dim[0]
@@ -1272,7 +1273,7 @@ cdef class ParameterCollection: # {{{
         Args:
             lam (float): Weight decay coefficient
         """
-        assert(isinstance(lam,float))
+        assert isinstance(lam,float), "Weight decay lambda must be float: %s" % lam
         self.thisptr.set_weight_decay_lambda(lam)
 
     cpdef name(self):
@@ -1695,7 +1696,7 @@ cdef class Expression: #{{{
             IndexError: If the indices are too large
             ValueError: In case of improper slice or if step is used
         """
-        assert isinstance(index, (int, slice))
+        assert isinstance(index, (int, slice)), "Expression key must be int or slice: %s" % index
         cdef int rows = self.c().dim().rows()
         cdef int i, j
         if isinstance(index, int):
@@ -5274,8 +5275,8 @@ class BiRNNBuilder(object): # {{{
         self.spec = num_layers, input_dim, hidden_dim, rnn_builder_factory, builder_layers
         model = self.model = model.add_subcollection("birnn")
         if builder_layers is None:
-            assert num_layers > 0
-            assert hidden_dim % 2 == 0, "BiRNN hidden dimension must be even."
+            assert num_layers > 0, "BiRNN number of layers must be positive: %d" % num_layers
+            assert hidden_dim % 2 == 0, "BiRNN hidden dimension must be even: %d" % hidden_dim
             self.builder_layers = []
             f = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
             b = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
