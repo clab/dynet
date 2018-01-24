@@ -181,6 +181,23 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(self.lp1.is_updated())
         self.assertFalse(self.lp2.is_updated())
 
+        dy.renew_cg()
+        pp1 = dy.parameter(self.p1)
+        pp2 = dy.parameter(self.p2)
+
+        a = pp1 * self.lp1[1]
+        b = pp2 * self.lp2[1]
+        l = dy.dot_product(a, b) / 100
+        l.backward()
+
+        self.trainer.update()
+
+        ones = np.ones((10, 10))
+        self.assertTrue(np.allclose(self.p1.as_array(), ones),
+                        msg=np.array_str(self.p1.as_array()))
+        self.assertTrue(np.allclose(self.lp2.as_array()[1], ones[
+                        0]), msg=np.array_str(self.lp2.as_array()))
+
     def test_update(self):
         ones = np.ones((10, 10))
         updated = np.ones((10, 10)) * 0.99
