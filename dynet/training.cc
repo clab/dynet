@@ -102,13 +102,15 @@ void Trainer::update() {
   }
   for(size_t i = 0; i < lparams.size(); ++i) {
     auto &p = lparams[i];
-    if(sparse_updates_enabled && p->updated && !p->all_updated) {
-      for (auto j : p->non_zero_grads)
-        update_lookup_params(gscale, i, j);
-    } else {
-      update_lookup_params(gscale, i);
+    if (p->updated) {
+      if(sparse_updates_enabled && !p->all_updated) {
+        for (auto j : p->non_zero_grads)
+          update_lookup_params(gscale, i, j);
+      } else {
+        update_lookup_params(gscale, i);
+      }
+      p->clear();
     }
-    p->clear();
   }
   ++updates;
   ++updates_since_status;
