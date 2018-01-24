@@ -174,6 +174,22 @@ struct TensorTools {
    */
   static void clip(Tensor& d, float left, float right);
   /**
+   * \brief Do an elementwise linear transform of values a*x + b
+   *
+   * \param x Tensor to modify
+   * \param a The value to multiply by
+   * \param b The value to add
+   */
+  static void scale(Tensor& x, float left, float right);
+  /**
+   * \brief Take a tensor of Uniform(0,1) sampled variables and turn them
+   *        into Bernoulli(p) variables
+   *
+   * \param x Tensor to modify
+   * \param p The bernoulli probability
+   */
+  static void uniform_to_bernoulli(Tensor& x, float p);
+  /**
    * \brief Fills the tensor with a constant value
    *
    * \param d Tensor to modify
@@ -329,6 +345,10 @@ struct TensorTools {
   static void constant_dev(const MyDevice & dev, Tensor& d, float c);
   template<class MyDevice>
   static void accumulate_dev(const MyDevice & dev, Tensor& v_src, const Tensor& v);
+  template<class MyDevice>
+  static void scale_dev(const MyDevice & dev, Tensor& x, float a, float b);
+  template<class MyDevice>
+  static void uniform_to_bernoulli_dev(const MyDevice & dev, Tensor& x, float p);
   template<class MyDevice>
   static IndexTensor argmax_dev(const MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
   template<class MyDevice>

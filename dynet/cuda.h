@@ -8,6 +8,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include <curand.h>
 #if HAVE_CUDNN
 #include <cudnn.h>
 #endif
@@ -45,6 +46,15 @@
     cublasStatus_t stat = stmt;                            \
     if (stat != CUBLAS_STATUS_SUCCESS) {                   \
       std::cerr << "CUBLAS failure in " << #stmt           \
+                << std::endl << stat << std::endl;         \
+      throw dynet::cuda_exception(#stmt);                  \
+    }                                                      \
+  } while(0)
+
+#define CURAND_CHECK(stmt) do {                            \
+    curandStatus_t stat = stmt;                            \
+    if (stat != CURAND_STATUS_SUCCESS) {                   \
+      std::cerr << "CURAND failure in " << #stmt           \
                 << std::endl << stat << std::endl;         \
       throw dynet::cuda_exception(#stmt);                  \
     }                                                      \
