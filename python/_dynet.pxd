@@ -231,6 +231,9 @@ cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs
 
+    cdef cppclass CAmsgradTrainer "dynet::AmsgradTrainer" (CTrainer):
+        CAmsgradTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs
+
 cdef extern from "dynet/devices.h" namespace "dynet":
     cdef cppclass CDevice "dynet::Device":
         string name

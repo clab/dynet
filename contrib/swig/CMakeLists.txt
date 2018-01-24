@@ -53,6 +53,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/AdadeltaTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/AdagradTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/AdamTrainer.java"
+    "${CMAKE_SWIG_OUTDIR}/AmsgradTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/BidirectionalTreeLSTMBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/ComputationGraph.java"
     "${CMAKE_SWIG_OUTDIR}/CoupledLSTMBuilder.java"

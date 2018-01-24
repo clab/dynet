@@ -5785,6 +5785,25 @@ cdef class AdamTrainer(Trainer):
     def whoami(self):
         return "AdamTrainer"
 
+cdef class AmsgradTrainer(Trainer):
+    """AMSGrad optimizer
+    
+    The AMSGrad optimizer is similar to Adam which uses unbiased estimates of the first and second moments of the gradient, however AMSGrad keeps the maximum of all the second moments and uses that instead
+    
+    Args:
+        m(dynet.ParameterCollection): ParameterCollection to be trained
+    
+    Keyword Args:
+        alpha(number): Initial learning rate (default: 0.001)
+        beta_1(number): Moving average parameter for the mean (default: 0.9)
+        beta_2(number): Moving average parameter for the variance (default: 0.999)
+        eps(number): Epsilon parameter to prevent numerical instability (default: 1e-8)
+    """
+    def __cinit__(self, ParameterCollection m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8 ):
+        self.thisptr = new CAmsgradTrainer(m.thisptr, alpha, beta_1, beta_2, eps)
+    def whoami(self):
+        return "AmsgradTrainer"
+
 # Trainers }}}
 
 

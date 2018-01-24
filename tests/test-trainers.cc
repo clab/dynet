@@ -81,6 +81,9 @@ DYNET_TRAINER_DIRECTION_TEST_CASE(rmsprop_direction, dynet::RMSPropTrainer)
 
 DYNET_TRAINER_DIRECTION_TEST_CASE(adam_direction, dynet::AdamTrainer)
 
+DYNET_TRAINER_DIRECTION_TEST_CASE(amsgrad_direction, dynet::AmsgradTrainer)
+
+
 BOOST_AUTO_TEST_CASE( eg_direction ) {
   param_vals = {0.5f,0.1f,0.4f};// EGTrainer requires values belonging to simplex [0,1]
   dynet::ParameterCollection mod;
@@ -130,6 +133,8 @@ DYNET_TRAINER_RESTART_TEST_CASE(adadelta_restart, dynet::AdadeltaTrainer)
 DYNET_TRAINER_RESTART_TEST_CASE(rmsprop_restart, dynet::RMSPropTrainer)
 
 DYNET_TRAINER_RESTART_TEST_CASE(adam_restart, dynet::AdamTrainer)
+
+DYNET_TRAINER_RESTART_TEST_CASE(amsgrad_restart, dynet::AmsgradTrainer)
 
 DYNET_TRAINER_RESTART_TEST_CASE(eg_restart, dynet::EGTrainer)
 
