@@ -161,6 +161,17 @@ std::vector<real> as_vector(const Tensor& v);
 
 /**
  * \ingroup tensor
+ * \brief Get the array of values in the scaled tensor
+ * \details For higher order tensors this returns the flattened value
+ *
+ * \param v Input tensor
+ * \param a Scale factor
+ * \return Values
+ */
+std::vector<real> as_scale_vector(const Tensor& v, float a);
+
+/**
+ * \ingroup tensor
  * \brief Provides tools for creating, accessing, copying and modifying tensors (in-place)
  *
  */
