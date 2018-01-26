@@ -1741,6 +1741,19 @@ Expression scale_gradient(const Expression& x, float lambd = 1.0f);
 
 /**
  * \ingroup flowoperations
+ * \brief Argmax
+ * \details This node takes an input vector \f$x\f$ and returns a one hot vector \f$y\f$ such that \f$y_{\text{argmax} x}=1\f$
+ * Note that this almost everywhere differentiable and its gradient is 0.
+ * Tensors of order \f$>1\f$ are not supported yet
+ *  
+ * \param x The input vector (can be batched)
+ *
+ * \return The one hot argmax vector
+ */
+Expression argmax(const Expression& x, unsigned d);
+
+/**
+ * \ingroup flowoperations
  * \brief Reshape to another size
  * \details This node reshapes a tensor to another size, without changing the
  *          underlying layout of the data. The layout of the data in DyNet is
@@ -1770,6 +1783,7 @@ Expression scale_gradient(const Expression& x, float lambd = 1.0f);
  *
  * \return The reshaped expression
  */
+
 Expression reshape(const Expression& x, const Dim& d);
 
 /**

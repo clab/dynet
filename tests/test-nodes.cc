@@ -1199,6 +1199,21 @@ BOOST_AUTO_TEST_CASE( dropout_dim_forward ) {
 // TODO: Dropout scales the gradients at training time, so they don't match.
 // Expression block_dropout(const Expression& x, real p);
 
+// Expression argmax(const Expression& x, unsigned d);
+BOOST_AUTO_TEST_CASE( argmax_forward ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = argmax(x, 0);
+  std::vector<float> v = as_vector(y.value());
+  auto v_x = as_vector(x.value());
+  BOOST_CHECK_EQUAL(v[0], 0.0);
+  BOOST_CHECK_EQUAL(v[1], 0.0);
+  BOOST_CHECK_EQUAL(v[2], 1.0);
+  BOOST_CHECK_EQUAL(v[3], 0.0);
+  BOOST_CHECK_EQUAL(v[4], 0.0);
+  BOOST_CHECK_EQUAL(v[5], 1.0);
+}
+
 // Expression reshape(const Expression& x, const Dim& d);
 BOOST_AUTO_TEST_CASE( reshape_gradient ) {
   dynet::ComputationGraph cg;
