@@ -1,7 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-cumulative.h"
 
-#include "dynet/nodes-macros.h"
-#include "dynet/functors.h"
+#include "dynet/nodes-impl-macros.h"
 
 using namespace std;
 
@@ -25,12 +25,16 @@ Dim CumulativeSum::dim_forward(const vector<Dim>& xs) const {
   return ret;
 }
 
+size_t CumulativeSum::aux_storage_size() const {
+  return dim.size() * sizeof(float);
+}
+
 #endif
 
 template<class MyDevice>
 void CumulativeSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed input count check in CumulativeSum");
-  fx.tb<3>().device(*dev.edevice) = xs[0]->tb<3>().cumsum(d);
+  tb<3>(fx).device(*dev.edevice) = tb<3>(*(xs[0])).cumsum(d);
 }
 
 template<class MyDevice>
@@ -43,8 +47,11 @@ void CumulativeSum::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in CumulativeSum::backward");
   Eigen::array<bool, 4> reverse_dim = {false, false, false, false};
   reverse_dim[d] = true;
-  // Check whether the issue stems from reverse
-  dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>().cumsum(d);//.reverse(reverse_dim).cumsum(d).reverse(reverse_dim);
+  // First reverse the gradient
+  Tensor dEdf_reversed(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  tb<3>(dEdf_reversed).device(*dev.edevice) = tb<3>(dEdf).reverse(reverse_dim);
+  // Then accumulate and reverse
+  tb<3>(dEdxi).device(*dev.edevice) += tb<3>(dEdf_reversed).cumsum(d).reverse(reverse_dim);
 }
 DYNET_NODE_INST_DEV_IMPL(CumulativeSum)
 
