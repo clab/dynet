@@ -285,6 +285,8 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_flip_gradient "dynet::flip_gradient" (CExpression& x) except + #
     CExpression c_scale_gradient "dynet::scale_gradient" (CExpression& x, float lambd) except + #
     
+    CExpression c_argmax "dynet::argmax" (CExpression& x, unsigned d) except + #
+    
     CExpression c_op_neg "dynet::operator-" (CExpression& x) except + #
     CExpression c_op_add "dynet::operator+" (CExpression& x, CExpression& y) except + #
     CExpression c_op_scalar_add "dynet::operator+" (CExpression& x, float y) except + #

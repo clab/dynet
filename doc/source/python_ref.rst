@@ -332,6 +332,8 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.flip_gradient
 
+.. autofunction:: dynet.argmax
+
 Noise operations
 ^^^^^^^^^^^^^^^^
 

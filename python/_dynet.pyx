@@ -2527,6 +2527,21 @@ cpdef Expression scale_gradient(Expression x, float lambd = 1.0):
     """
     return Expression.from_cexpr(x.cg_version, c_scale_gradient(x.c(), lambd))
 
+cpdef Expression argmax(Expression x, unsigned d=0):
+    """Argmax
+    
+    This node takes an input vector :math:`x` and returns a one hot vector :math:`y` such that :math:`y_{\\text{argmax} x}=1`
+    Note that this operation is almost everywhere differentiable and its gradient is 0.
+    Tensors of order :math:`>1` are not supported yet. If you really need to use this operation on matrices, tensors, etc... feel free to open an issue on github.
+    
+    Args:
+        x (dynet.Expression): The input vector (can be batched)
+        d (int): Dimension (for now only 0 is supported)
+    
+    Returns:
+        dynet.Expression: The one hot argmax vector
+    """
+    return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), d))
 # binary-exp
 cpdef Expression cdiv(Expression x, Expression y):
     """Componentwise division
