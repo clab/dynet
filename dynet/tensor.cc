@@ -106,7 +106,7 @@ vector<real> as_scale_vector(const Tensor& v, float a) {
     CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(real) * res.size(), cudaMemcpyDeviceToHost));
 #endif
   } else { throw std::runtime_error("Bad device type"); }
-  std::transform(res.begin(), res.end(), res.begin(), [&](real t){ return t * a; });
+  if (a != 1.) std::transform(res.begin(), res.end(), res.begin(), [&](real t){ return t * a; });
   return res;
 }
 
