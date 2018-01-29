@@ -5,6 +5,7 @@ from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
 from libcpp.memory cimport shared_ptr
 import numpy as np
+import cython
 
 # python3 pickle already uses the c implementaion 
 try:
@@ -2022,6 +2023,75 @@ cdef class _inputExpression(Expression):
 def scalarInput(float s, device=""):
     return _cg.inputValue(s, device)
 
+cdef class _tensorInputExpression(Expression):
+    cdef vector[float] val
+    cdef FloatVectorValue reusable_val
+    cdef bool reusable
+    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None, batch_size=1, device="", reusable_expr=False):
+        self.reusable = reusable_expr
+        if reusable_expr:
+            self.reusable_val = FloatVectorValue(val)
+        else:
+            self.val = val
+        if dim is None: dim = val.size()
+        self.cg_version = g.version()
+        cdef CExpression e
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            if reusable_expr:
+                e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.reusable_val.addr(), dev)
+            else:
+                e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val, dev)
+        else:
+            if reusable_expr:
+                e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.reusable_val.addr())
+            else:
+                e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val)
+        self.vindex = e.i
+        g._inputs.append(self)
+    def set(self, vector[float] data):
+        """Change the value of the expression
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
+        This allows you to use dynet as a static framework.
+        For now this only accepts new values as flattened arrays (column majors). TODO : change this
+
+        Args:
+            data(vector[float]): New value
+        """
+        if not self.reusable: raise ValueError("set() can only be called on a reusable _tensorInputExpression")
+        self.cgp().invalidate()
+        self.reusable_val.set(data)
+
+
+cdef class inputTensorTranspose(Expression):
+    """
+    This allows inputting a raw numpy tensor in column-major format.
+    At input time, the numpy array can have only one dimension (it's possible to input a 1-d view on a multi-d tensor), while the expression dimensions can be controled using the dim and batch_size arguments.
+    """
+
+    cdef vector[float] val
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    def __cinit__(self, vector[float] val, dim=None, batch_size=1, device=""):
+        self.val = val
+        if dim is None: dim = (self.val.size(), )
+        total_size = batch_size
+        for d in dim: total_size *= d
+        if total_size != int(self.val.size()): raise ValueError("dimensions/batch size multiply to", total_size, ", which does not match size of given array", self.val.size())
+        self.cg_version = _cg.version()
+        cdef CExpression e
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val, dev)
+        else:
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val)
+        self.vindex = e.i
+        _cg._inputs.append(self)
+
 cdef class _vecInputExpression(Expression):
     """Subclass of Expression corresponding to any non-scalar input expressions
     
@@ -2146,7 +2216,8 @@ def inputMatrix(vector[float] v, tuple d):
     """
     raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
-def inputTensor(arr,batched=False,device=""):
+@cython.boundscheck(False)
+def inputTensor(arr,batched=False,device="",reusable_expr=False):
     """Creates a tensor expression based on a numpy array or a list.
     
     The dimension is inferred from the shape of the input.
@@ -2176,12 +2247,13 @@ def inputTensor(arr,batched=False,device=""):
         raise TypeError("Input Tensor should be a numpy.ndarray or a valid list of floats")
     if batched:
         dim = arr.shape[:-1] if len(arr.shape) > 1 else (1,)
-        batch_size= arr.shape[-1]
+        batch_size = arr.shape[-1]
     else:
         dim = arr.shape
         batch_size= 1
-    arr = arr.flatten(order='F')
-    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size,device=device)
+    if len(dim)>1 or batch_size > 1:
+        arr = arr.flatten(order='F')
+    return _tensorInputExpression(_cg, arr, dim, batch_size=batch_size, device=device, reusable_expr=reusable_expr)
 
 
 def sparse_inputTensor(idxs, values, shape, batched=False, defval=0,device=""):
