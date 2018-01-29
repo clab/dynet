@@ -22,7 +22,7 @@ namespace dynet {
 
 string Argmax::as_string(const vector<string>& arg_names) const {
   ostringstream s;
-  s << "argmax(" << arg_names[0] << ")_{" << dim << '}';
+  s << (straight_through ? "straight_through(" : "argmax(") << arg_names[0] << ")_{" << dim << '}';
   return s.str();
 }
 
@@ -61,7 +61,10 @@ void Argmax::backward_dev_impl(const MyDevice & dev,
                             const Tensor& dEdf,
                             unsigned i,
                             Tensor& dEdxi) const {
-  // No gradient!
+  // If we're using the straight-through estimator: copy gradient
+  if (straight_through)
+    tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
+  // Otherwise no gradient!
 }
 DYNET_NODE_INST_DEV_IMPL(Argmax)
 

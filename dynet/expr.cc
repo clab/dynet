@@ -46,6 +46,7 @@ Expression flip_gradient(const Expression& x) { return Expression(x.pg, x.pg->ad
 Expression scale_gradient(const Expression& x, float lambd) { return Expression(x.pg, x.pg->add_function<ScaleGradient>({x.i}, lambd)); }
 
 Expression argmax(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<Argmax>({x.i}, d)); }
+Expression straight_through(const Expression& x, unsigned d) { return Expression(x.pg, x.pg->add_function<Argmax>({x.i}, d, true)); }
 
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
 Expression operator+(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<CwiseSum>({x.i, y.i}));}

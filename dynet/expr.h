@@ -1750,7 +1750,21 @@ Expression scale_gradient(const Expression& x, float lambd = 1.0f);
  *
  * \return The one hot argmax vector
  */
-Expression argmax(const Expression& x, unsigned d);
+Expression argmax(const Expression& x, unsigned d=0);
+
+/**
+ * \ingroup flowoperations
+ * \brief Stright-through estimator
+ * \details This node implements the straight-through estimator [(Bengio et al., 2013)](https://arxiv.org/abs/1308.3432).
+ * Its forward pass is the same as the argmax operation, but its gradient is the same as the identity function.
+ * Note that this does not technically correspond to a differentiable function (hence the name "estimator").
+ * Tensors of order \f$>1\f$ are not supported yet
+ *  
+ * \param x The input vector (can be batched)
+ *
+ * \return The one hot argmax vector
+ */
+Expression straight_through(const Expression& x, unsigned d);
 
 /**
  * \ingroup flowoperations
