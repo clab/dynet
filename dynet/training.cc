@@ -102,13 +102,15 @@ void Trainer::update() {
   }
   for(size_t i = 0; i < lparams.size(); ++i) {
     auto &p = lparams[i];
-    if(sparse_updates_enabled && p->updated && !p->all_updated) {
-      for (auto j : p->non_zero_grads)
-        update_lookup_params(gscale, i, j);
-    } else {
-      update_lookup_params(gscale, i);
+    if (p->updated) {
+      if(sparse_updates_enabled && !p->all_updated) {
+        for (auto j : p->non_zero_grads)
+          update_lookup_params(gscale, i, j);
+      } else {
+        update_lookup_params(gscale, i);
+      }
+      p->clear();
     }
-    p->clear();
   }
   ++updates;
   ++updates_since_status;
@@ -402,6 +404,63 @@ void AdamTrainer::restart() {
   for (auto slp : lm)
     TensorTools::zero(slp.all_h);
   for (auto slp : lv)
+    TensorTools::zero(slp.all_h);
+}
+
+#endif
+
+// --- AMSGradTrainer
+
+// Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=mean, ts[3]=variance, t[4]=max
+template <class MyDevice>
+void AmsgradTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
+  tvec(*ts[1]).device(*dev.edevice) = tvec(*ts[1]) * gscale;
+  tvec(*ts[2]).device(*dev.edevice) = tvec(*ts[2]) * beta_1 + tvec(*ts[1]) * (1.f - beta_1);
+  tvec(*ts[3]).device(*dev.edevice) = tvec(*ts[3]) * beta_2 + tvec(*ts[1]).square() * (1.f - beta_2);
+  tvec(*ts[4]).device(*dev.edevice) = tvec(*ts[4]).cwiseMax(tvec(*ts[3]));
+  float lr_t = learning_rate * sqrt(1-pow(beta_2, updates+1))/(1-pow(beta_1, updates+1))/ model->get_weight_decay().current_weight_decay();
+  tvec(*ts[0]).device(*dev.edevice) -= tvec(*ts[2]) / (tvec(*ts[4]).sqrt() + epsilon) * lr_t;
+}
+DYNET_TRAINER_INST_DEV_IMPL(AmsgradTrainer)
+
+#ifndef __CUDACC__
+void AmsgradTrainer::update_params(real gscale, size_t idx) {
+  auto & p = model->parameters_list()[idx];
+  update_rule(gscale, {&p->values, &p->g, &m[idx].h, &v[idx].h, &vhat[idx].h});
+}
+void AmsgradTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &lv[idx].h[lidx], &lvhat[idx].h[lidx]});
+}
+void AmsgradTrainer::update_lookup_params(real gscale, size_t idx) {
+  auto & p = model->lookup_parameters_list()[idx];
+  update_rule(gscale, {&p->all_values, &p->all_grads, &lm[idx].all_h, &lv[idx].all_h, &lvhat[idx].all_h});
+}
+unsigned AmsgradTrainer::alloc_impl() {
+  allocate_shadow_parameters(*model, aux_allocated, m);
+  allocate_shadow_parameters(*model, aux_allocated, v);
+  allocate_shadow_parameters(*model, aux_allocated, vhat);
+  return vhat.size();
+}
+unsigned AmsgradTrainer::alloc_lookup_impl() {
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, lm);
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, lv);
+  allocate_shadow_lookup_parameters(*model, aux_allocated_lookup, lvhat);
+  return lvhat.size();
+}
+
+void AmsgradTrainer::restart() {
+  for (auto sp : m)
+    TensorTools::zero(sp.h);
+  for (auto sp : v)
+    TensorTools::zero(sp.h);
+  for (auto sp : vhat)
+    TensorTools::zero(sp.h);
+  for (auto slp : lm)
+    TensorTools::zero(slp.all_h);
+  for (auto slp : lv)
+    TensorTools::zero(slp.all_h);
+  for (auto slp : lvhat)
     TensorTools::zero(slp.all_h);
 }
 

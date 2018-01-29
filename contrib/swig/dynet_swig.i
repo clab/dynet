@@ -853,6 +853,11 @@ struct AdamTrainer : public Trainer {
   void restart() override;
 };
 
+struct AmsgradTrainer : public Trainer {
+  explicit AmsgradTrainer(ParameterCollection& m, float learning_rate = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8);
+  void restart() override;
+};
+
 //struct EGTrainer : public Trainer {
 //  explicit EGTrainer(ParameterCollection& mod, real learning_rate = 0.1, real mom = 0.9, real ne = 0.0);
 //  void enableCyclicalLR(float _learning_rate_min = 0.01, float _learning_rate_max = 0.1, float _step_size = 2000, float _gamma = 0.0);

@@ -1728,15 +1728,27 @@ Expression nobackprop(const Expression& x);
 
 /**
  * \ingroup flowoperations
- * \brief Negative backprop
- * \details This node has no effect on the forward pass, but takes negative on backprop process.
+ * \brief Flip gradient
+ * \details This node has no effect on the forward pass, but inverts the gradient on backprop.
  *          This operation is widely used in adversarial networks.
  *
  * \param x The input expression
  *
- * \return An output expression containing the same as input (only effects on backprop process)
+ * \return An output expression containing the same as input (only effects the backprop process)
  */
 Expression flip_gradient(const Expression& x);
+
+/**
+ * \ingroup flowoperations
+ * \brief Scale gradient by constant
+ * \details This node has no effect on the forward pass, but scales the gradient by lambda
+ *          on backprop
+ *
+ * \param x The input expression
+ *
+ * \return An output expression containing the same as input (only effects the backprop process)
+ */
+Expression scale_gradient(const Expression& x, float lambd = 1.0f);
 
 /**
  * \ingroup flowoperations
