@@ -99,25 +99,36 @@ cdef class DynetParams: # {{{
         """
         cpu_use = False
         sys_argv = list(sys.argv)
+        truncated_args = []
+        for arg in sys_argv:
+          pos = arg.find('=')
+          if pos == -1:
+            truncated_args.append(arg)
+          else:
+            truncated_args.append(arg[:pos])
         if '--dynet-gpu' in sys_argv:
             sys_argv.remove('--dynet-gpu')
-            sys_argv.append('--dynet-gpus')
-            sys_argv.append('1')
-        elif not ('--dynet-gpus' in sys_argv or
-                  '--dynet-devices' in sys_argv or
-                  '--dynet-viz' in sys_argv):
+            sys_argv.append('--dynet-gpus=1')
+        elif '--dynet_gpu' in sys_argv:
+            sys_argv.remove('--dynet_gpu')
+            sys_argv.append('--dynet-gpus=1')
+        elif not ('--dynet-gpus' in truncated_args or
+                  '--dynet_gpus' in truncated_args or
+                  '--dynet-devices' in truncated_args or
+                  '--dynet_devices' in truncated_args or
+                  '--dynet-viz' in truncated_args or
+                  '--dynet_viz' in truncated_args):
             cpu_use = True
 
         argv_count = int(len(sys_argv))
-        cdef int argc = argv_count + 2 if cpu_use else argv_count
+        cdef int argc = argv_count + 1 if cpu_use else argv_count
         cdef char** c_argv
         c_argv = <char**>malloc(sizeof(char*) * argc) # TODO check failure?
         args = [bytearray(x, encoding="utf-8") for x in sys_argv]
         for idx, s in enumerate(args):
             c_argv[idx] = s
         if cpu_use:
-            c_argv[argc-2] = '--dynet-devices' 
-            c_argv[argc-1] = 'CPU'
+            c_argv[argc-1] = '--dynet-devices=CPU'
 
         if shared_parameters is None:
             self.cparams = dynet.extract_dynet_params(argc,c_argv, 0)
@@ -6140,3 +6151,4 @@ cdef class ClassFactoredSoftmaxBuilder(SoftmaxBuilder):
         return Expression.from_cexpr(self.cg_version, self.thiscfptr.subclass_logits(x.c(), classid))
 
 # Softmax Builders }}}
+
