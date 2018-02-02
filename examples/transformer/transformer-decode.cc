@@ -4,6 +4,7 @@
 */
 
 #include "ensemble-decoder.h"
+#include "getpid.h"
 
 #include <iostream>
 #include <fstream>
@@ -93,7 +94,7 @@ int main(int argc, char** argv) {
 	notify(vm);
 
 	// print command line
-	cerr << endl << "PID=" << ::getpid() << endl;
+	cerr << endl << "PID=" << getpid() << endl;
 	cerr << "Command: ";
 	for (int i = 0; i < argc; i++){ 
 		cerr << argv[i] << " "; 

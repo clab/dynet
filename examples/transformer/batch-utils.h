@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <numeric>
 
 // --------------------------------------------------------------------------------------------------------------------------------
 // The batching strategy here is similar to one used in lamtram toolkit (https://github.com/neubig/lamtram).
