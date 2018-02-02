@@ -111,7 +111,7 @@ void HuberDistance::backward_dev_impl(const MyDevice & dev,
   diff.v = static_cast<float*>(scratch_allocator->allocate(diff.d.size() * sizeof(float)));
   tvec(diff).device(*dev.edevice) = tvec(*xs[i]) - tvec(*xs[1-i]);
   float scale = 2 * as_scalar(dEdf);
-  tvec(dEdxi).device(*dev.edevice) += scale * (tvec(diff).abs() < d).select(tvec(diff), d * ((tvec(diff) > 0.f).cast<float>() - (tvec(diff) < 0.f).cast<float>()));
+  tvec(dEdxi).device(*dev.edevice) += scale * (tvec(diff).abs() < d).select(tvec(diff), d * ((tvec(diff) > 0.f).template cast<float>() - (tvec(diff) < 0.f).template cast<float>()));
   scratch_allocator->free();
 }
 DYNET_NODE_INST_DEV_IMPL(HuberDistance)
