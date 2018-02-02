@@ -5,6 +5,7 @@ from cython.operator cimport dereference as deref
 from libc.stdlib cimport malloc, free
 from libcpp.memory cimport shared_ptr
 import numpy as np
+import cython
 
 # python3 pickle already uses the c implementaion 
 try:
@@ -98,25 +99,36 @@ cdef class DynetParams: # {{{
         """
         cpu_use = False
         sys_argv = list(sys.argv)
+        truncated_args = []
+        for arg in sys_argv:
+          pos = arg.find('=')
+          if pos == -1:
+            truncated_args.append(arg)
+          else:
+            truncated_args.append(arg[:pos])
         if '--dynet-gpu' in sys_argv:
             sys_argv.remove('--dynet-gpu')
-            sys_argv.append('--dynet-gpus')
-            sys_argv.append('1')
-        elif not ('--dynet-gpus' in sys_argv or
-                  '--dynet-devices' in sys_argv or
-                  '--dynet-viz' in sys_argv):
+            sys_argv.append('--dynet-gpus=1')
+        elif '--dynet_gpu' in sys_argv:
+            sys_argv.remove('--dynet_gpu')
+            sys_argv.append('--dynet-gpus=1')
+        elif not ('--dynet-gpus' in truncated_args or
+                  '--dynet_gpus' in truncated_args or
+                  '--dynet-devices' in truncated_args or
+                  '--dynet_devices' in truncated_args or
+                  '--dynet-viz' in truncated_args or
+                  '--dynet_viz' in truncated_args):
             cpu_use = True
 
         argv_count = int(len(sys_argv))
-        cdef int argc = argv_count + 2 if cpu_use else argv_count
+        cdef int argc = argv_count + 1 if cpu_use else argv_count
         cdef char** c_argv
         c_argv = <char**>malloc(sizeof(char*) * argc) # TODO check failure?
         args = [bytearray(x, encoding="utf-8") for x in sys_argv]
         for idx, s in enumerate(args):
             c_argv[idx] = s
         if cpu_use:
-            c_argv[argc-2] = '--dynet-devices' 
-            c_argv[argc-1] = 'CPU'
+            c_argv[argc-1] = '--dynet-devices=CPU'
 
         if shared_parameters is None:
             self.cparams = dynet.extract_dynet_params(argc,c_argv, 0)
@@ -311,12 +323,12 @@ cdef _load_one(datafname, fh, model):
         obj.param_collection().populate(datafname, name)
         return obj
 
-cpdef save(basename, lst):
+cpdef save(basename, objects):
     """Saves a list of parameters, lookup parameters and builder objects to disk.
 
     Args:
         basename (string): The base-name of the files to save. Two files will be created: `basename.data` and `basename.meta`.
-        lst      (list):  A list of objects to save (see below).
+        objects  (iterable):  An iterable of objects to save (see below).
 
 
     Example:
@@ -336,7 +348,7 @@ cpdef save(basename, lst):
 
     
     What can be saved:
-        Each object in `lst` must be one of the following:
+        Each object in `objects` must be one of the following:
         
         (1) Parameter
         (2) LookupParameter
@@ -356,24 +368,23 @@ cpdef save(basename, lst):
         behind the scenes:
         
         - for each item, we write to `.meta`:
-            if its a Parameters/ParameterCollection: 
+            if it is a Parameters/ParameterCollection:
                 its type and full name.
-            if its a builder:
+            if it is a builder:
                 its class, its spec, the full name of its parameters collection.
         - the associated parameters/sub-collection is then saved to `.data`
     """
     open(basename+".data","w").close() # delete current
-    fh = open(basename+".meta","wb")
-    for item in lst:
-        _save_one(basename+".data", fh, item)
-    fh.close()
+    with open(basename+".meta","wb") as fh:
+        for item in objects:
+            _save_one(basename+".data", fh, item)
 
 cpdef load(basename, params):
     """Loads a list of parameters, lookup parameters and builder objects from disk.
-    The loaded objects are added to the supplied params collection, and returned.
+    The loaded objects are added to the supplied parameter collection, and returned.
 
     Args:
-        basename (string):  The basename to read from. 
+        basename (string):  The basename to read from.
                             This is the same string that was used when saving the objects.
         params   (dynet.ParameterCollection): A ParameterCollection to add the loaded objects to.
 
@@ -396,15 +407,42 @@ cpdef load(basename, params):
         pc = dy.ParameterCollection()
         E2, builder2, W2 = dy.load("model", pc)
     """
-    fh = open(basename+".meta","rb")
-    res = []
-    while True:
-        try:
-            obj = _load_one(basename+".data", fh, params)
-        except EOFError: break
-        res.append(obj)
-    fh.close()
-    return res
+    return list(load_generator(basename, params))
+
+def load_generator(basename, params):
+    """Same as load(), but the parameters are returned as a generator instead of a list.
+    This allows saving memory or even showing a progress bar while loading the parameters.
+
+    Args:
+        basename (string):  The basename to read from.
+                            This is the same string that was used when saving the objects.
+        params   (dynet.ParameterCollection): A ParameterCollection to add the loaded objects to.
+
+    Returns:
+        A generator of parameters, lookup parameters and builder objects, in the same order they
+        were passed to the save function.
+
+
+    Example:
+        import dynet as dy
+        from tqdm import tqdm
+
+        pc = dy.ParameterCollection()
+        W = pc.add_parameters((100,50))
+        E = pc.add_lookup_parameters((1000,50))
+        builder = dy.LSTMBuilder(2, 50, 50, pc)
+
+        dy.save("model", tqdm((E, builder, W), unit="param"))
+
+        # then, when loading:
+        pc = dy.ParameterCollection()
+        E2, builder2, W2 = tqdm(dy.load_generator("model", pc), unit="param")
+    """
+    with open(basename+".meta","rb") as fh:
+        while True:
+            try:
+                yield _load_one(basename+".data", fh, params)
+            except EOFError: break
 # }}}
 
 cdef c_tensor_as_np(CTensor &t):
@@ -623,7 +661,8 @@ cdef class Parameters: # {{{
             arr = np.asarray(arr)
         shape = arr.shape
         if self.shape() != shape:
-            raise ValueError("Shape of values and parameter don't match in Parameters.set_value")
+            raise ValueError("Shape of values and parameter don't match in Parameters.set_value: "
+                             "%s != %s" % (shape, self.shape()))
         arr = arr.flatten(order='F')
         self.thisptr.set_value(arr)
 
@@ -1164,7 +1203,7 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.Parameters): Created Parameter
         """
-        assert(isinstance(dim,(tuple,int)))
+        assert isinstance(dim,(tuple,int)), "Parameter dimension must be tuple or int: %s" % dim
         cdef CParameters p
         cdef CParameterInit *initializer
         cdef CDevice *dev
@@ -1194,7 +1233,7 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.LookupParameters): Created LookupParameter
         """
-        assert(isinstance(dim, tuple))
+        assert isinstance(dim, tuple), "Lookup parameter dimension must be tuple: %s" % dim
         cdef CDevice *dev
         cdef CLookupParameters p
         cdef int nids = dim[0]
@@ -1246,7 +1285,7 @@ cdef class ParameterCollection: # {{{
         Args:
             lam (float): Weight decay coefficient
         """
-        assert(isinstance(lam,float))
+        assert isinstance(lam,float), "Weight decay lambda must be float: %s" % lam
         self.thisptr.set_weight_decay_lambda(lam)
 
     cpdef name(self):
@@ -1669,7 +1708,7 @@ cdef class Expression: #{{{
             IndexError: If the indices are too large
             ValueError: In case of improper slice or if step is used
         """
-        assert isinstance(index, (int, slice))
+        assert isinstance(index, (int, slice)), "Expression key must be int or slice: %s" % index
         cdef int rows = self.c().dim().rows()
         cdef int i, j
         if isinstance(index, int):
@@ -1995,6 +2034,75 @@ cdef class _inputExpression(Expression):
 def scalarInput(float s, device=""):
     return _cg.inputValue(s, device)
 
+cdef class _tensorInputExpression(Expression):
+    cdef vector[float] val
+    cdef FloatVectorValue reusable_val
+    cdef bool reusable
+    def __cinit__(self, ComputationGraph g, vector[float] val, dim=None, batch_size=1, device="", reusable_expr=False):
+        self.reusable = reusable_expr
+        if reusable_expr:
+            self.reusable_val = FloatVectorValue(val)
+        else:
+            self.val = val
+        if dim is None: dim = val.size()
+        self.cg_version = g.version()
+        cdef CExpression e
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            if reusable_expr:
+                e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.reusable_val.addr(), dev)
+            else:
+                e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val, dev)
+        else:
+            if reusable_expr:
+                e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), self.reusable_val.addr())
+            else:
+                e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val)
+        self.vindex = e.i
+        g._inputs.append(self)
+    def set(self, vector[float] data):
+        """Change the value of the expression
+        
+        This is useful if you want to to change the input and recompute the graph without needing to re-create it. Don't forget to use :code:`recalculate=True` when calling :code:`.value()` on the output.
+        This allows you to use dynet as a static framework.
+        For now this only accepts new values as flattened arrays (column majors). TODO : change this
+
+        Args:
+            data(vector[float]): New value
+        """
+        if not self.reusable: raise ValueError("set() can only be called on a reusable _tensorInputExpression")
+        self.cgp().invalidate()
+        self.reusable_val.set(data)
+
+
+cdef class inputTensorTranspose(Expression):
+    """
+    This allows inputting a raw numpy tensor in column-major format.
+    At input time, the numpy array can have only one dimension (it's possible to input a 1-d view on a multi-d tensor), while the expression dimensions can be controled using the dim and batch_size arguments.
+    """
+
+    cdef vector[float] val
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    def __cinit__(self, vector[float] val, dim=None, batch_size=1, device=""):
+        self.val = val
+        if dim is None: dim = (self.val.size(), )
+        total_size = batch_size
+        for d in dim: total_size *= d
+        if total_size != int(self.val.size()): raise ValueError("dimensions/batch size multiply to", total_size, ", which does not match size of given array", self.val.size())
+        self.cg_version = _cg.version()
+        cdef CExpression e
+        cdef CDevice* dev
+        if str(device) != "":
+            dev = c_str2dev(device)
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val, dev)
+        else:
+            e = c_input(self.cgp()[0], Dim(dim,batch_size=batch_size), &self.val)
+        self.vindex = e.i
+        _cg._inputs.append(self)
+
 cdef class _vecInputExpression(Expression):
     """Subclass of Expression corresponding to any non-scalar input expressions
     
@@ -2119,7 +2227,8 @@ def inputMatrix(vector[float] v, tuple d):
     """
     raise DeprecationWarning('matInput is now deprecated. Use dynet.inputTensor instead')
 
-def inputTensor(arr,batched=False,device=""):
+@cython.boundscheck(False)
+def inputTensor(arr,batched=False,device="",reusable_expr=False):
     """Creates a tensor expression based on a numpy array or a list.
     
     The dimension is inferred from the shape of the input.
@@ -2149,12 +2258,13 @@ def inputTensor(arr,batched=False,device=""):
         raise TypeError("Input Tensor should be a numpy.ndarray or a valid list of floats")
     if batched:
         dim = arr.shape[:-1] if len(arr.shape) > 1 else (1,)
-        batch_size= arr.shape[-1]
+        batch_size = arr.shape[-1]
     else:
         dim = arr.shape
         batch_size= 1
-    arr = arr.flatten(order='F')
-    return _cg.inputMatrixLiteral(arr, dim,batch_size=batch_size,device=device)
+    if len(dim)>1 or batch_size > 1:
+        arr = arr.flatten(order='F')
+    return _tensorInputExpression(_cg, arr, dim, batch_size=batch_size, device=device, reusable_expr=reusable_expr)
 
 
 def sparse_inputTensor(idxs, values, shape, batched=False, defval=0,device=""):
@@ -5282,8 +5392,8 @@ class BiRNNBuilder(object): # {{{
         self.spec = num_layers, input_dim, hidden_dim, rnn_builder_factory, builder_layers
         model = self.model = model.add_subcollection("birnn")
         if builder_layers is None:
-            assert num_layers > 0
-            assert hidden_dim % 2 == 0, "BiRNN hidden dimension must be even."
+            assert num_layers > 0, "BiRNN number of layers must be positive: %d" % num_layers
+            assert hidden_dim % 2 == 0, "BiRNN hidden dimension must be even: %d" % hidden_dim
             self.builder_layers = []
             f = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
             b = rnn_builder_factory(1, input_dim, hidden_dim/2, model)
@@ -6075,3 +6185,4 @@ cdef class ClassFactoredSoftmaxBuilder(SoftmaxBuilder):
         return Expression.from_cexpr(self.cg_version, self.thiscfptr.subclass_logits(x.c(), classid))
 
 # Softmax Builders }}}
+

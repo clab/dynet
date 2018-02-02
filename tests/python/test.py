@@ -297,6 +297,25 @@ class TestBatchManipulation(unittest.TestCase):
         w = dy.concatenate_to_batch([y, z])
         self.assertTrue(np.allclose(w.npvalue(), self.pval.T))
 
+class TestIOPartialWeightDecay(unittest.TestCase):
+    def setUp(self):
+        self.file = "tmp.model"
+        self.m = dy.ParameterCollection()
+        self.m2 = dy.ParameterCollection()
+        self.p = self.m.add_parameters(1)
+        self.t = dy.SimpleSGDTrainer(self.m)
+
+    def test_save_load(self):
+        self.p.expr().forward()
+        self.p.expr().backward()
+        self.t.update()
+        dy.renew_cg()
+        v1 = self.p.expr().value()
+        dy.save(self.file, [self.p])
+        [p2] = dy.load(self.file, self.m2)
+        v2 = p2.expr().value()
+        self.assertTrue(np.allclose(v1, v2))
+
 
 class TestIOEntireModel(unittest.TestCase):
     def setUp(self):
@@ -340,6 +359,10 @@ class TestIOHighLevelAPI(unittest.TestCase):
     def test_save_load(self):
         dy.save(self.file, [self.b])
         [b] = dy.load(self.file, self.m2)
+
+    def test_save_load_generator(self):
+        dy.save(self.file, (x for x in [self.b]))
+        [b] = list(dy.load_generator(self.file, self.m2))
 
 
 class TestExpression(unittest.TestCase):

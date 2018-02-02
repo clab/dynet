@@ -9,6 +9,7 @@
 #include <random>
 #include <vector>
 #include <cstring>
+#include <algorithm>
 
 #ifdef __CUDACC__
 #include "dynet/gpu-ops.h"
@@ -92,6 +93,20 @@ vector<Eigen::DenseIndex> as_vector(const IndexTensor& v) {
     CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(Eigen::DenseIndex) * res.size(), cudaMemcpyDeviceToHost));
 #endif
   } else { throw std::runtime_error("Bad device type"); }
+  return res;
+}
+
+vector<real> as_scale_vector(const Tensor& v, float a) {
+  vector<real> res(v.d.size());
+  if (v.device->type == DeviceType::CPU) {
+    memcpy(&res[0], v.v, sizeof(real) * res.size());
+  } else if (v.device->type == DeviceType::GPU) {
+#if HAVE_CUDA
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)v.device)->cuda_device_id));
+    CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(real) * res.size(), cudaMemcpyDeviceToHost));
+#endif
+  } else { throw std::runtime_error("Bad device type"); }
+  if (a != 1.) std::transform(res.begin(), res.end(), res.begin(), [&](real t){ return t * a; });
   return res;
 }
 
