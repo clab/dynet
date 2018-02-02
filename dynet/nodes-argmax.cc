@@ -44,10 +44,10 @@ template<class MyDevice>
 void Argmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Eigen::DenseIndex* argmax_ids_mem = static_cast<Eigen::DenseIndex*>(aux_mem);
   Dim argmax_dim({1}, xs[0]->d.bd);
-  IndexTensor argmax_ids(argmax_dim, argmax_ids_mem, fx.device, DeviceMempool::FXS);
+  IndexTensor argmax_ids(argmax_dim, argmax_ids_mem, fx.device, DeviceMempool::SCS);
   tb<0>(argmax_ids).device(*dev.edevice) = tb<1>(*xs[0]).argmax(d);
   std::vector<Eigen::DenseIndex> ids_vec = as_vector(argmax_ids);
-  tvec(fx) = tvec(fx).constant(0.0);
+  tvec(fx).device(*dev.edevice) = tvec(fx).constant(0.0);
   for (unsigned b=0; b<xs[0]->d.bd; b++){
       int idx = ids_vec[b] + b * (xs[0]->d[d]);
       TensorTools::set_element(fx, idx, 1.0);
