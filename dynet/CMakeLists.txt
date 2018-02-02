@@ -285,7 +285,7 @@ if(WITH_CUDA_BACKEND)
     target_compile_definitions(dynet PRIVATE HAVE_CUDNN)
   endif()
   cuda_add_cublas_to_target(dynet)
-  target_link_libraries(dynet ${LIBS} ${CUDA_curand_LIBRARY})
+  target_link_libraries(dynet ${LIBS})
 else()
   # Build cpu library
   add_library(dynet ${dynet_library_SRCS} ${dynet_library_HDRS})
