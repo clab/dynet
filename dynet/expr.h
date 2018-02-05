@@ -434,15 +434,16 @@ Expression constant(ComputationGraph& g, const Dim& d, float val);
 /**
  * \ingroup inputoperations
  * \brief Create a random normal vector
- * \details Create a vector distributed according to normal distribution with mean
- *          0, variance 1.
+ * \details Create a vector distributed according to normal distribution with specified mean and standard deviation.
  *
  * \param g Computation graph
  * \param d The dimensions of the input
+ * \param mean The mean of the distribution (default: 0.0)
+ * \param stddev The standard deviation of the distribution (default: 1.0)
  *
  * \return A "d" dimensioned normally distributed vector
  */
-Expression random_normal(ComputationGraph& g, const Dim& d);
+Expression random_normal(ComputationGraph& g, const Dim& d, float mean=0.f, float stddev=1.0);
 
 /**
  * \ingroup inputoperations

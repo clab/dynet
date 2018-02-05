@@ -276,7 +276,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_zeros "dynet::zeros" (CComputationGraph& g, CDim& d) except + #
     CExpression c_ones "dynet::ones" (CComputationGraph& g, CDim& d) except + #
     CExpression c_constant "dynet::constant" (CComputationGraph& g, CDim& d, float val) except + #
-    CExpression c_random_normal "dynet::random_normal" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_random_normal "dynet::random_normal" (CComputationGraph& g, CDim& d, float m, float s) except + #
     CExpression c_random_bernoulli "dynet::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale) except +
     CExpression c_random_uniform "dynet::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) except + #
     CExpression c_random_gumbel "dynet::random_gumbel" (CComputationGraph& g, CDim& d, float left, float right) except + #

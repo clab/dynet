@@ -36,7 +36,7 @@ Expression zeros(ComputationGraph& g, const Dim& d) { return Expression(&g, g.ad
 // Expression zeroes(ComputationGraph& g, const Dim& d) {return zeros(g, d);}
 Expression ones(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Constant>(d, 1.f)); }
 Expression constant(ComputationGraph& g, const Dim& d, float val) { return Expression(&g, g.add_function<Constant>(d, val)); }
-Expression random_normal(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<RandomNormal>(d)); }
+Expression random_normal(ComputationGraph& g, const Dim& d, float mean, float stddev) { return Expression(&g, g.add_function<RandomNormal>(d, mean, stddev)); }
 Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale) { return Expression(&g, g.add_function<RandomBernoulli>({}, d, p, scale)); }
 Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right) { return Expression(&g, g.add_function<RandomUniform>({}, d, left, right)); }
 Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu, real beta) { return Expression(&g, g.add_function<RandomGumbel>({}, d, mu, beta)); }
