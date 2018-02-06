@@ -1199,11 +1199,11 @@ BOOST_AUTO_TEST_CASE( dropout_dim_forward ) {
 // TODO: Dropout scales the gradients at training time, so they don't match.
 // Expression block_dropout(const Expression& x, real p);
 
-// Expression argmax(const Expression& x, unsigned d);
+// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
 BOOST_AUTO_TEST_CASE( argmax_forward ) {
   dynet::ComputationGraph cg;
   Expression x = input(cg, Dim({3}, 2), batch_vals);
-  Expression y = argmax(x, 0);
+  Expression y = argmax(x, zero_gradient);
   std::vector<float> v = as_vector(y.value());
   BOOST_CHECK_EQUAL(v[0], 0.0);
   BOOST_CHECK_EQUAL(v[1], 0.0);
@@ -1213,11 +1213,11 @@ BOOST_AUTO_TEST_CASE( argmax_forward ) {
   BOOST_CHECK_EQUAL(v[5], 1.0);
 }
 
-// Expression argmax(const Expression& x, unsigned d);
+// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
 BOOST_AUTO_TEST_CASE( argmax_backward ) {
   dynet::ComputationGraph cg;
   Expression x = input(cg, Dim({3}, 2), batch_vals);
-  Expression y = argmax(x, 0);
+  Expression y = argmax(x, zero_gradient);
   Expression z = sum_batches(squared_norm(y));
   cg.backward(z, true);
   std::vector<float> g_x = as_vector(x.gradient());
@@ -1229,12 +1229,12 @@ BOOST_AUTO_TEST_CASE( argmax_backward ) {
   BOOST_CHECK_EQUAL(g_x[5], 0.0);
 }
 
-// Expression straight_through(const Expression& x, unsigned d);
+// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
 BOOST_AUTO_TEST_CASE( straight_through_backward ) {
   dynet::ComputationGraph cg;
   Expression x = input(cg, Dim({3}, 2), batch_vals);
   Expression x_ = input(cg, Dim({3}, 2), batch_vals);
-  Expression y = straight_through(x, 0);
+  Expression y = argmax(x, straight_through_gradient);
   Expression z = sum_batches(dot_product(y, x_));
   cg.backward(z, true);
   std::vector<float> g_x = as_vector(x.gradient());

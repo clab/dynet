@@ -334,8 +334,6 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.argmax
 
-.. autofunction:: dynet.straight_through
-
 Noise operations
 ^^^^^^^^^^^^^^^^
 

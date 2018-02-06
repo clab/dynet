@@ -1742,30 +1742,38 @@ Expression scale_gradient(const Expression& x, float lambd = 1.0f);
 
 /**
  * \ingroup flowoperations
- * \brief Argmax
- * \details This node takes an input vector \f$x\f$ and returns a one hot vector \f$y\f$ such that \f$y_{\text{argmax} x}=1\f$
- * Note that this almost everywhere differentiable and its gradient is 0.
- * Tensors of order \f$>1\f$ are not supported yet
- *  
- * \param x The input vector (can be batched)
- *
- * \return The one hot argmax vector
+ * \brief Gradient modes for the argmax operation
  */
-Expression argmax(const Expression& x, unsigned d=0);
+enum ArgmaxGradient {
+    zero_gradient,              /* Standard gradient (=no gradient) */
+    straight_through_gradient   /* Straight-through estimator (=gradient of the identity)*/
+};
 
 /**
  * \ingroup flowoperations
- * \brief Stright-through estimator
- * \details This node implements the straight-through estimator [(Bengio et al., 2013)](https://arxiv.org/abs/1308.3432).
+ * \brief Argmax
+ * \details This node takes an input vector \f$x\f$ and returns a one hot vector \f$y\f$ such that \f$y_{\text{argmax} x}=1\f$
+ * 
+ * There are two gradient modes for this operation:
+ *
+ *     argmax(x, zero_gradient)
+ * 
+ * is the standard argmax operation. Note that this almost everywhere differentiable and its gradient is 0. **It will stop your gradient**
+ *
+ *     argmax(x, straight_through_gradient)
+ *
+ * This gradient mode implements the straight-through estimator [(Bengio et al., 2013)](https://arxiv.org/abs/1308.3432).
  * Its forward pass is the same as the argmax operation, but its gradient is the same as the identity function.
  * Note that this does not technically correspond to a differentiable function (hence the name "estimator").
+ *
  * Tensors of order \f$>1\f$ are not supported yet
  *  
  * \param x The input vector (can be batched)
+ * \param gradient_mode Specify the gradient type (zero or straight-through)
  *
  * \return The one hot argmax vector
  */
-Expression straight_through(const Expression& x, unsigned d);
+Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
 
 /**
  * \ingroup flowoperations
