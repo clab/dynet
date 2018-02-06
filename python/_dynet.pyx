@@ -2531,7 +2531,7 @@ cpdef Expression constant(dim, float val, int batch_size=1):
     """
     return Expression.from_cexpr(_cg.version(), c_constant(_cg.thisptr[0], Dim(dim, batch_size), val))
 
-cpdef Expression random_normal(dim, int batch_size=1): 
+cpdef Expression random_normal(dim, float mean=0., float stddev=1., int batch_size=1): 
     """Create a random normal vector
     
     Create a vector distributed according to normal distribution with mean 0, variance 1.
@@ -2540,12 +2540,14 @@ cpdef Expression random_normal(dim, int batch_size=1):
         dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
+        mean (float): mean of the distribution (default: 0.0)
+        stddev (float): standard deviation of distribution (default: 1.0)
         batch_size (number): Batch size of the tensor  (default: (1))
     
     Returns:
         dynet.Expression: A "d" dimensioned normally distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], Dim(dim, batch_size)))
+    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], Dim(dim, batch_size), mean, stddev))
 cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=1):
     """Create a random bernoulli tensor
     
