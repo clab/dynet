@@ -109,9 +109,8 @@ namespace dynet {
 template<typename Scalar> struct scalar_log_sigmoid_forward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_log_sigmoid_forward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
-#ifndef __CUDACC__
     using std::exp;
-#endif
+    using std::log1p;
     // distinguish between positive and negative values of x for precision
     if (x>0)
         return -log1p(exp(-x));
