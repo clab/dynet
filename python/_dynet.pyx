@@ -4644,21 +4644,23 @@ cdef class _RNNBuilder: # {{{
         Args:
             vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression` s  (default: {None})
             update (bool): trainer updates internal parameters (default: {True})
+                           NOTE: subsequent calls without calling dynet.renew_cg() will not change the `update` behavior.
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
+        # if we didn't initialize for this CG yet, create a new _init_state
         if self.cg_version != _cg.version():
             self.new_graph(update)
-            if vecs is not None:
-                self.start_new_sequence(vecs)
-            else:
-                self.start_new_sequence()
+            self.start_new_sequence()
             self._init_state = RNNState(self, -1)
+        # if we have vecs, return a new state based on the initial state
+        if vecs is not None:
+            return self._init_state.set_s(vecs)
         return self._init_state
 
-    cpdef RNNState initial_state_from_raw_vectors(self,vecs=None, update=True):
+    cpdef RNNState initial_state_from_raw_vectors(self,vecs, update=True):
         """Get a :code:`dynet.RNNState`
         
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
@@ -4668,24 +4670,13 @@ cdef class _RNNBuilder: # {{{
         Args:
             vecs (list): Initial hidden state for each layer as a list of numpy arrays  (default: {None})
             update (bool): trainer updates internal parameters (default: {True})
+                           NOTE: subsequent calls without calling dynet.renew_cg() will not change the `update` behavior.
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
-        if self.cg_version != _cg.version():
-            self.new_graph(update)
-            if vecs is not None:
-                es = []
-                for v in vecs:
-                    e = vecInput(len(v))
-                    e.set(v)
-                    es.append(e)
-                self.start_new_sequence(es)
-            else:
-                self.start_new_sequence()
-            self._init_state = RNNState(self, -1)
-        return self._init_state
+        return self.initial_state([inputTensor(v) for v in vecs],update)
 
     cpdef ParameterCollection param_collection(self):
         return ParameterCollection.wrap(self.thisptr.get_parameter_collection())
