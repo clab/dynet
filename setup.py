@@ -346,7 +346,10 @@ class build_ext(_build_ext):
             for d in os.listdir("build"):
                 target_dir = os.path.join(SCRIPT_DIR, "build", d)
                 rmtree(target_dir, ignore_errors=True)
-                copytree(os.path.join("build", d), target_dir)
+                try:
+                    copytree(os.path.join("build", d), target_dir)
+                except OSError, e:
+                    log.info("Cannot copy %s %s" % (os.path.join("build",d), e))
 
 
 try:

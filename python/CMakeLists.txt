@@ -71,6 +71,13 @@ if(PYTHON)
   add_dependencies(pydynet pydynet_precopy)
   add_dependencies(pydynet_precopy dynet)
 
+  execute_process(
+      COMMAND git describe --tags --always
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_DESCRIBE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+
 endif()
 
 if (WITH_CUDA_BACKEND)
