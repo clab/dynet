@@ -16,6 +16,8 @@ else:
 
 __version__ = 2.0
 
+__gitversion__ = "${GIT_DESCRIBE}"
+
 # check HAVE_CUDA
 if not HAVE_CUDA:
     ERRMSG = 'DyNet was not installed with GPU support. Please see the installation instructions for how to make it possible to use GPUs.'
