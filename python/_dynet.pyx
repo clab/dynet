@@ -2639,6 +2639,43 @@ cpdef Expression scale_gradient(Expression x, float lambd = 1.0):
     """
     return Expression.from_cexpr(x.cg_version, c_scale_gradient(x.c(), lambd))
 
+
+cpdef Expression argmax(Expression x, str gradient_mode):
+    """Argmax
+    
+    This node takes an input vector :math:`x` and returns a one hot vector :math:`y` such that :math:`y_{\\text{argmax} x}=1`
+    There are two gradient modes for this operation:
+
+    .. code-block:: python
+        
+        argmax(x, gradient_mode="zero_gradient")
+
+    is the standard argmax operation. Note that this almost everywhere differentiable and its gradient is 0. **It will stop your gradient**
+
+    .. code-block:: python
+        
+        argmax(x, gradient_mode="straight_through_gradient")
+    
+    This gradient mode implements the straight-through estimator `(Bengio et al., 2013) <https://arxiv.org/abs/1308.3432>`_.
+    Its forward pass is the same as the argmax operation, but its gradient is the same as the identity function.
+    Note that this does not technically correspond to a differentiable function (hence the name "estimator").
+    Tensors of order :math:`>1` are not supported yet. If you really need to use this operation on matrices, tensors, etc... feel free to open an issue on github.
+    
+    Args:
+        x (dynet.Expression): The input vector (can be batched)
+        gradient_mode (str): Gradient mode for the backward pass (one of :code:`"zero_gradient"` or :code:`"straight_through_gradient"`
+    
+    Returns:
+        dynet.Expression: The one hot argmax vector
+    """
+    if gradient_mode == "zero_gradient":
+        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_ArgmaxGradient.zero_gradient))
+    elif gradient_mode == "straight_through_gradient":
+        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_ArgmaxGradient.straight_through_gradient))
+    else:
+        raise ValueError("Unknown gradient mode for argmax: " + gradient_mode)
+
+
 # binary-exp
 cpdef Expression cdiv(Expression x, Expression y):
     """Componentwise division

@@ -1,5 +1,6 @@
 #include "dynet/nodes-activations.h"
 #include "dynet/nodes-affinetransform.h"
+#include "dynet/nodes-argmax.h"
 #include "dynet/nodes-arith-const.h"
 #include "dynet/nodes-arith-cwise.h"
 #include "dynet/nodes-arith-sum.h"
