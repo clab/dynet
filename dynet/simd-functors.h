@@ -111,7 +111,6 @@ template<typename Scalar> struct scalar_log_sigmoid_forward_op {
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
 #ifndef __CUDACC__
     using std::exp;
-    using std::log1p;
 #endif
     // distinguish between positive and negative values of x for precision
     if (x>0)
