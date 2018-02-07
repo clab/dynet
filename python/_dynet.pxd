@@ -320,6 +320,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_erf "dynet::erf" (CExpression& x) except + #
     CExpression c_cube "dynet::cube" (CExpression& x) except + #
     CExpression c_log "dynet::log" (CExpression& x) except + #
+    CExpression c_log_sigmoid "dynet::log_sigmoid" (CExpression& x) except + #
     CExpression c_lgamma "dynet::lgamma" (CExpression& x) except + #
     CExpression c_logistic "dynet::logistic" (CExpression& x) except + #
     CExpression c_rectify "dynet::rectify" (CExpression& x) except + #        

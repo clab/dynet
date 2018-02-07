@@ -1022,6 +1022,18 @@ Expression cube(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Log sigmoid
+ * \details Calculate elementwise \f$y_i = \ln(\frac{1}{1+e^{-x_i}})\f$
+ * This is more numerically stable than `log(logistic(x))`
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to \f$y_i = \ln(\frac{1}{1+e^{-x_i}})\f$
+ */
+Expression log_sigmoid(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Log gamma
  * \details Calculate elementwise y_i = ln(gamma(x_i))
  *

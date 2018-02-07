@@ -242,6 +242,40 @@ void Abs::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(Abs)
 
+// ************* LogSigmoid *************
+
+#ifndef __CUDACC__
+
+string LogSigmoid::as_string(const vector<string>& arg_names) const {
+  ostringstream os;
+  os << "log_sigmoid(" << arg_names[0] << ')';
+  return os.str();
+}
+
+Dim LogSigmoid::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in LogSigmoid")
+  return xs[0];
+}
+
+#endif
+
+template<class MyDevice>
+void LogSigmoid::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).unaryExpr(scalar_log_sigmoid_forward_op<float>());
+}
+
+template<class MyDevice>
+void LogSigmoid::backward_dev_impl(const MyDevice & dev,
+                             const vector<const Tensor*>& xs,
+                             const Tensor& fx,
+                             const Tensor& dEdf,
+                             unsigned i,
+                             Tensor& dEdxi) const {
+  tvec(dEdxi).device(*dev.edevice) += tvec(fx).binaryExpr(tvec(dEdf), scalar_log_sigmoid_backward_op<float>());
+}
+DYNET_NODE_INST_DEV_IMPL(LogSigmoid)
+
+
 // ************* LogGamma *************
 
 #ifndef __CUDACC__

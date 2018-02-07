@@ -3209,6 +3209,19 @@ cpdef Expression log(Expression x):
         dynet.Expression: :math:`y_i = \ln(x_i)`
     """
     return Expression.from_cexpr(x.cg_version, c_log(x.c()))
+cpdef Expression log_sigmoid(Expression x): 
+    """Log sigmoid
+    
+    Calculate elementwise log gamma function :math:`y_i = \ln(\\frac{1}{1+e^{x_i}})`
+    This is more numerically stable than `log(logistic(x))`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y_i = \ln(\\frac{1}{1+e^{x_i}})`
+    """
+    return Expression.from_cexpr(x.cg_version, c_log_sigmoid(x.c()))
 cpdef Expression lgamma(Expression x): 
     """Log gamma
     

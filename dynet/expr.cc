@@ -78,6 +78,7 @@ Expression tanh(const Expression& x) { return Expression(x.pg, x.pg->add_functio
 Expression asinh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Asinh>({x.i})); }
 Expression acosh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Acosh>({x.i})); }
 Expression atanh(const Expression& x) { return Expression(x.pg, x.pg->add_function<Atanh>({x.i})); }
+Expression log_sigmoid(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogSigmoid>({x.i})); }
 Expression lgamma(const Expression& x) { return Expression(x.pg, x.pg->add_function<LogGamma>({x.i})); }
 Expression log(const Expression& x) { return Expression(x.pg, x.pg->add_function<Log>({x.i})); }
 Expression exp(const Expression& x) { return Expression(x.pg, x.pg->add_function<Exp>({x.i})); }
