@@ -299,7 +299,7 @@ cdef CDim shape_as_c_dim(tuple d,bool batched = False):
 # IO {{{
 
 cdef _save_one(datafname, fh, obj):
-    if isinstance(obj, Parameters):
+    if isinstance(obj, ParameterExpression):
         pickle.dump(("Parameters", obj.name()), fh)
         obj.save(datafname,append=True)
     elif isinstance(obj, LookupParameters):
@@ -582,7 +582,7 @@ cdef class Parameters: # {{{
     cdef wrap_ptr(CParameters ptr):
         self = Parameters()
         self.thisptr = ptr
-        return self
+        return ParameterExpression(self)
 
     # TODO docs
     def save(self, fname, key="",append=False):
@@ -1069,13 +1069,13 @@ cdef class ParameterCollection: # {{{
             key   (string): the full-name of the parameter to read.
 
         Returns:
-            (dynet.Parameters) The Parameters object.
+            (dynet.ParameterExpression) The Parameters object.
         """
         cdef CTextFileLoader *loader
         cdef string _fname = <string> fname.encode("utf8")
         cdef string _key = <string> key.encode("utf8")
         loader = new CTextFileLoader(_fname)
-        p = Parameters.wrap_ptr(loader.load_param(self.thisptr, _key))
+        cdef ParameterExpression p = Parameters.wrap_ptr(loader.load_param(self.thisptr, _key))
         del loader
         return p
 
@@ -1149,7 +1149,7 @@ cdef class ParameterCollection: # {{{
             device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
-            (dynet.Parameters): Parameter
+            (dynet.ParameterExpression): Parameter
         """
         dim = array.shape
         cdef CDevice* dev
@@ -1160,7 +1160,7 @@ cdef class ParameterCollection: # {{{
             p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name, dev)
         else:
             p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name)
-        cdef Parameters pp = Parameters.wrap_ptr(p)
+        cdef ParameterExpression pp = Parameters.wrap_ptr(p)
         return pp
 
     # TODO this may fail with >2 dim arrays.
@@ -1201,7 +1201,7 @@ cdef class ParameterCollection: # {{{
             device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
-            (dynet.Parameters): Created Parameter
+            (dynet.ParameterExpression): Created Parameter
         """
         assert isinstance(dim,(tuple,int)), "Parameter dimension must be tuple or int: %s" % dim
         cdef CParameters p
@@ -1216,7 +1216,7 @@ cdef class ParameterCollection: # {{{
             p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name, dev)
         else:
             p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name)
-        cdef Parameters pp = Parameters.wrap_ptr(p)
+        cdef ParameterExpression pp = Parameters.wrap_ptr(p)
         return pp
         
     cpdef add_lookup_parameters(self, dim, PyInitializer init=None, name="", device=""):
@@ -1420,13 +1420,13 @@ cdef class ComputationGraph:
         self._cg_version += 1
         return self
 
-    cpdef version(self): 
+    cpdef int version(self): 
         """
         Same as :code:`dynet.cg_version()`
         """
         return self._cg_version
 
-    def parameters(self, Parameters params):
+    cdef parameters(self, Parameters params):
         """
         Same as :code:`dynet.parameters(params)`
         """
@@ -1618,7 +1618,11 @@ cdef class Tensor: #{{{
 
 #{{{ Expressions
 cdef ensure_freshness(Expression a):
-    if a.cg_version != _cg.version(): raise ValueError("Attempt to use a stale expression.")
+    if a.cg_version != _cg.version():
+        if type(a) is ParameterExpression:
+            pass
+        else:
+            raise ValueError("Attempt to use a stale expression.")
 
 cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_add(a.c(), b.c()))
 cdef _mul(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_mul(a.c(), b.c()))
@@ -1649,11 +1653,11 @@ cdef class Expression: #{{{
         self.vindex = 0
     @staticmethod
     cdef Expression from_cexpr(int cgv, CExpression cexpr):
-        if cgv != _cg._cg_version: raise ValueError("Attempt to use a stale expression, from a previous Computation Graph.")
+        if cexpr.is_stale(): raise ValueError("Attempt to use a stale expression, from a previous Computation Graph.")
         self = Expression()
         #self.cg = cexpr.pg
         self.vindex = cexpr.i
-        self.cg_version = cgv
+        self.cg_version = _cg._cg_version
         return self
     cdef CExpression c(self):
         return CExpression(self.cgp(), self.vindex)
@@ -1745,7 +1749,7 @@ cdef class Expression: #{{{
                 raise ValueError("Step sizes not yet supported.")
             return pick_range(self, i, j)
 
-    cpdef scalar_value(self, recalculate=False):
+    cpdef scalar_value(self, bool recalculate=False):
         """Returns value of an expression as a scalar
         
         This only works if the expression is a scalar
@@ -1760,7 +1764,7 @@ cdef class Expression: #{{{
         if recalculate: self.cg().forward(self.vindex) # TODO: make recalculate run on the entire graph, not only up to here?
         return c_as_scalar(self.cgp().get_value(self.vindex))
 
-    cpdef vec_value(self, recalculate=False):
+    cpdef vec_value(self, bool recalculate=False):
         """Returns the value of the expression as a vector
         
         In case of a multidimensional expression, the values are flattened according to a column major ordering
@@ -1775,7 +1779,7 @@ cdef class Expression: #{{{
         if recalculate: self.cg().forward(self.vindex)
         return c_as_vector(self.cgp().get_value(self.vindex))
 
-    cpdef npvalue(self, recalculate=False):
+    cpdef npvalue(self, bool recalculate=False):
         """Returns the value of the expression as a numpy array
         
         The last dimension is the batch size (if it's > 1)
@@ -1795,7 +1799,7 @@ cdef class Expression: #{{{
         arr = np.array(c_tensor_as_np(t))
         return arr
 
-    cpdef tensor_value(self, recalculate=False):
+    cpdef tensor_value(self, bool recalculate=False):
         """Returns the value of the expression as a Tensor.
 
         This is useful if you want to use the value for other on-device calculations
@@ -1814,7 +1818,7 @@ cdef class Expression: #{{{
         t = self.cgp().get_value(self.vindex)
         return Tensor.wrap_ctensor(t)
 
-    cpdef value(self, recalculate=False):
+    cpdef value(self, bool recalculate=False):
         """Gets the value of the expression in the most relevant format
         
         this returns the same thing as :code:`scalar_value`, :code:`vec_value`, :code:`npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
@@ -1855,7 +1859,7 @@ cdef class Expression: #{{{
         return arr
 
     # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
-    cpdef forward(self, recalculate=False):
+    cpdef forward(self, bool recalculate=False):
         """This runs incremental forward on the entire graph
         
         May not be optimal in terms of efficiency.
@@ -1945,7 +1949,7 @@ cpdef values(list exps, recalculate=False):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
 cdef class ParameterExpression(Expression):
-    # The _ParameterExpression wraps a Parameter such that it persists between graph
+    # The ParameterExpression wraps a Parameter such that it persists between graph
     # renewals, and does not need to be added each time. Behind the scenes, it is added
     # to the graph whenever its called.
     cdef Parameters params 
@@ -1954,11 +1958,53 @@ cdef class ParameterExpression(Expression):
         self.params = params
         self.update = update
 
+    # needed for Expression
     cdef CExpression c(self):
         return self.params.expr(self.update).c() # TODO don't go through expr?
 
-cpdef param(arg):
-    return ParameterExpression(arg)
+    def dim(self):
+        return self.params.expr().dim()
+
+    def __repr__(self):
+        return str(self)
+    def __str__(self):
+        return "ParameterExpression %s" % self.name()
+
+    def __getitem__(self, index):
+        return self.params.expr().__getitem__(index)
+
+    cpdef scalar_value(self, bool recalculate=False): return self.params.expr().scalar_value(recalculate)
+    cpdef vec_value(self, bool recalculate=False):    return self.params.expr().vec_value(recalculate)
+    cpdef npvalue(self, bool recalculate=False):      return self.params.expr().npvalue(recalculate) 
+    cpdef tensor_value(self, bool recalculate=False): return self.params.expr().tensor_value(recalculate)
+    cpdef value(self, bool recalculate=False):        return self.params.expr().value(recalculate)
+    cpdef gradient(self):                             return self.params.expr().gradient()
+    cpdef forward(self, bool recalculate=False):      return self.params.expr().forward(recalculate)
+    cpdef backward(self, bool full=False):            return self.params.expr().backward(full)
+
+    # needed for Parameters
+    cpdef save(self, fname, key="",append=False): return self.params.save(fname, key, append)
+    cpdef populate(self, fname, key):             return self.params.populate(fname, key)
+    cpdef write_to_textfile(self, fname, key="", bool append=False):
+                                                  return self.params.write_to_textfile(fname, key, append)
+    cpdef populate_from_textfile(self, fname, key=""):  
+                                                  return self.params.populate_from_textfile(fname, key)
+    cpdef shape(self):                            return self.params.shape()
+    cpdef as_array(self):                         return self.params.as_array()
+    cpdef grad_as_array(self):                    return self.params.grad_as_array()
+    cpdef clip_inplace(self, float left, float right):
+                                                  return self.params.clip_inplace(left, right)
+    cpdef set_value(self, arr):                   return self.params.set_value(arr)
+    cpdef zero(self):                             return self.params.zero()
+    cpdef scale(self,float s):                    return self.params.scale(s)
+    cpdef scale_gradient(self,float s):           return self.params.scale_gradient(s)
+    cpdef bool is_updated(self):                  return self.params.is_updated()
+    cpdef set_updated(self, bool b):              return self.params.set_updated(b)
+    cpdef name(self):                             return self.params.name()
+    cpdef expr(self,update=True):                 return self.params.expr(update)
+
+#cpdef param(arg):
+#    return ParameterExpression(arg)
 
 def parameter(*args):
     """Add parameters to the computation graph.
@@ -1976,15 +2022,10 @@ def parameter(*args):
     Raises:
         NotImplementedError: Only works with Parameters and LookupParameters.
     """
-    for p in args:
-      if not (isinstance(p, Parameters) or isinstance(p, LookupParameters)):
-        raise NotImplementedError(
-            "Cannot call parameter() on anything other than Parameters or LookupParameters")
-    if len(args) == 1:
-      return args[0].expr(True)  # True=update parameter
-    else:
-      return tuple(p.expr(True) for p in args)
+    print("Depracated: there is no longer need to explicitly add parameters to the computation graph.")
 
+    if len(args) == 1: return args[0]
+    return args
 
 def const_parameter(*args):
     """Add constant parameters to the computation graph.
@@ -2004,15 +2045,10 @@ def const_parameter(*args):
     Raises:
         NotImplementedError: Only works with Parameters and LookupParameters.
     """
-    for p in args:
-      if not (isinstance(p, Parameters) or isinstance(p, LookupParameters)):
-        raise NotImplementedError(
-            "Cannot call const_parameter() on anything other than Parameters or LookupParameters")
     if len(args) == 1:
-      return args[0].expr(False)  # False=update parameter
+        return nobackprop(args)
     else:
-      return tuple(p.expr(False) for p in args)
-
+        return [nobackprop(a) for a in args]
 
 # {{{ Mutable Expressions
 #     These depend values that can be set by the caller
