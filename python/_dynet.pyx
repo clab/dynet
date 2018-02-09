@@ -754,7 +754,7 @@ cdef class Parameters(Expression): # {{{
         return "Parameter %s" % self.name()
 
     def __getitem__(self, index):
-        return self._expr().__getitem__(index)
+        return self._iexpr().__getitem__(index)
 
     cpdef scalar_value(self, bool recalculate=False): return self._iexpr().scalar_value(recalculate)
     cpdef vec_value(self, bool recalculate=False):    return self._iexpr().vec_value(recalculate)
