@@ -1,8 +1,25 @@
 Installing DyNet for Python
 ===========================
 
+Installing a Release CPU Version
+--------------------------------
+
 Python bindings to DyNet are supported for both Python 2.x and 3.x.
-Before installing DyNet, you will need to make sure that several packages are installed.
+If you want to install a release version of DyNet and don't need to run on GPU, you can
+simply run
+
+::
+
+    pip install dynet
+
+
+Installing a Cutting-edge and/or GPU Version
+--------------------------------------------
+
+If you want the most recent features of DyNet from the development branch, or want GPU
+compute capability, you'll want to install DyNet from source.
+
+Before doing so, you will need to make sure that several packages are installed.
 For example on **Ubuntu Linux**:
 
 ::
