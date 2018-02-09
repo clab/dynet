@@ -2017,7 +2017,7 @@ def const_parameter(*args):
         NotImplementedError: Only works with Parameters and LookupParameters.
     """
     if len(args) == 1:
-        return nobackprop(args)
+        return nobackprop(args[0])
     else:
         return [nobackprop(a) for a in args]
 
