@@ -74,12 +74,11 @@ namespace dynet {
 template<typename Scalar> struct scalar_logistic_sigmoid_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_logistic_sigmoid_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
-    using std::exp;
     const Scalar one = Scalar(1.0);
     if (x >= 0.0){
-        return one / (one + exp(-x));
+        return one / (one + expf(-x));
     }else{
-        return exp(x) / (one + exp(x));
+        return expf(x) / (one + expf(x));
     }
   }
   template <typename Packet>
@@ -109,13 +108,12 @@ namespace dynet {
 template<typename Scalar> struct scalar_log_sigmoid_forward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_log_sigmoid_forward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
-    using std::exp;
-    using std::log1p;
+    using std::log1pf;
     // distinguish between positive and negative values of x for precision
     if (x>0)
-        return -log1p(exp(-x));
+        return -log1pf(expf(-x));
     else
-        return x - log1p(exp(x));
+        return x - log1pf(expf(x));
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
@@ -157,10 +155,7 @@ namespace dynet {
 template<typename Scalar> struct scalar_log_sigmoid_backward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_log_sigmoid_backward_op)
   DYNET_DEVICE_FUNC EIGEN_STRONG_INLINE const Scalar operator() (const Scalar& t, const Scalar& d) const { 
-#ifndef __CUDACC__
-    using std::exp;
-#endif
-    return (1 - exp(t)) * d;
+    return (1 - expf(t)) * d;
   }
   template<typename Packet>
   DYNET_DEVICE_FUNC EIGEN_STRONG_INLINE const Packet packetOp(const Packet& t, const Packet& d) const {
@@ -449,9 +444,8 @@ namespace dynet {
 template<typename Scalar> struct scalar_erf_backward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_erf_backward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x, const Scalar& d) const {
-    using std::exp;
     const Scalar sqrt_pi_over2(1.1283791670955125738961589);
-    return sqrt_pi_over2 * exp(-x * x) * d;
+    return sqrt_pi_over2 * expf(-x * x) * d;
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x, const Packet& d) const {
@@ -528,8 +522,7 @@ namespace dynet {
 template<typename Scalar> struct scalar_nlsoftmax_backward_op {
   scalar_nlsoftmax_backward_op(const Scalar& lz, const Scalar& err) : logz(lz), d(err) {}
   DYNET_DEVICE_FUNC EIGEN_STRONG_INLINE const Scalar operator()(const Scalar& t) const {
-    using std::exp;
-    return exp(t - logz) * d;
+    return expf(t - logz) * d;
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC EIGEN_STRONG_INLINE const Packet packetOp(const Packet& t) const {
