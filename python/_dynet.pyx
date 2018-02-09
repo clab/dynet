@@ -736,7 +736,7 @@ cdef class Parameters(Expression): # {{{
 
     # for backward compatibility.
     # deprecate.
-    #cpdef expr(self): return self
+    cpdef expr(self): return self
 
     # needed for Expression
     cdef CExpression c(self):
@@ -1974,6 +1974,7 @@ cpdef values(list exps, recalculate=False):
     forward(exps, recalculate)
     return [e.value() for e in exps]
 
+__deprecation_shown=False
 def parameter(*args):
     """Add parameters to the computation graph.
 
@@ -1990,7 +1991,9 @@ def parameter(*args):
     Raises:
         NotImplementedError: Only works with Parameters and LookupParameters.
     """
-    print("Depracated: there is no longer need to explicitly add parameters to the computation graph.")
+    global __deprecation_shown
+    if not __deprecation_shown: print("Depracated: there is no longer need to explicitly add parameters to the computation graph.")
+    __deprecation_shown=True
 
     if len(args) == 1: return args[0]
     return args
