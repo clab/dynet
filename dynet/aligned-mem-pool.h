@@ -10,7 +10,7 @@ namespace dynet {
 
 class BaseMemoryPool {
  public:
-  BaseMemoryPool(const std::string & name, MemAllocator* a) : name(name), a(a) {}
+  BaseMemoryPool(const std::string & name, MemAllocator* a) : a(a), name(name) {}
   virtual ~BaseMemoryPool() {}
   virtual void* allocate(size_t n) = 0; 
 

@@ -15,6 +15,10 @@ std::string Expression::get_device_name() const {
   return pg->nodes[i]->device->name;
 }
 
+const bool Expression::is_dynamic() const {
+  return default_device->pools[0]->is_dynamic();
+}
+
 Expression input(ComputationGraph& g, real s, Device *device) { return Expression(&g, g.add_input(s, device)); }
 Expression input(ComputationGraph& g, const real *ps, Device *device) { return Expression(&g, g.add_input(ps, device)); }
 Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data, Device *device) { return Expression(&g, g.add_input(d, data, device)); }

@@ -48,7 +48,7 @@ struct Expression {
 
   Expression() : pg(nullptr), i(0), graph_id(0) {}
 
-  const bool is_dynamic() const {return default_device->pools[0]->is_dynamic();}
+  const bool is_dynamic() const;
   /**
    * \brief Base expression constructor
    * \details Used when creating operations

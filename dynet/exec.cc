@@ -34,6 +34,26 @@ vector<const Tensor*> ExecutionEngine::forward(
   return ret;
 }
 
+SimpleExecutionEngine::SimpleExecutionEngine(const ComputationGraph& cg) :
+  ExecutionEngine(cg), num_nodes_evaluated(0) {
+  if (default_device->pools[0]->is_dynamic()) {
+    mem = new CPUAllocator();
+    pool_fxs   = new AlignedMemoryPool("CPU forward memory",  1 << 24, mem, 1 << 24, true);
+    pool_dEdfs = new AlignedMemoryPool("CPU backward memory", 1 << 24, mem, 1 << 24, true);
+  } else {
+    pool_fxs   = default_device->pools[(int)DeviceMempool::FXS];
+    pool_dEdfs = default_device->pools[(int)DeviceMempool::DEDFS];
+  }
+}
+
+SimpleExecutionEngine::~SimpleExecutionEngine() {
+  if (default_device->pools[0]->is_dynamic()) {
+    delete pool_fxs;
+    delete pool_dEdfs;
+    delete mem;
+  }
+}
+
 void SimpleExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
   backward_computed = 0;
@@ -202,7 +222,6 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
     node_dEdfx.d = dim;
     node_dEdfx.device = nfxs[i].device;
     node_dEdfx.mem_pool = DeviceMempool::DEDFS;
-<<<<<<< HEAD
     const Node* node = cg.nodes[i];
     // If the operation is inplaced, re-use memory
     if(node->backward_inplaced()) {
@@ -219,16 +238,6 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
             "out of memory while attempting to allocate space for "
             "derivatives of node " << i << ", allocating BWD memory.");
       }
-=======
-    node_dEdfx.v = static_cast<float*>(begin);
-    auto rounded_n = pool_dEdfs->round_up_align(dim.size() * sizeof(float));
-    begin += rounded_n;
-
-    if (node_dEdfx.v == nullptr) {
-      DYNET_RUNTIME_ERR(
-          "out of memory while attempting to allocate space for "
-          "derivatives of node " << i);
->>>>>>> 2da4a053ee0952b2d8c39e46d72542638e1468dc
     }
   }
 

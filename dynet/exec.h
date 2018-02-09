@@ -39,25 +39,9 @@ class ExecutionEngine {
 
 class SimpleExecutionEngine : public ExecutionEngine {
  public:
-  explicit SimpleExecutionEngine(const ComputationGraph& cg) :
-    ExecutionEngine(cg), num_nodes_evaluated(0) {
-    if (default_device->pools[0]->is_dynamic()) {
-      mem = new CPUAllocator();
-      pool_fxs   = new AlignedMemoryPool("CPU forward memory",  1 << 24, mem, 1 << 24, true);
-      pool_dEdfs = new AlignedMemoryPool("CPU backward memory", 1 << 24, mem, 1 << 24, true);
-    } else {
-      pool_fxs   = default_device->pools[(int)DeviceMempool::FXS];
-      pool_dEdfs = default_device->pools[(int)DeviceMempool::DEDFS];
-    }
-  }
+  explicit SimpleExecutionEngine(const ComputationGraph& cg);
 
-  ~SimpleExecutionEngine() {
-    if (default_device->pools[0]->is_dynamic()) {
-      delete pool_fxs;
-      delete pool_dEdfs;
-      delete mem;
-    }
-  }
+  ~SimpleExecutionEngine();
   
   void invalidate() override;
   void invalidate(unsigned i) override;
