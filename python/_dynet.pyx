@@ -476,7 +476,7 @@ cdef class NormalInitializer(PyInitializer):
         mean (number): Mean of the distribution (default: 0)
         var (number): Variance of the distribution (default: 1)
     """
-    def __init__(self, float mean=0, var=1):
+    def __init__(self, float mean=0, float var=1):
         self.initializer = new CParameterInitNormal(mean, var)
 
 cdef class UniformInitializer(PyInitializer):
@@ -533,7 +533,7 @@ cdef class SaxeInitializer(PyInitializer):
         Keyword Arguments:
             scale (number): scale to apply to the orthonormal matrix
     """
-    def __init__(self,scale=1.0):
+    def __init__(self,float scale=1.0):
         self.initializer = new CParameterInitSaxe(scale)
 
 cdef class FromFileInitializer(PyInitializer):
@@ -886,7 +886,7 @@ cdef class LookupParameters: # {{{
         """
         self.thisptr.initialize(i, row)
 
-    cpdef row_as_array(self, row):
+    cpdef row_as_array(self, int row):
         """Return row as a numpy array.
         
         Args:
@@ -1384,7 +1384,7 @@ cdef class FloatVectorValue:
 cdef int SECRET = 923148
 cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
-def cg_version(): 
+cpdef int cg_version():
     """
     Varsion of the current computation graph
     """
