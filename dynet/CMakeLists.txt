@@ -23,6 +23,7 @@ set(dynet_library_SRCS
     model.cc
     nodes-activations.cc
     nodes-affinetransform.cc
+    nodes-argmax.cc
     nodes-arith-const.cc
     nodes-arith-cwise.cc
     nodes-arith-sum.cc
@@ -102,6 +103,7 @@ set(dynet_library_HDRS
     model.h
     nodes-activations.h
     nodes-affinetransform.h
+    nodes-argmax.h
     nodes-arith-const.h
     nodes-arith-cwise.h
     nodes-arith-sum.h
@@ -159,6 +161,7 @@ endif()
 set(dynet_gpu_mergeable_SRCS
     nodes-activations
     nodes-affinetransform
+    nodes-argmax
     nodes-arith-const
     nodes-arith-cwise
     nodes-arith-sum

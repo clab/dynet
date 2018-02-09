@@ -271,7 +271,7 @@ void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
     generate(val.v, val.v + val.d.size(), b);
 #if HAVE_CUDA
   } else if (val.device->type == DeviceType::GPU) {
-    CURAND_CHECK(curandGenerateNormal(curandeng, val.v, val.d.size(), 0, 1));
+    CURAND_CHECK(curandGenerateNormal(curandeng, val.v, val.d.size(), mean, stddev));
 #endif
   } else { throw std::runtime_error("Bad device type"); }
 }

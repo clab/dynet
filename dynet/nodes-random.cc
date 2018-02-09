@@ -67,7 +67,7 @@ Dim RandomNormal::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void RandomNormal::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomNormal::forward");
-  TensorTools::randomize_normal(fx);
+  TensorTools::randomize_normal(fx, mean, stddev);
 }
 
 template<class MyDevice>

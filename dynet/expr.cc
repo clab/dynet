@@ -36,7 +36,7 @@ Expression zeros(ComputationGraph& g, const Dim& d) { return Expression(&g, g.ad
 // Expression zeroes(ComputationGraph& g, const Dim& d) {return zeros(g, d);}
 Expression ones(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Constant>(d, 1.f)); }
 Expression constant(ComputationGraph& g, const Dim& d, float val) { return Expression(&g, g.add_function<Constant>(d, val)); }
-Expression random_normal(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<RandomNormal>(d)); }
+Expression random_normal(ComputationGraph& g, const Dim& d, float mean, float stddev) { return Expression(&g, g.add_function<RandomNormal>(d, mean, stddev)); }
 Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale) { return Expression(&g, g.add_function<RandomBernoulli>({}, d, p, scale)); }
 Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right) { return Expression(&g, g.add_function<RandomUniform>({}, d, left, right)); }
 Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu, real beta) { return Expression(&g, g.add_function<RandomGumbel>({}, d, mu, beta)); }
@@ -44,6 +44,8 @@ Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu, real beta) 
 Expression nobackprop(const Expression& x) { return Expression(x.pg, x.pg->add_function<NoBackprop>({x.i})); }
 Expression flip_gradient(const Expression& x) { return Expression(x.pg, x.pg->add_function<ScaleGradient>({x.i}, -1.f)); }
 Expression scale_gradient(const Expression& x, float lambd) { return Expression(x.pg, x.pg->add_function<ScaleGradient>({x.i}, lambd)); }
+
+Expression argmax(const Expression& x, ArgmaxGradient gradient_mode) { return Expression(x.pg, x.pg->add_function<Argmax>({x.i}, 0, (gradient_mode==straight_through_gradient))); }
 
 Expression operator-(const Expression& x) { return Expression(x.pg, x.pg->add_function<Negate>({x.i})); }
 Expression operator+(const Expression& x, const Expression& y) { return Expression(x.pg, x.pg->add_function<CwiseSum>({x.i, y.i}));}

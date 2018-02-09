@@ -1211,6 +1211,53 @@ BOOST_AUTO_TEST_CASE( dropout_dim_forward ) {
 // TODO: Dropout scales the gradients at training time, so they don't match.
 // Expression block_dropout(const Expression& x, real p);
 
+// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+BOOST_AUTO_TEST_CASE( argmax_forward ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = argmax(x, zero_gradient);
+  std::vector<float> v = as_vector(y.value());
+  BOOST_CHECK_EQUAL(v[0], 0.0);
+  BOOST_CHECK_EQUAL(v[1], 0.0);
+  BOOST_CHECK_EQUAL(v[2], 1.0);
+  BOOST_CHECK_EQUAL(v[3], 0.0);
+  BOOST_CHECK_EQUAL(v[4], 0.0);
+  BOOST_CHECK_EQUAL(v[5], 1.0);
+}
+
+// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+BOOST_AUTO_TEST_CASE( argmax_backward ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = argmax(x, zero_gradient);
+  Expression z = sum_batches(squared_norm(y));
+  cg.backward(z, true);
+  std::vector<float> g_x = as_vector(x.gradient());
+  BOOST_CHECK_EQUAL(g_x[0], 0.0);
+  BOOST_CHECK_EQUAL(g_x[1], 0.0);
+  BOOST_CHECK_EQUAL(g_x[2], 0.0);
+  BOOST_CHECK_EQUAL(g_x[3], 0.0);
+  BOOST_CHECK_EQUAL(g_x[4], 0.0);
+  BOOST_CHECK_EQUAL(g_x[5], 0.0);
+}
+
+// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+BOOST_AUTO_TEST_CASE( straight_through_backward ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression x_ = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = argmax(x, straight_through_gradient);
+  Expression z = sum_batches(dot_product(y, x_));
+  cg.backward(z, true);
+  std::vector<float> g_x = as_vector(x.gradient());
+  BOOST_CHECK_EQUAL(g_x[0], batch_vals[0]);
+  BOOST_CHECK_EQUAL(g_x[1], batch_vals[1]);
+  BOOST_CHECK_EQUAL(g_x[2], batch_vals[2]);
+  BOOST_CHECK_EQUAL(g_x[3], batch_vals[3]);
+  BOOST_CHECK_EQUAL(g_x[4], batch_vals[4]);
+  BOOST_CHECK_EQUAL(g_x[5], batch_vals[5]);
+}
+
 // Expression reshape(const Expression& x, const Dim& d);
 BOOST_AUTO_TEST_CASE( reshape_gradient ) {
   dynet::ComputationGraph cg;

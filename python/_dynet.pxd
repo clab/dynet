@@ -276,7 +276,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_zeros "dynet::zeros" (CComputationGraph& g, CDim& d) except + #
     CExpression c_ones "dynet::ones" (CComputationGraph& g, CDim& d) except + #
     CExpression c_constant "dynet::constant" (CComputationGraph& g, CDim& d, float val) except + #
-    CExpression c_random_normal "dynet::random_normal" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_random_normal "dynet::random_normal" (CComputationGraph& g, CDim& d, float m, float s) except + #
     CExpression c_random_bernoulli "dynet::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale) except +
     CExpression c_random_uniform "dynet::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) except + #
     CExpression c_random_gumbel "dynet::random_gumbel" (CComputationGraph& g, CDim& d, float left, float right) except + #
@@ -284,6 +284,12 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_nobackprop "dynet::nobackprop" (CExpression& x) except + #
     CExpression c_flip_gradient "dynet::flip_gradient" (CExpression& x) except + #
     CExpression c_scale_gradient "dynet::scale_gradient" (CExpression& x, float lambd) except + #
+    
+    cdef enum c_ArgmaxGradient "dynet:ArgmaxGradient":
+        zero_gradient,
+        straight_through_gradient
+
+    CExpression c_argmax "dynet::argmax" (CExpression& x, c_ArgmaxGradient gradient_mode) except + #
     
     CExpression c_op_neg "dynet::operator-" (CExpression& x) except + #
     CExpression c_op_add "dynet::operator+" (CExpression& x, CExpression& y) except + #
