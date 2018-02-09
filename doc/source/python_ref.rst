@@ -505,6 +505,10 @@ Optimizers
    :members:
    :show-inheritance:
 
+.. autoclass:: dynet.AmsgradTrainer
+   :members:
+   :show-inheritance:
+
 MultiDevice
 -----------
 
