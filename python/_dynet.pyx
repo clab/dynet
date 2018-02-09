@@ -299,7 +299,7 @@ cdef CDim shape_as_c_dim(tuple d,bool batched = False):
 # IO {{{
 
 cdef _save_one(datafname, fh, obj):
-    if isinstance(obj, ParameterExpression):
+    if isinstance(obj, Parameters):
         pickle.dump(("Parameters", obj.name()), fh)
         obj.save(datafname,append=True)
     elif isinstance(obj, LookupParameters):
@@ -566,7 +566,7 @@ cdef class NumpyInitializer(PyInitializer):
 # }}}
 
 # {{{ ParameterCollection / Parameters 
-cdef class Parameters: # {{{
+cdef class Parameters(Expression): # {{{
     """Parameters class
     
     Parameters are things that are optimized. in contrast to a system like Torch where computational modules may have their own parameters, in DyNet parameters are just parameters.
@@ -578,11 +578,13 @@ cdef class Parameters: # {{{
     cdef Expression _const_expr
     def __cinit__(self):
         self._version = -1
+
+    # All creations MUST go through wrap_ptr
     @staticmethod
     cdef wrap_ptr(CParameters ptr):
         self = Parameters()
         self.thisptr = ptr
-        return ParameterExpression(self)
+        return self
 
     # TODO docs
     def save(self, fname, key="",append=False):
@@ -713,13 +715,9 @@ cdef class Parameters: # {{{
         """
         return self.thisptr.get_fullname().decode("utf8")
 
-    cpdef Expression expr(self, bool update=True):
+    cdef Expression _iexpr(self, bool update=True):
         """Returns the parameter as an expression
 
-        This is the same as calling
-
-            dy.parameter(param)
-        
         Args:
             update(bool): If this is set to False, the parameter won't be updated during the backward pass
         Returns:
@@ -735,6 +733,37 @@ cdef class Parameters: # {{{
                 self._const_version = cg_version()
                 self._const_expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
             return self._const_expr
+
+    # for backward compatibility.
+    # deprecate.
+    #cpdef expr(self): return self
+
+    # needed for Expression
+    cdef CExpression c(self):
+        if cg_version() != self._version:
+            self._version = cg_version()
+            self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+        return self._expr.c()
+
+    def dim(self):
+        return self._expr().dim()
+
+    def __repr__(self):
+        return str(self)
+    def __str__(self):
+        return "Parameter %s" % self.name()
+
+    def __getitem__(self, index):
+        return self._expr().__getitem__(index)
+
+    cpdef scalar_value(self, bool recalculate=False): return self._iexpr().scalar_value(recalculate)
+    cpdef vec_value(self, bool recalculate=False):    return self._iexpr().vec_value(recalculate)
+    cpdef npvalue(self, bool recalculate=False):      return self._iexpr().npvalue(recalculate)
+    cpdef tensor_value(self, bool recalculate=False): return self._iexpr().tensor_value(recalculate)
+    cpdef value(self, bool recalculate=False):        return self._iexpr().value(recalculate)
+    cpdef gradient(self):                             return self._iexpr().gradient()
+    cpdef forward(self, bool recalculate=False):      return self._iexpr().forward(recalculate)
+    cpdef backward(self, bool full=False):            return self._iexpr().backward(full)
 
 # Parameters }}}
 
@@ -1069,13 +1098,13 @@ cdef class ParameterCollection: # {{{
             key   (string): the full-name of the parameter to read.
 
         Returns:
-            (dynet.ParameterExpression) The Parameters object.
+            (dynet.Parameters) The Parameters object.
         """
         cdef CTextFileLoader *loader
         cdef string _fname = <string> fname.encode("utf8")
         cdef string _key = <string> key.encode("utf8")
         loader = new CTextFileLoader(_fname)
-        cdef ParameterExpression p = Parameters.wrap_ptr(loader.load_param(self.thisptr, _key))
+        cdef Parameters p = Parameters.wrap_ptr(loader.load_param(self.thisptr, _key))
         del loader
         return p
 
@@ -1149,7 +1178,7 @@ cdef class ParameterCollection: # {{{
             device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
-            (dynet.ParameterExpression): Parameter
+            (dynet.Parameters): Parameter
         """
         dim = array.shape
         cdef CDevice* dev
@@ -1160,7 +1189,7 @@ cdef class ParameterCollection: # {{{
             p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name, dev)
         else:
             p = self.thisptr.add_parameters(Dim(dim), deref(NumpyInitializer(array).initializer), _name)
-        cdef ParameterExpression pp = Parameters.wrap_ptr(p)
+        cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
     # TODO this may fail with >2 dim arrays.
@@ -1201,7 +1230,7 @@ cdef class ParameterCollection: # {{{
             device (string)           : Optional device name for this parameter (default: "", default device)
         
         Returns:
-            (dynet.ParameterExpression): Created Parameter
+            (dynet.Parameters): Created Parameter
         """
         assert isinstance(dim,(tuple,int)), "Parameter dimension must be tuple or int: %s" % dim
         cdef CParameters p
@@ -1216,7 +1245,7 @@ cdef class ParameterCollection: # {{{
             p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name, dev)
         else:
             p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name)
-        cdef ParameterExpression pp = Parameters.wrap_ptr(p)
+        cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
         
     cpdef add_lookup_parameters(self, dim, PyInitializer init=None, name="", device=""):
@@ -1619,7 +1648,7 @@ cdef class Tensor: #{{{
 #{{{ Expressions
 cdef ensure_freshness(Expression a):
     if a.cg_version != _cg.version():
-        if type(a) is ParameterExpression:
+        if type(a) is Parameters:
             pass
         else:
             raise ValueError("Attempt to use a stale expression.")
@@ -1944,67 +1973,6 @@ cpdef values(list exps, recalculate=False):
     cdef Expression e
     forward(exps, recalculate)
     return [e.value() for e in exps]
-
-#cdef Expression _parameter(ComputationGraph g, Parameters p):
-#    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
-
-cdef class ParameterExpression(Expression):
-    # The ParameterExpression wraps a Parameter such that it persists between graph
-    # renewals, and does not need to be added each time. Behind the scenes, it is added
-    # to the graph whenever its called.
-    cdef Parameters params 
-    cdef bool update
-    def __cinit__(self, Parameters params, bool update=True):
-        self.params = params
-        self.update = update
-
-    # needed for Expression
-    cdef CExpression c(self):
-        return self.params.expr(self.update).c() # TODO don't go through expr?
-
-    def dim(self):
-        return self.params.expr().dim()
-
-    def __repr__(self):
-        return str(self)
-    def __str__(self):
-        return "ParameterExpression %s" % self.name()
-
-    def __getitem__(self, index):
-        return self.params.expr().__getitem__(index)
-
-    cpdef scalar_value(self, bool recalculate=False): return self.params.expr().scalar_value(recalculate)
-    cpdef vec_value(self, bool recalculate=False):    return self.params.expr().vec_value(recalculate)
-    cpdef npvalue(self, bool recalculate=False):      return self.params.expr().npvalue(recalculate) 
-    cpdef tensor_value(self, bool recalculate=False): return self.params.expr().tensor_value(recalculate)
-    cpdef value(self, bool recalculate=False):        return self.params.expr().value(recalculate)
-    cpdef gradient(self):                             return self.params.expr().gradient()
-    cpdef forward(self, bool recalculate=False):      return self.params.expr().forward(recalculate)
-    cpdef backward(self, bool full=False):            return self.params.expr().backward(full)
-
-    # needed for Parameters
-    cpdef save(self, fname, key="",append=False): return self.params.save(fname, key, append)
-    cpdef populate(self, fname, key):             return self.params.populate(fname, key)
-    cpdef write_to_textfile(self, fname, key="", bool append=False):
-                                                  return self.params.write_to_textfile(fname, key, append)
-    cpdef populate_from_textfile(self, fname, key=""):  
-                                                  return self.params.populate_from_textfile(fname, key)
-    cpdef shape(self):                            return self.params.shape()
-    cpdef as_array(self):                         return self.params.as_array()
-    cpdef grad_as_array(self):                    return self.params.grad_as_array()
-    cpdef clip_inplace(self, float left, float right):
-                                                  return self.params.clip_inplace(left, right)
-    cpdef set_value(self, arr):                   return self.params.set_value(arr)
-    cpdef zero(self):                             return self.params.zero()
-    cpdef scale(self,float s):                    return self.params.scale(s)
-    cpdef scale_gradient(self,float s):           return self.params.scale_gradient(s)
-    cpdef bool is_updated(self):                  return self.params.is_updated()
-    cpdef set_updated(self, bool b):              return self.params.set_updated(b)
-    cpdef name(self):                             return self.params.name()
-    cpdef expr(self,update=True):                 return self.params.expr(update)
-
-#cpdef param(arg):
-#    return ParameterExpression(arg)
 
 def parameter(*args):
     """Add parameters to the computation graph.
