@@ -20,6 +20,7 @@
 #include "dynet/nodes-maxpooling2d.h"
 #include "dynet/nodes-minmax.h"
 #include "dynet/nodes-moments.h"
+#include "dynet/nodes-cumulative.h"
 #include "dynet/nodes-normalization.h"
 #include "dynet/nodes-norms.h"
 #include "dynet/nodes-pickneglogsoftmax.h"
