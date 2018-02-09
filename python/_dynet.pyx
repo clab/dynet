@@ -1944,6 +1944,22 @@ cpdef values(list exps, recalculate=False):
 #cdef Expression _parameter(ComputationGraph g, Parameters p):
 #    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
 
+cdef class ParameterExpression(Expression):
+    # The _ParameterExpression wraps a Parameter such that it persists between graph
+    # renewals, and does not need to be added each time. Behind the scenes, it is added
+    # to the graph whenever its called.
+    cdef Parameters params 
+    cdef bool update
+    def __cinit__(self, Parameters params, bool update=True):
+        self.params = params
+        self.update = update
+
+    cdef CExpression c(self):
+        return self.params.expr(self.update).c() # TODO don't go through expr?
+
+cpdef param(arg):
+    return ParameterExpression(arg)
+
 def parameter(*args):
     """Add parameters to the computation graph.
 
