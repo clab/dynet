@@ -72,6 +72,8 @@ Dim Conv2D::dim_forward(const vector<Dim>& xs) const {
 
 int Conv2D::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
   Sig s(nt::conv2d);
+  // Note that autobatching will only occur when inputs are of batch size one
+  // TODO: remove this restriction, allowing for combining batched inputs
   if(dim.bd == 1) {
     s.add_dim(cg.nodes[args[0]]->dim); // the input
     s.add_node(args[1]); // the filter

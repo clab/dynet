@@ -91,6 +91,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 function(find_cudnn)
   if (DEFINED ENV{CUDNN_ROOT} AND NOT DEFINED CUDNN_ROOT)  # use env variable if not defined
     set(CUDNN_ROOT $ENV{CUDNN_ROOT})
+  elseif (DEFINED CUDA_TOOLKIT_ROOT_DIR AND NOT DEFINED CUDNN_ROOT)  # use env variable if not defined
+    set(CUDNN_ROOT ${CUDA_TOOLKIT_ROOT_DIR})
   endif()
 #  set(CUDNN_ROOT /usr/local/cuda CACHE PATH "CUDNN root path")
   find_path(CUDNN_INCLUDE_DIRS cudnn.h

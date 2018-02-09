@@ -1700,6 +1700,40 @@ BOOST_AUTO_TEST_CASE( conv2d_valid_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression log_softmax(const Expression& x);
+BOOST_AUTO_TEST_CASE( conv2d_autobatch_gradient ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  dynet::autobatch_flag = 1;
+  dynet::ComputationGraph cg;
+  Parameter param_kernel = mod.add_parameters({2, 2, 2, 3});
+  std::vector<float> param_kernel_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
+                                          .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
+                                          .211f, .222f, .233f, .212f, .222f, .232f
+                                         };
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
+  Expression kernel = parameter(cg, param_kernel);
+  vector<unsigned> stride = {3, 3}; bool is_valid = true;
+  std::vector<float> conv2d_vals1(50 * 50 * 2), conv2d_vals2(50 * 50 * 2);
+  for (unsigned i = 0; i < conv2d_vals1.size(); ++i) {
+    conv2d_vals1[i] = i * 0.011f + (i + 1) * 0.001f;
+    conv2d_vals2[i] = i * 0.015f + (i + 1) * -0.001f;
+  }
+  vector<Expression> zs;
+  {
+    Expression x = input(cg, Dim({50, 50, 2}), conv2d_vals1);
+    Expression y = conv2d(x, kernel, stride, is_valid);
+    zs.push_back(to_scalar(y));
+  }
+  {
+    Expression x = input(cg, Dim({50, 50, 2}), conv2d_vals2);
+    Expression y = conv2d(x, kernel, stride, is_valid);
+    zs.push_back(to_scalar(y));
+  }
+  Expression z = sum(zs);
+  BOOST_CHECK(check_grad(mod, z, 0));
+  dynet::autobatch_flag = autobatch_cache;
+}
+
 // Expression conv2d(const Expression& x ,const Expression& f, const std::vector<unsigned>& stride, bool is_valid);
 BOOST_AUTO_TEST_CASE( conv2d_valid_singlefilter_gradient ) {
   dynet::ComputationGraph cg;
