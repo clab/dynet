@@ -70,6 +70,28 @@ Dim Conv2D::dim_forward(const vector<Dim>& xs) const {
   return Dim(output_shape, bs);
 }
 
+int Conv2D::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::conv2d);
+  // Note that autobatching will only occur when inputs are of batch size one
+  // TODO: remove this restriction, allowing for combining batched inputs
+  if(dim.bd == 1) {
+    s.add_dim(cg.nodes[args[0]]->dim); // the input
+    s.add_node(args[1]); // the filter
+    s.add_int(static_cast<int>(is_valid));
+    s.add_int(stride[0]);
+    s.add_int(stride[1]);
+    return sm.get_idx(s);
+  } else {
+    return 0;
+  }
+}
+
+std::vector<int> Conv2D::autobatch_concat(const ComputationGraph & cg) const {
+  vector<int> ret(args.size(), 0);
+  if (dim.bd == 1) { ret[0] = 1; }
+  return ret;
+}
+
 // size_t Conv2D::aux_storage_size() const {
 //   vector<unsigned> input_size(arity());
 //   for (unsigned i = 0; i < arity(); ++i) {
