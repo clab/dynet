@@ -61,6 +61,7 @@
 #include "lstm.h"
 #include "gru.h"
 #include "fast-lstm.h"
+#include "treelstm.h"
 #include "io.h"
 #include "mem.h"
 #include "aligned-mem-pool.h"
@@ -91,6 +92,7 @@ VECTORCONSTRUCTOR(int, Integer, IntVector)
 VECTORCONSTRUCTOR(unsigned, Integer, UnsignedVector)
 VECTORCONSTRUCTOR(dynet::Expression, Expression, ExpressionVector)
 VECTORCONSTRUCTOR(dynet::Parameter, Parameter, ParameterVector)
+VECTORCONSTRUCTOR(std::vector<unsigned>, UnsignedVector, UnsignedVectorVector)
 VECTORCONSTRUCTOR(std::vector<dynet::Expression>, ExpressionVector, ExpressionVectorVector)
 VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVectorVector)
 
@@ -100,6 +102,10 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 %include "std_string.i"
 %include "std_pair.i"
 %include "cpointer.i"
+%include <std_shared_ptr.i>
+
+%shared_ptr(dynet::ParameterStorage)
+%shared_ptr(dynet::LookupParameterStorage)
 
 // Convert C++ exceptions into Java exceptions. This provides
 // nice error messages for each listed exception, and a default
@@ -116,6 +122,7 @@ struct dynet::Expression;
 namespace std {
   %template(IntVector)                    vector<int>;
   %template(UnsignedVector)               vector<unsigned>;
+  %template(UnsignedVectorVector)         vector<vector<unsigned>>;
   %template(DoubleVector)                 vector<double>;
   %template(FloatVector)                  vector<float>;
   %template(LongVector)                   vector<long>;
@@ -454,13 +461,17 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index);
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex);
 Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
 //Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
-//Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
-Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
+Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
+//Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 
+Expression zeros(ComputationGraph& g, const Dim& d);
 Expression zeroes(ComputationGraph& g, const Dim& d);
+Expression ones(ComputationGraph& g, const Dim& d);
+Expression constant(ComputationGraph& g, const Dim& d, float val);
 Expression random_normal(ComputationGraph& g, const Dim& d);
 Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale = 1.0f);
 Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right);
+Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu = 0.0, real beta = 1.0);
 
 /* ARITHMETIC OPERATIONS */
 
@@ -484,9 +495,31 @@ Expression operator/(const Expression& x, float y); // { return x * (1.f / y); }
 
 %template(affine_transform) detail::f<AffineTransform, std::vector<Expression>>;
 %template(sum) detail::f<Sum, std::vector<Expression>>;
+
+Expression sum_elems(const Expression& x);
+Expression moment_elems(const Expression& x, unsigned r);
+Expression mean_elems(const Expression& x);
+Expression std_elems(const Expression& x);
+
+Expression sum_batches(const Expression& x);
+Expression moment_batches(const Expression& x, unsigned r);
+Expression mean_batches(const Expression& x);
+Expression std_batches(const Expression& x);
+
+Expression sum_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false);
+
+// These are deprecated but kept for backward compatibility
+Expression sum_rows(const Expression& x);
+Expression sum_cols(const Expression& x);
+
+Expression moment_dim(const Expression& x, const std::vector<unsigned>& dims, unsigned r, bool b=false, unsigned n=0);
+Expression mean_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false, unsigned n=0);
+Expression std_dim(const Expression& x, const std::vector<unsigned>& dims, bool b=false, unsigned n=0);
+
 %template(average) detail::f<Average, std::vector<Expression>>;
 
 Expression sqrt(const Expression& x);
+Expression abs(const Expression& x);
 Expression erf(const Expression& x);
 Expression tanh(const Expression& x);
 Expression exp(const Expression& x);
@@ -498,6 +531,7 @@ Expression logistic(const Expression& x);
 Expression rectify(const Expression& x);
 Expression elu(const Expression& x, float alpha=1.f);
 Expression selu(const Expression& x);
+Expression silu(const Expression& x, float beta=1.f);
 Expression softsign(const Expression& x);
 Expression pow(const Expression& x, const Expression& y);
 
@@ -526,6 +560,7 @@ Expression colwise_add(const Expression& x, const Expression& bias);
 Expression softmax(const Expression& x);
 Expression log_softmax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
+Expression logsumexp_dim(const Expression& x, unsigned d);
 
 %template(logsumexp) detail::f<LogSumExp, std::vector<Expression>>;
 
@@ -537,10 +572,16 @@ Expression hinge(const Expression& x, unsigned index, float m = 1.0);
 Expression hinge(const Expression& x, unsigned* pindex, float m = 1.0);
 Expression hinge(const Expression& x, const std::vector<unsigned>& indices, float m = 1.0);
 
+Expression hinge_dim(const Expression& x, const std::vector<unsigned>& indices, unsigned d = 0, float m = 1.0);
+// Expression hinge_dim(const Expression& x, const std::vector<unsigned>* pindex, unsigned d = 0, float m = 1.0);
+Expression hinge_dim(const Expression& x, const std::vector<std::vector<unsigned> >& indices, unsigned d = 0, float m = 1.0);
+// Expression hinge_dim(const Expression& x, const std::vector<std::vector<unsigned> >* pindices, unsigned d = 0, float m = 1.0);
+
 Expression sparsemax(const Expression& x);
 Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>& target_support);
 
 Expression squared_norm(const Expression& x);
+Expression l2_norm(const Expression& x);
 Expression squared_distance(const Expression& x, const Expression& y);
 Expression l1_distance(const Expression& x, const Expression& y);
 Expression huber_distance(const Expression& x, const Expression& y, float c = 1.345f);
@@ -552,38 +593,50 @@ Expression poisson_loss(const Expression& x, const unsigned* py);
 /* FLOW / SHAPING OPERATIONS */
 
 Expression nobackprop(const Expression& x);
+Expression flip_gradient(const Expression& x);
 Expression reshape(const Expression& x, const Dim& d);
 Expression transpose(const Expression& x);
 Expression select_rows(const Expression& x, const std::vector<unsigned> &rows);
 Expression select_cols(const Expression& x, const std::vector<unsigned> &cols);
-Expression sum_batches(const Expression& x);
 
 Expression pick(const Expression& x, unsigned v, unsigned d = 0);
 Expression pick(const Expression& x, const std::vector<unsigned>& v, unsigned d = 0);
 Expression pick(const Expression& x, const unsigned* v, unsigned d = 0);
 Expression pick_range(const Expression& x, unsigned s, unsigned e, unsigned d = 0);
+Expression pick_batch_elem(const Expression& x, unsigned v);
+Expression pick_batch_elems(const Expression& x, const std::vector<unsigned> & v);
 
 // Concatenate and ConcatenateCols got changed around, need to implement
 // explicitly now.
 %{
 namespace dynet {
-inline Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0) {
-  return detail::f<Concatenate>(xs, d);
+inline Expression concatenate_to_batch(const std::vector<Expression>& xs) {
+  return detail::f<ConcatenateToBatch>(xs);
 };
 
 inline Expression concatenate_cols(const std::vector<Expression>& xs) {
   return detail::f<Concatenate>(xs, 1);
 };
+
+inline Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0) {
+  return detail::f<Concatenate>(xs, d);
+};
 }
 %}
 
-Expression concatenate(const std::vector<Expression>& xs);
+Expression concatenate_to_batch(const std::vector<Expression>& xs);
 Expression concatenate_cols(const std::vector<Expression>& xs);
+Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0);
+
+Expression max_dim(const Expression& x, unsigned d = 0);
+Expression min_dim(const Expression& x, unsigned d = 0);
 
 /* NOISE OPERATIONS */
 
 Expression noise(const Expression& x, real stddev);
 Expression dropout(const Expression& x, real p);
+Expression dropout_dim(const Expression& x, unsigned d, real p);
+Expression dropout_batch(const Expression& x, real p);
 Expression block_dropout(const Expression& x, real p);
 
 /* CONVOLUTION OPERATIONS */
@@ -594,15 +647,12 @@ Expression block_dropout(const Expression& x, real p);
 Expression filter1d_narrow(const Expression& x, const Expression& f);
 Expression kmax_pooling(const Expression& x, unsigned k);
 Expression fold_rows(const Expression& x, unsigned nrows=2);
-Expression sum_dim(const Expression& x, unsigned d);
-Expression sum_cols(const Expression& x);
-Expression sum_rows(const Expression& x);
 Expression average_cols(const Expression& x);
 Expression kmh_ngram(const Expression& x, unsigned n);
 
 Expression conv2d(const Expression& x, const Expression& f, const std::vector<unsigned>& stride, bool is_valid = true);
 Expression conv2d(const Expression& x, const Expression& f, const Expression& b, const std::vector<unsigned>& stride, bool is_valid = true);
-
+Expression maxpooling2d(const Expression& x, const std::vector<unsigned>& ksize, const std::vector<unsigned>& stride, bool is_valid = true);
 
 /* TENSOR OPERATIONS */
 
@@ -739,7 +789,11 @@ extern Device* default_device; // where parameters go by default
 %nodefaultctor Trainer;
 struct Trainer {
   virtual void update();
+  //void update(const std::vector<unsigned> & updated_params, const std::vector<unsigned> & updated_lookup_params);
   void update_epoch(real r = 1.0);
+
+  virtual void restart() = 0;
+  void restart(real lr);
 
   float clip_gradients();
   void rescale_and_reset_weight_decay();
@@ -755,7 +809,8 @@ struct Trainer {
   real updates_since_status;
 
   bool sparse_updates_enabled;
-  bool aux_allocated;
+  unsigned aux_allocated;
+  unsigned aux_allocated_lookup;
 
   void status();
 
@@ -764,32 +819,51 @@ struct Trainer {
 
 struct SimpleSGDTrainer : public Trainer {
   explicit SimpleSGDTrainer(ParameterCollection& m, real learning_rate = 0.1);
+  void restart() override;
 };
 
 struct CyclicalSGDTrainer : public Trainer {
   explicit CyclicalSGDTrainer(ParameterCollection& m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0);
+  void restart() override;
   void update() override;
 };
 
 struct MomentumSGDTrainer : public Trainer {
   explicit MomentumSGDTrainer(ParameterCollection& m, real learning_rate = 0.01, real mom = 0.9);
+  void restart() override;
 };
 
 struct AdagradTrainer : public Trainer {
   explicit AdagradTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20);
+  void restart() override;
 };
 
 struct AdadeltaTrainer : public Trainer {
   explicit AdadeltaTrainer(ParameterCollection& m, real eps = 1e-6, real rho = 0.95);
+  void restart() override;
 };
 
 struct RMSPropTrainer : public Trainer {
    explicit RMSPropTrainer(ParameterCollection& m, real learning_rate = 0.1, real eps = 1e-20, real rho = 0.95);
+   void restart() override;
 };
 
 struct AdamTrainer : public Trainer {
   explicit AdamTrainer(ParameterCollection& m, float learning_rate = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8);
+  void restart() override;
 };
+
+struct AmsgradTrainer : public Trainer {
+  explicit AmsgradTrainer(ParameterCollection& m, float learning_rate = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8);
+  void restart() override;
+};
+
+//struct EGTrainer : public Trainer {
+//  explicit EGTrainer(ParameterCollection& mod, real learning_rate = 0.1, real mom = 0.9, real ne = 0.0);
+//  void enableCyclicalLR(float _learning_rate_min = 0.01, float _learning_rate_max = 0.1, float _step_size = 2000, float _gamma = 0.0);
+//  void update() override;
+//  void restart() override;
+//};
 
 ///////////////////////////////////
 // declarations from dynet/rnn.h //
@@ -907,7 +981,8 @@ struct VanillaLSTMBuilder : public RNNBuilder {
                        unsigned input_dim,
                        unsigned hidden_dim,
                        ParameterCollection& model,
-                       bool ln_lstm = false);
+                       bool ln_lstm = false,
+                       float forget_bias = 1.f);
 
   Expression back() const override;
   std::vector<Expression> final_h() const override;
@@ -953,6 +1028,7 @@ struct VanillaLSTMBuilder : public RNNBuilder {
   unsigned input_dim, hid;
   float dropout_rate_h;
   bool ln_lstm;
+  float forget_bias;
   bool dropout_masks_valid;
 };
 
@@ -1066,6 +1142,81 @@ struct FastLSTMBuilder : public RNNBuilder {
   unsigned layers;
 };
 
+
+/////////////////////////////////////////
+// declarations from dynet/treelstm.h  //
+/////////////////////////////////////////
+
+%nodefaultctor TreeLSTMBuilder;
+struct TreeLSTMBuilder : public RNNBuilder {
+  virtual void set_num_elements(int num) = 0;
+  Expression add_input(int id, std::vector<int> children, const Expression& x);
+  std::vector<Expression> final_h() const override;
+  virtual std::vector<Expression> final_s() const override;
+  std::vector<Expression> get_h(RNNPointer i) const override;
+  std::vector<Expression> get_s(RNNPointer i) const override;
+ virtual unsigned num_h0_components() const override;
+ virtual void copy(const RNNBuilder & params) override;
+};
+
+struct NaryTreeLSTMBuilder : public TreeLSTMBuilder {
+  explicit NaryTreeLSTMBuilder(unsigned N, //Max branching factor
+                       unsigned layers,
+                       unsigned input_dim,
+                       unsigned hidden_dim,
+                       ParameterCollection& model);
+
+  virtual void set_num_elements(int num) override;
+  Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  void copy(const RNNBuilder & params) override;
+  ParameterCollection & get_parameter_collection() override;
+
+  // initial values of h and c at each layer
+  // - both default to zero matrix input
+  bool has_initial_state; // if this is false, treat h0 and c0 as 0
+  std::vector<Expression> h0;
+  std::vector<Expression> c0;
+  unsigned layers;
+  unsigned N; // Max branching factor
+
+};
+
+struct UnidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
+  UnidirectionalTreeLSTMBuilder() = default;
+  explicit UnidirectionalTreeLSTMBuilder(unsigned layers,
+                       unsigned input_dim,
+                       unsigned hidden_dim,
+                       ParameterCollection& model);
+
+  virtual void set_num_elements(int num) override;
+  Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  ParameterCollection & get_parameter_collection() override { return node_builder.get_parameter_collection(); }
+
+  ParameterCollection local_model;
+  LSTMBuilder node_builder;
+  std::vector<Expression> h;
+};
+
+
+struct BidirectionalTreeLSTMBuilder : public TreeLSTMBuilder {
+  BidirectionalTreeLSTMBuilder() = default;
+  explicit BidirectionalTreeLSTMBuilder(unsigned layers,
+                       unsigned input_dim,
+                       unsigned hidden_dim,
+                       ParameterCollection& model);
+
+  virtual void set_num_elements(int num) override;
+  Expression add_input(int id, std::vector<int> children, const Expression& x) override;
+  ParameterCollection & get_parameter_collection() override;
+
+  LSTMBuilder fwd_node_builder;
+  LSTMBuilder rev_node_builder;
+  std::vector<Expression> h;
+  ParameterCollection local_model;
+
+};
+
+
 ////////////////////////////////////
 // declarations from dynet/init.h //
 ////////////////////////////////////
@@ -1075,7 +1226,7 @@ struct DynetParams {
   std::string mem_descriptor = "512"; /**< Total memory to be allocated for Dynet */
   float weight_decay = 0; /**< Weight decay rate for L2 regularization */
   int autobatch = 0; /**< Whether to autobatch or not */
-  int autobatch_debug = 0; /**< Whether to show autobatch debug info or not */
+  int profiling = 0; /**< Whether to show profiling info or not */
   bool shared_parameters = false; /**< TO DOCUMENT */
 
 #ifdef SWIG_USE_CUDA

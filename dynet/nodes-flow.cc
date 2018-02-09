@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-flow.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 using namespace std;
 
@@ -35,7 +36,7 @@ template<class MyDevice>
 void Reshape::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   // just point to the input memory and change dimensions
   // dimensions are handled by forward_dim
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
 }
 
 template<class MyDevice>
@@ -46,7 +47,7 @@ void Reshape::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   const Tensor reshaped(dEdxi.d, dEdf.v, dEdxi.device, dEdf.mem_pool);
-  dEdxi.tvec().device(*dev.edevice) += reshaped.tvec();
+  tvec(dEdxi).device(*dev.edevice) += tvec(reshaped);
 }
 DYNET_NODE_INST_DEV_IMPL(Reshape)
 
@@ -67,7 +68,7 @@ Dim Identity::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void Identity::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
 }
 
 template<class MyDevice>
@@ -77,7 +78,7 @@ void Identity::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+  tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(Identity)
 
@@ -100,7 +101,7 @@ Dim NoBackprop::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void NoBackprop::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
 }
 
 template<class MyDevice>
@@ -114,38 +115,38 @@ void NoBackprop::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(NoBackprop)
 
-// ************* FlipGradient *************
+// ************* ScaleGradient *************
 
 #ifndef __CUDACC__
 
-string FlipGradient::as_string(const vector<string>& arg_names) const {
+string ScaleGradient::as_string(const vector<string>& arg_names) const {
   ostringstream s;
   s << "flip_gradient(" << arg_names[0] << ')';
   return s.str();
 }
 
-Dim FlipGradient::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in FlipGradient");
+Dim ScaleGradient::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() == 1, "Failed input count check in ScaleGradient");
   return xs[0];
 }
 
 #endif
 
 template<class MyDevice>
-void FlipGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+void ScaleGradient::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
 }
 
 template<class MyDevice>
-void FlipGradient::backward_dev_impl(const MyDevice & dev,
+void ScaleGradient::backward_dev_impl(const MyDevice & dev,
                                    const vector<const Tensor*>& xs,
                                    const Tensor& fx,
                                    const Tensor& dEdf,
                                    unsigned i,
                                    Tensor& dEdxi) const {
-  // takes negative on backprop
-  dEdxi.tvec().device(*dev.edevice) -= dEdf.tvec();
+  // Scale gradient by lambda on backprop
+  tvec(dEdxi).device(*dev.edevice) += tvec(dEdf) * lambd;
 }
-DYNET_NODE_INST_DEV_IMPL(FlipGradient)
+DYNET_NODE_INST_DEV_IMPL(ScaleGradient)
 
 }

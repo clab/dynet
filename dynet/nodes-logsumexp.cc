@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-logsumexp.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 using namespace std;
 
@@ -36,7 +37,7 @@ Dim LogSumExp::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   if (xs.size() == 1) {
-    fx.tvec().device(*dev.edevice) = xs[0]->tvec();
+    tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
   } else {
     AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
     Tensor ms(fx.d, nullptr, fx.device, fx.mem_pool);
@@ -45,28 +46,28 @@ void LogSumExp::forward_dev_impl(const MyDevice & dev, const vector<const Tensor
     Eigen::array<ptrdiff_t, 2> bcast = {1,fx.d.bd};
     // Calculate the max
     if(ms.d.bd == xs[0]->d.bd)
-      ms.tvec().device(*dev.edevice) = xs[0]->tvec();
+      tvec(ms).device(*dev.edevice) = tvec(*xs[0]);
     else
-      ms.tbvec().device(*dev.edevice) = xs[0]->tbvec().broadcast(bcast); 
+      tbvec(ms).device(*dev.edevice) = tbvec(*xs[0]).broadcast(bcast);
     for (size_t i = 1; i < xs.size(); ++i) {
       if(ms.d.bd == xs[i]->d.bd)
-        ms.tvec().device(*dev.edevice) = ms.tvec().cwiseMax(xs[i]->tvec());
+        tvec(ms).device(*dev.edevice) = tvec(ms).cwiseMax(tvec(*xs[i]));
       else
-        ms.tbvec().device(*dev.edevice) = ms.tbvec().cwiseMax(xs[i]->tbvec().broadcast(bcast)); 
+        tbvec(ms).device(*dev.edevice) = tbvec(ms).cwiseMax(tbvec(*xs[i]).broadcast(bcast));
     }
     // sumexp
     if(ms.d.bd == xs[0]->d.bd)
-      fx.tvec().device(*dev.edevice) = (xs[0]->tvec() - ms.tvec()).exp();
+      tvec(fx).device(*dev.edevice) = (tvec(*xs[0]) - tvec(ms)).exp();
     else
-      fx.tbvec().device(*dev.edevice) = (xs[0]->tbvec().broadcast(bcast) - ms.tbvec()).exp();
+      tbvec(fx).device(*dev.edevice) = (tbvec(*xs[0]).broadcast(bcast) - tbvec(ms)).exp();
     for (size_t i = 1; i < xs.size(); ++i) {
       if(ms.d.bd == xs[i]->d.bd)
-        fx.tvec().device(*dev.edevice) += (xs[i]->tvec() - ms.tvec()).exp();
+        tvec(fx).device(*dev.edevice) += (tvec(*xs[i]) - tvec(ms)).exp();
       else
-        fx.tbvec().device(*dev.edevice) += (xs[i]->tbvec().broadcast(bcast) - ms.tbvec()).exp();
+        tbvec(fx).device(*dev.edevice) += (tbvec(*xs[i]).broadcast(bcast) - tbvec(ms)).exp();
     }
     // log and add max
-    fx.tvec().device(*dev.edevice) = fx.tvec().log() + ms.tvec();
+    tvec(fx).device(*dev.edevice) = tvec(fx).log() + tvec(ms);
 
     scratch_allocator->free();
   }
@@ -80,17 +81,17 @@ void LogSumExp::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   if (xs.size() == 1) {
-    dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+    tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
   } else {
     // df/dx_i = 1/{sum_j exp(x_j)} * exp(x_i)}
     //         = 1/{exp f(x)} * exp(x_i)
     //         = exp(x_i - f(x))
     if(fx.d.bd == xs[i]->d.bd) {
-      dEdxi.tvec().device(*dev.edevice) += (xs[i]->tvec() - fx.tvec()).exp() * dEdf.tvec();
+      tvec(dEdxi).device(*dev.edevice) += (tvec(*xs[i]) - tvec(fx)).exp() * tvec(dEdf);
     } else {
       Eigen::array<ptrdiff_t, 2> bcast = {1,fx.d.bd};
       Eigen::array<int, 1> red_axis = {1};
-      dEdxi.tvec().device(*dev.edevice) += ((xs[i]->tbvec().broadcast(bcast) - fx.tbvec()).exp() * dEdf.tbvec()).sum(red_axis);
+      tvec(dEdxi).device(*dev.edevice) += ((tbvec(*xs[i]).broadcast(bcast) - tbvec(fx)).exp() * tbvec(dEdf)).sum(red_axis);
     }
   }
 }
@@ -111,7 +112,7 @@ string LogSumExpDimension::as_string(const vector<string>& arg_names) const {
 Dim LogSumExpDimension::dim_forward(const vector<Dim>& xs) const {
   DYNET_ARG_CHECK(xs.size() == 1, "LogSumExpDimension takes only one argument" << xs);
   DYNET_ARG_CHECK(xs[0].nd <= 2, "LogSumExpDimension, expects 2 or fewer dimensions" << xs);
-  DYNET_ARG_CHECK(xs[0].nd > dimension, "LogSumExpDimension, expects its dimension argument (" << 
+  DYNET_ARG_CHECK(xs[0].nd > dimension, "LogSumExpDimension, expects its dimension argument (" <<
                     dimension << ") to be smaller than the number of elements in the input " << xs);
   Dim d = xs[0];
   if(dimension < d.nd)
@@ -140,7 +141,7 @@ void LogSumExpDimension::backward_dev_impl(const MyDevice & dev,
   unsigned other_dim = dimension ^ 1;
   Eigen::array<int, 3> bcast = {1, 1, 1}; bcast[dimension] = xs[0]->d[dimension];
   Eigen::array<int, 3> morph = {1, 1, (int)fx.d.bd}; morph[other_dim] = fx.d[0];
-  dEdxi.tb<2>().device(*dev.edevice) += (xs[0]->tb<2>() - fx.tb<1>().reshape(morph).broadcast(bcast)).exp() * dEdf.tb<1>().reshape(morph).broadcast(bcast);
+  tb<2>(dEdxi).device(*dev.edevice) += (tb<2>(*xs[0]) - tb<1>(fx).reshape(morph).broadcast(bcast)).exp() * tb<1>(dEdf).reshape(morph).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(LogSumExpDimension)
 

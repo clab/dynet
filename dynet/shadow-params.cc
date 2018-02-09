@@ -4,6 +4,7 @@
 #include "dynet/tensor.h"
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/model.h"
+#include "dynet/devices.h"
 
 #define LOAD_INIT_FUNC() initialize_lookups()
 
@@ -12,12 +13,12 @@ using namespace std;
 namespace dynet {
 
 ShadowParameters::ShadowParameters(const ParameterStorage& p) : h(p.values) {
-  default_device->allocate_tensor(DeviceMempool::PS, h);
+  p.device->allocate_tensor(DeviceMempool::PS, h);
   TensorTools::zero(h);
 }
 
 ShadowLookupParameters::ShadowLookupParameters(const LookupParameterStorage& lp) : all_h(lp.all_values) {
-  default_device->allocate_tensor(DeviceMempool::PS, all_h);
+  lp.device->allocate_tensor(DeviceMempool::PS, all_h);
   TensorTools::zero(all_h);
   initialize_lookups();
 }

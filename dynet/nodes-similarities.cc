@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-similarities.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
 
 using namespace std;
@@ -31,13 +32,13 @@ void DotProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   Eigen::array<int, 1> red_axis; red_axis[0] = 0;
   Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
   if(fx.d.bd == 1) {
-    fx.t<0>().device(*dev.edevice) = (xs[0]->tvec() * xs[1]->tvec()).sum();
+    t<0>(fx).device(*dev.edevice) = (tvec(*xs[0]) * tvec(*xs[1])).sum();
   } else if(xs[0]->d.bd == xs[1]->d.bd) {
-    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() * xs[1]->tbvec()).sum(red_axis);
+    tb<0>(fx).device(*dev.edevice) = (tbvec(*xs[0]) * tbvec(*xs[1])).sum(red_axis);
   } else if(xs[0]->d.bd == 1) {
-    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec().broadcast(bcast) * xs[1]->tbvec()).sum(red_axis);
+    tb<0>(fx).device(*dev.edevice) = (tbvec(*xs[0]).broadcast(bcast) * tbvec(*xs[1])).sum(red_axis);
   } else {
-    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() * xs[1]->tbvec().broadcast(bcast)).sum(red_axis);
+    tb<0>(fx).device(*dev.edevice) = (tbvec(*xs[0]) * tbvec(*xs[1]).broadcast(bcast)).sum(red_axis);
   }
 }
 
@@ -50,17 +51,17 @@ void DotProduct::backward_dev_impl(const MyDevice & dev,
                              Tensor& dEdxi) const {
   if(fx.d.bd == 1) {
     Eigen::array<int, 1> bcast; bcast[0] = xs[i]->d.batch_size();
-    dEdxi.tvec().device(*dev.edevice) += xs[1-i]->tvec() * dEdf.tvec().broadcast(bcast);
+    tvec(dEdxi).device(*dev.edevice) += tvec(*xs[1-i]) * tvec(dEdf).broadcast(bcast);
   } else {
     Eigen::array<int, 2> bcast; bcast[0] =xs[i]->d.batch_size(); bcast[1] = 1;
     if(xs[0]->d.bd == xs[1]->d.bd) {
-      dEdxi.tbvec().device(*dev.edevice) += xs[1-i]->tbvec() * dEdf.tbvec().broadcast(bcast);
+      tbvec(dEdxi).device(*dev.edevice) += tbvec(*xs[1-i]) * tbvec(dEdf).broadcast(bcast);
     } else if(dEdxi.d.bd == 1) {
       Eigen::array<int, 1> red_axis; red_axis[0] = 1;
-      dEdxi.tvec().device(*dev.edevice) += (xs[1-i]->tbvec() * dEdf.tbvec().broadcast(bcast)).sum(red_axis);
+      tvec(dEdxi).device(*dev.edevice) += (tbvec(*xs[1-i]) * tbvec(dEdf).broadcast(bcast)).sum(red_axis);
     } else {
       Eigen::array<int, 2> batchcast; batchcast[0] = 1; batchcast[1] = fx.d.bd;
-      dEdxi.tbvec().device(*dev.edevice) += (xs[1-i]->tbvec().broadcast(batchcast) * dEdf.tbvec().broadcast(bcast));
+      tbvec(dEdxi).device(*dev.edevice) += (tbvec(*xs[1-i]).broadcast(batchcast) * tbvec(dEdf).broadcast(bcast));
     }
   }
 }
@@ -89,7 +90,12 @@ Dim HuberDistance::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void HuberDistance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "HuberDistance::forward dimension check failed");
-  fx.t<0>().device(*dev.edevice) = (xs[0]->tvec() - xs[1]->tvec()).unaryExpr(FHuberForward(d)).sum();
+  AlignedMemoryPool* scratch_allocator = xs[0]->device->pools[(int)DeviceMempool::SCS];
+  Tensor diff(xs[0]->d, nullptr, xs[0]->device, xs[0]->mem_pool);
+  diff.v = static_cast<float*>(scratch_allocator->allocate(diff.d.size() * sizeof(float)));
+  tvec(diff).device(*dev.edevice) = tvec(*xs[0]) - tvec(*xs[1]);
+  t<0>(fx).device(*dev.edevice) = (tvec(diff).abs() < d).select(tvec(diff).square(), d * (2 * tvec(diff).abs() - d)).sum();
+  scratch_allocator->free();
 }
 
 template<class MyDevice>
@@ -100,7 +106,13 @@ void HuberDistance::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "HuberDistance::backward dimension check failed");
-  dEdxi.tvec().device(*dev.edevice) += (xs[i]->tvec() - xs[1-i]->tvec()).unaryExpr(FHuberBackward(d, as_scalar(dEdf)));
+  AlignedMemoryPool* scratch_allocator = xs[i]->device->pools[(int)DeviceMempool::SCS];
+  Tensor diff(xs[i]->d, nullptr, xs[i]->device, xs[i]->mem_pool);
+  diff.v = static_cast<float*>(scratch_allocator->allocate(diff.d.size() * sizeof(float)));
+  tvec(diff).device(*dev.edevice) = tvec(*xs[i]) - tvec(*xs[1-i]);
+  float scale = 2 * as_scalar(dEdf);
+  tvec(dEdxi).device(*dev.edevice) += scale * (tvec(diff).abs() < d).select(tvec(diff), d * ((tvec(diff) > 0.f).template cast<float>() - (tvec(diff) < 0.f).template cast<float>()));
+  scratch_allocator->free();
 }
 DYNET_NODE_INST_DEV_IMPL(HuberDistance)
 
@@ -127,7 +139,7 @@ Dim L1Distance::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void L1Distance::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in L1Distance::forward");
-  fx.t<0>().device(*dev.edevice) = (xs[0]->tvec() - xs[1]->tvec()).abs().sum();
+  t<0>(fx).device(*dev.edevice) = (tvec(*xs[0]) - tvec(*xs[1])).abs().sum();
 }
 
 template<class MyDevice>
@@ -138,7 +150,7 @@ void L1Distance::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ASSERT(i < 2, "Failed dimension check in L1Distance::backward");
-  dEdxi.tvec().device(*dev.edevice) += (xs[i]->tvec() - xs[1-i]->tvec()).unaryExpr(FL1Backward(as_scalar(dEdf)));
+  tvec(dEdxi).device(*dev.edevice) += (tvec(*xs[i]) - tvec(*xs[1-i])).unaryExpr(FL1Backward(as_scalar(dEdf)));
 }
 DYNET_NODE_INST_DEV_IMPL(L1Distance)
 
@@ -197,13 +209,13 @@ void SquaredEuclideanDistance::forward_dev_impl(const MyDevice & dev, const vect
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in SquaredEuclideanDistance::forward");
   Eigen::array<ptrdiff_t, 1> red_axis = {0};
   if(xs[0]->d.bd == xs[1]->d.bd) {
-    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() - xs[1]->tbvec()).square().sum(red_axis);
+    tb<0>(fx).device(*dev.edevice) = (tbvec(*xs[0]) - tbvec(*xs[1])).square().sum(red_axis);
   } else if(xs[0]->d.bd == 1) {
     Eigen::array<ptrdiff_t, 2> bcast = {1, xs[1]->d.bd};
-    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec().broadcast(bcast) - xs[1]->tbvec()).square().sum(red_axis);
+    tb<0>(fx).device(*dev.edevice) = (tbvec(*xs[0]).broadcast(bcast) - tbvec(*xs[1])).square().sum(red_axis);
   } else {
     Eigen::array<ptrdiff_t, 2> bcast = {1, xs[0]->d.bd};
-    fx.tb<0>().device(*dev.edevice) = (xs[0]->tbvec() - xs[1]->tbvec().broadcast(bcast)).square().sum(red_axis);
+    tb<0>(fx).device(*dev.edevice) = (tbvec(*xs[0]) - tbvec(*xs[1]).broadcast(bcast)).square().sum(red_axis);
   }
 }
 
@@ -218,22 +230,22 @@ void SquaredEuclideanDistance::backward_dev_impl(const MyDevice & dev,
   float multiplier = (i == 1 ? -2.0f : 2.0f);
   Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
   if(xs[0]->d.bd == xs[1]->d.bd) {
-    dEdxi.tbvec().device(*dev.edevice) += (xs[0]->tbvec() - xs[1]->tbvec()) * dEdf.tbvec().broadcast(bcast) * multiplier;
+    tbvec(dEdxi).device(*dev.edevice) += (tbvec(*xs[0]) - tbvec(*xs[1])) * tbvec(dEdf).broadcast(bcast) * multiplier;
   } else if(xs[0]->d.bd == 1) {
     Eigen::array<ptrdiff_t, 2> batchcast = {1, xs[1]->d.bd};
     if(i == 1) {
-      dEdxi.tbvec().device(*dev.edevice) += (xs[0]->tbvec().broadcast(batchcast) - xs[1]->tbvec()) * dEdf.tbvec().broadcast(bcast) * multiplier;
+      tbvec(dEdxi).device(*dev.edevice) += (tbvec(*xs[0]).broadcast(batchcast) - tbvec(*xs[1])) * tbvec(dEdf).broadcast(bcast) * multiplier;
     } else {
       Eigen::array<ptrdiff_t, 1> red_axis = {1};
-      dEdxi.tvec().device(*dev.edevice) += ((xs[0]->tbvec().broadcast(batchcast) - xs[1]->tbvec()) * dEdf.tbvec().broadcast(bcast) * multiplier).sum(red_axis);
+      tvec(dEdxi).device(*dev.edevice) += ((tbvec(*xs[0]).broadcast(batchcast) - tbvec(*xs[1])) * tbvec(dEdf).broadcast(bcast) * multiplier).sum(red_axis);
     }
   } else {
     Eigen::array<ptrdiff_t, 2> batchcast = {1, xs[0]->d.bd};
     if(i == 0) {
-      dEdxi.tbvec().device(*dev.edevice) += (xs[0]->tbvec() - xs[1]->tbvec().broadcast(batchcast)) * dEdf.tbvec().broadcast(bcast) * multiplier;
+      tbvec(dEdxi).device(*dev.edevice) += (tbvec(*xs[0]) - tbvec(*xs[1]).broadcast(batchcast)) * tbvec(dEdf).broadcast(bcast) * multiplier;
     } else {
       Eigen::array<ptrdiff_t, 1> red_axis = {1};
-      dEdxi.tvec().device(*dev.edevice) += ((xs[0]->tbvec() - xs[1]->tbvec().broadcast(batchcast)) * dEdf.tbvec().broadcast(bcast) * multiplier).sum(red_axis);
+      tvec(dEdxi).device(*dev.edevice) += ((tbvec(*xs[0]) - tbvec(*xs[1]).broadcast(batchcast)) * tbvec(dEdf).broadcast(bcast) * multiplier).sum(red_axis);
     }
   }
 }

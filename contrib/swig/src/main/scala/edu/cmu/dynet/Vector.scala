@@ -8,6 +8,11 @@ package edu.cmu.dynet
 import scala.language.implicitConversions
 import scala.collection.JavaConverters._
 
+object IntVector {
+  implicit def Seq2IntVector(x: Seq[Int]) =
+    new IntVector(x)
+}
+
 class IntVector private[dynet] (private[dynet] val vector: internal.IntVector)
     extends scala.collection.mutable.IndexedSeq[Int] {
   def this(size: Long) { this(new internal.IntVector(size)) }
@@ -20,6 +25,11 @@ class IntVector private[dynet] (private[dynet] val vector: internal.IntVector)
   override def apply(idx: Int): Int = vector.get(idx)
   override def length: Int = vector.size.toInt
   override def update(idx: Int, elem: Int): Unit = vector.set(idx, elem)
+}
+
+object UnsignedVector {
+  implicit def Seq2UnsignedVector(x: Seq[Long]) =
+    new UnsignedVector(x)
 }
 
 /** SWIG converts C++ `unsigned` to Scala `Long` */
@@ -36,6 +46,11 @@ class UnsignedVector private[dynet] (private[dynet] val vector: internal.Unsigne
   override def update(idx: Int, elem: Long): Unit = vector.set(idx, elem)
 }
 
+object FloatVector {
+  implicit def Seq2FloatVector(x: Seq[Float]) =
+    new FloatVector(x)
+}
+
 class FloatVector private[dynet] (private[dynet] val vector: internal.FloatVector)
     extends scala.collection.mutable.IndexedSeq[Float] {
   def this(size: Long) { this(new internal.FloatVector(size)) }
@@ -47,6 +62,11 @@ class FloatVector private[dynet] (private[dynet] val vector: internal.FloatVecto
   override def apply(idx: Int): Float = vector.get(idx)
   override def length: Int = vector.size.toInt
   override def update(idx: Int, elem: Float): Unit = vector.set(idx, elem)
+}
+
+object ExpressionVector {
+  implicit def Seq2ExpressionVector(x: Seq[Expression]) =
+    new ExpressionVector(x)
 }
 
 class ExpressionVector private[dynet] (
@@ -79,4 +99,22 @@ class ExpressionVector private[dynet] (
     elem.ensureFresh()
     vector.set(idx, elem.expr)
   }
+}
+
+object UnsignedVectorVector {
+  implicit def Seq2UnsignedVectorVector(x: Seq[UnsignedVector]) =
+    new UnsignedVectorVector(x)
+}
+
+class UnsignedVectorVector private[dynet] (private[dynet] val vector: internal.UnsignedVectorVector)
+  extends scala.collection.mutable.IndexedSeq[UnsignedVector] {
+  def this(size: Long) { this(new internal.UnsignedVectorVector(size)) }
+  def this(values: Seq[UnsignedVector] = Seq.empty) {
+    this(new internal.UnsignedVectorVector(values.map(_.vector).asJavaCollection))
+  }
+
+  def add(v: UnsignedVector): Unit = vector.add(v.vector)
+  override def apply(idx: Int): UnsignedVector = new UnsignedVector(vector.get(idx))
+  override def length: Int = vector.size.toInt
+  override def update(idx: Int, v: UnsignedVector): Unit = vector.set(idx, v.vector)
 }

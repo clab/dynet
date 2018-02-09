@@ -27,10 +27,12 @@ options.
    a minimum of work. More information about this functionality can be found
    `here <http://dynet.readthedocs.io/en/latest/minibatch.html>`_.
 -  ``--dynet-gpus NUMBER``: Specify how many GPUs you want to use, if
-   DyNet is compiled with CUDA. Currently, only one GPU is supported.
+   DyNet is compiled with CUDA.
 -  ``--dynet-gpu``: Specify whether to use GPU or not. Note that it is an option for Python programs.
 -  ``--dynet-devices CPU,GPU:1,GPU:3,GPU:0``: Specify the CPU/GPU devices that you
    want to use. You can the physical ID for GPU and can not specify the ID for CPU.
    This is an useful option working together with your multi-device code.
    Currently, DyNet needs you to specify the device ID explictly.
    The option ``--dynet-gpu-ids`` is deprecated.
+-  ``--dynet-profiling NUMBER``: Will output information about the amount of
+   time/memory used by each node in the graph. Profile level with ``0, 1`` and ``2``.

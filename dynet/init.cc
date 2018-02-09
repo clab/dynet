@@ -1,9 +1,11 @@
 #include "dynet/init.h"
+
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet.h"
 #include "dynet/weight-decay.h"
 #include "dynet/globals.h"
 #include "dynet/str-util.h"
+#include "dynet/devices.h"
 
 #include <iostream>
 #include <random>
@@ -18,7 +20,7 @@ using namespace std;
 
 namespace dynet {
 
-DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), autobatch_debug(0),
+DynetParams::DynetParams() : random_seed(0), mem_descriptor("512"), weight_decay(0), autobatch(0), profiling(0),
   shared_parameters(false), ngpus_requested(false), ids_requested(false), cpu_requested(false), requested_gpus(-1)
 {
 #if HAVE_CUDA
@@ -30,14 +32,50 @@ DynetParams::~DynetParams()
 {
 }
 
+static bool has_arg(int argi, int argc, char** argv) {
+  const std::string arg(argv[argi]);
+  auto pos = arg.find('=');
+  if (pos == std::string::npos) {
+    if ((argi + 1) < argc) {
+      const std::string argn(argv[argi + 1]);
+      if (argn.size() < 2 || !(argn[0] == '-' && argn[1] == '-'))
+        return true;
+    }
+  } else {
+    // check that there is actually a string present
+    if ((pos + 1) < arg.size()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static void remove_args(int& argc, char**& argv, int& argi, int n) {
+  if (n == 2) {
+    // when we want a single argument, check to see if it was specified with
+    // an '=', if so decrement the argument count.
+    const std::string arg(argv[argi]);
+    if (arg.find('=') != std::string::npos) {
+      --n;
+    }
+  }
   for (int i = argi + n; i < argc; ++i)
     argv[i - n] = argv[i];
   argc -= n;
   DYNET_ASSERT(argc >= 0, "remove_args less than 0");
 }
 
-DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters) {
+static std::string get_arg(int argi, char** argv) {
+  const std::string arg(argv[argi]);
+  auto pos = arg.find('=');
+  if (pos != std::string::npos) {
+    return arg.substr(pos+1);
+  }
+  return argv[argi + 1];
+}
+
+DynetParams extract_dynet_params(int& argc,
+                                 char**& argv, bool shared_parameters) {
   DynetParams params;
   params.shared_parameters = shared_parameters;
 
@@ -52,72 +90,86 @@ DynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters
     string arg = argv[argi];
 
     // Memory
-    if (arg == "--dynet-mem" || arg == "--dynet_mem") {
-      if ((argi + 1) >= argc) {
+    if (startswith(arg, "--dynet-mem") || startswith(arg, "--dynet_mem")) {
+      if (!has_arg(argi, argc, argv)) {
         throw std::invalid_argument("[dynet] --dynet-mem expects an argument (the memory, in megabytes, to reserve)");
       } else {
-        params.mem_descriptor = argv[argi + 1];
+        params.mem_descriptor = get_arg(argi, argv);
         remove_args(argc, argv, argi, 2);
       }
     }
 
     // Weight decay
-    else if (arg == "--dynet-weight-decay" || arg == "--dynet_weight_decay") {
-      if ((argi + 1) >= argc) {
+    else if (startswith(arg, "--dynet-weight-decay") ||
+             startswith(arg, "--dynet_weight_decay")) {
+      if (!has_arg(argi, argc, argv)) {
         throw std::invalid_argument("[dynet] --dynet-weight-decay requires an argument (the weight decay per update)");
       } else {
-        string a2 = argv[argi + 1];
+        string a2 = get_arg(argi, argv);
         istringstream d(a2); d >> params.weight_decay;
         remove_args(argc, argv, argi, 2);
       }
     }
 
     // Random seed
-    else if (arg == "--dynet-seed" || arg == "--dynet_seed") {
-      if ((argi + 1) >= argc) {
+    else if (startswith(arg, "--dynet-seed") ||
+             startswith(arg, "--dynet_seed")) {
+      if (!has_arg(argi, argc, argv)) {
         throw std::invalid_argument("[dynet] --dynet-seed expects an argument (the random number seed)");
       } else {
-        string a2 = argv[argi + 1];
+        string a2 = get_arg(argi, argv);
         istringstream c(a2); c >> params.random_seed;
         remove_args(argc, argv, argi, 2);
       }
     }
 
-    // Memory
-    else if (arg == "--dynet-autobatch" || arg == "--dynet_autobatch") {
-      if ((argi + 1) >= argc) {
+    // Autobatching
+    else if (startswith(arg, "--dynet-autobatch") ||
+             startswith(arg, "--dynet_autobatch")) {
+      if (!has_arg(argi, argc, argv)) {
         throw std::invalid_argument("[dynet] --dynet-autobatch expects an argument (0 for none 1 for on)");
       } else {
-        string a2 = argv[argi + 1];
+        string a2 = get_arg(argi, argv);
         istringstream c(a2); c >> params.autobatch;
         remove_args(argc, argv, argi, 2);
       }
     }
-    else if (arg == "--dynet-autobatch-debug" || arg == "--dynet_autobatch_debug") {
-      params.autobatch_debug = 1;
-        remove_args(argc, argv, argi, 1);
+
+    // Profiling
+    else if (startswith(arg, "--dynet-profiling") ||
+             startswith(arg, "--dynet_profiling")) {
+      if (!has_arg(argi, argc, argv)) {
+        throw std::invalid_argument("[dynet] --dynet-profiling expects an argument (0 for none 1 for on)");
+      } else {
+        string a2 = get_arg(argi, argv);
+        istringstream c(a2); c >> params.profiling;
+        remove_args(argc, argv, argi, 2);
+      }
     }
 
 #if HAVE_CUDA
-    else if (arg == "--dynet-gpus" || arg == "--dynet_gpus") {
-      if ((argi + 1) > argc) {
+    else if (startswith(arg, "--dynet-gpus") ||
+             startswith(arg, "--dynet_gpus")) {
+      if (!has_arg(argi, argc, argv)) {
         throw std::invalid_argument("[dynet] --dynet-gpus expects an argument (number of GPUs to use)");
       } else {
         if (params.ngpus_requested)
           throw std::invalid_argument("Multiple instances of --dynet-gpus");
         params.ngpus_requested = true;
-        string a2 = argv[argi + 1];
+        string a2 = get_arg(argi, argv);
         istringstream c(a2); c >> params.requested_gpus;
         remove_args(argc, argv, argi, 2);
       }
     }
 #endif
 
-    else if (arg == "--dynet-devices" || arg == "--dynet_devices") {
-      if ((argi + 1) >= argc) {
+    // Devices
+    else if (startswith(arg, "--dynet-devices") ||
+             startswith(arg, "--dynet_devices")) {
+      if (!has_arg(argi, argc, argv)) {
         throw std::invalid_argument("[dynet] --dynet-devices expects an argument (comma separated list of CPU and physical GPU ids to use)");
       } else {
-        string devices_str = argv[argi + 1];
+        string devices_str = get_arg(argi, argv);
         if (params.ids_requested)
            throw std::invalid_argument("Multiple instances of --dynet-devices");
         params.ids_requested = true;
@@ -189,6 +241,12 @@ void initialize(DynetParams& params) {
   }
   cerr << "[dynet] random seed: " << params.random_seed << endl;
   rndeng = new mt19937(params.random_seed);
+#if HAVE_CUDA
+  CURAND_CHECK(curandCreateGenerator(&curandeng, 
+                                     CURAND_RNG_PSEUDO_PHILOX4_32_10));
+  CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curandeng, 
+                                                  params.random_seed+1));
+#endif
 
   // Set weight decay rate
   if (params.weight_decay < 0 || params.weight_decay >= 1)
@@ -200,15 +258,20 @@ void initialize(DynetParams& params) {
     cerr << "[dynet] using autobatching" << endl;
   autobatch_flag = params.autobatch;
   
-  if(params.autobatch_debug)
-    cerr << "[dynet] using autobatching debugging" << endl;
-  autobatch_debug_flag = params.autobatch_debug;
+  if(params.profiling)
+    cerr << "[dynet] using profiling level " << params.profiling << endl;
+  profiling_flag = params.profiling;
 
   // Allocate memory
   cerr << "[dynet] allocating memory: " << params.mem_descriptor << "MB\n";
   int default_index = 0;
 
-  Device *d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
+  Device *d;
+  if (gpudevices.size()) {
+    d = new Device_CPU(device_manager->num_devices(), std::string("128"), params.shared_parameters);
+  } else {
+    d = new Device_CPU(device_manager->num_devices(), params.mem_descriptor, params.shared_parameters);
+  }
   device_manager->add(d);
   default_device = device_manager->get(default_index);
 #if HAVE_CUDA

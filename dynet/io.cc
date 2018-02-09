@@ -3,6 +3,8 @@
 #include "dynet/except.h"
 #include "dynet/str-util.h"
 
+#include <algorithm>
+
 // Normally DyNet style permits using namespace std, but to make compatibility
 // possible with some external code, it is simpler if types are fully
 // qualified in dynet/io.cc. Please do not uncomment the following:
@@ -59,7 +61,7 @@ TextFileSaver::TextFileSaver(const std::string & filename, bool append) :
         p_datastream(
             new std::ofstream(
                 filename.c_str(),
-                append ? std::ios_base::app : std::ios_base::out)),
+                (append ? std::ios_base::app : std::ios_base::out) | std::ios_base::binary)),
         datastream(*p_datastream) {
   if(!datastream)
     DYNET_RUNTIME_ERR("Could not write model to " << filename);
@@ -114,7 +116,7 @@ void TextFileSaver::save(const ParameterStorage & p,
     datastream << strsize << " ZERO_GRAD";
   else
     datastream << strsize*2 << " FULL_GRAD";
-  datastream << std::endl << dynet::as_vector(p.values) << std::endl;
+  datastream << std::endl << dynet::as_scale_vector(p.values, p.owner->get_weight_decay().current_weight_decay()) << std::endl;
   if(!zero_grad)
     datastream << dynet::as_vector(p.g) << std::endl;
 }
@@ -128,7 +130,7 @@ void TextFileSaver::save(const LookupParameterStorage & p,
     datastream << strsize << " ZERO_GRAD";
   else
     datastream << strsize*2 << " FULL_GRAD";
-  datastream << std::endl << dynet::as_vector(p.all_values) << std::endl;
+  datastream << std::endl << dynet::as_scale_vector(p.all_values, p.owner->get_weight_decay().current_weight_decay()) << std::endl;
   if(!zero_grad)
     datastream << dynet::as_vector(p.all_grads) << std::endl;
 }
@@ -139,7 +141,7 @@ TextFileLoader::TextFileLoader(const std::string & filename) :
 TextFileLoader::~TextFileLoader() {}
 
 void TextFileLoader::populate(ParameterCollection & model, const std::string & key) {
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad = false;
@@ -202,7 +204,7 @@ void TextFileLoader::populate(Parameter & param,
                     const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.populate() requires non-empty key");
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad=false;
@@ -235,7 +237,7 @@ void TextFileLoader::populate(LookupParameter & lookup_param,
                               const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.populate() requires non-empty key");
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad=false;
@@ -268,7 +270,7 @@ Parameter TextFileLoader::load_param(ParameterCollection & model,
                                      const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.load_param() requires non-empty key");
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad=false;
@@ -301,7 +303,7 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
                                                   const std::string & key) {
   if(key == "")
     DYNET_INVALID_ARG("TextFileLoader.load_lookup_param() requires non-empty key");
-  std::ifstream datastream(dataname);
+  std::ifstream datastream(dataname, std::ios_base::in | std::ios_base::binary);
   if(!datastream) DYNET_RUNTIME_ERR("Could not read model from " << dataname);
   std::string line, type, name;
   bool zero_grad=false;

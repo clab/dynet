@@ -1,10 +1,15 @@
+
 #include "dynet/tensor.h"
+#include "dynet/tensor-eigen.h"
+#include "dynet/index-tensor.h"
 #include "dynet/globals.h"
 #include "dynet/except.h"
+#include "dynet/devices.h"
 
 #include <random>
 #include <vector>
 #include <cstring>
+#include <algorithm>
 
 #ifdef __CUDACC__
 #include "dynet/gpu-ops.h"
@@ -19,9 +24,26 @@ namespace dynet {
 
 #ifndef __CUDACC__
 
+bool Tensor::is_valid() const {
+  // TODO : replace this with a custom exception
+  if (device->type == DeviceType::CPU) {
+    const size_t s = d.size();
+    for (unsigned i = 0; i < s; ++i)
+      if (std::isnan(v[i]) || std::isinf(v[i])) return false;
+    return true;
+  } else {
+#if HAVE_CUDA
+    if (device->type == DeviceType::GPU) {
+      DYNET_NO_CUDA_IMPL_ERROR("is_valid()");
+    }
+#endif
+  }
+  return false;
+}
+
 ostream& operator<<(ostream& os, const Tensor& t) {
   if (t.device->type == DeviceType::CPU) {
-    os << (*t);
+    os << mat(t);
 #if HAVE_CUDA
   } else if (t.device->type == DeviceType::GPU) {
     vector<real> vt = as_vector(t);
@@ -74,6 +96,20 @@ vector<Eigen::DenseIndex> as_vector(const IndexTensor& v) {
   return res;
 }
 
+vector<real> as_scale_vector(const Tensor& v, float a) {
+  vector<real> res(v.d.size());
+  if (v.device->type == DeviceType::CPU) {
+    memcpy(&res[0], v.v, sizeof(real) * res.size());
+  } else if (v.device->type == DeviceType::GPU) {
+#if HAVE_CUDA
+    CUDA_CHECK(cudaSetDevice(((Device_GPU*)v.device)->cuda_device_id));
+    CUDA_CHECK(cudaMemcpy(&res[0], v.v, sizeof(real) * res.size(), cudaMemcpyDeviceToHost));
+#endif
+  } else { throw std::runtime_error("Bad device type"); }
+  if (a != 1.) std::transform(res.begin(), res.end(), res.begin(), [&](real t){ return t * a; });
+  return res;
+}
+
 float TensorTools::access_element(const Tensor& v, int index) {
   float ret = 0.;
   if (v.device->type == DeviceType::CPU) {
@@ -90,10 +126,13 @@ float TensorTools::access_element(const Tensor& v, int index) {
 
 float TensorTools::access_element(const Tensor& v, const Dim& index) {
   if (v.device->type == DeviceType::CPU) {
-    return (*v)(index[0], index[1]);
+    return mat(v)(index[0], index[1]);
 #if HAVE_CUDA
-  } else if (v.device->type == DeviceType::GPU) {
-    DYNET_NO_CUDA_IMPL_ERROR("TensorTools::access_element(Tensor,Dim)")
+  if (v.device->type == DeviceType::GPU) {
+    float ret = 0.0f;
+    CUDA_CHECK(cudaMemcpy(&ret, v.v + (v.d.rows() * index[0] + index[1]), sizeof(float), cudaMemcpyDeviceToHost));
+    return ret;
+  }
 #endif
   } else { throw std::runtime_error("Bad device type"); }
   return 0;
@@ -133,7 +172,7 @@ void TensorTools::copy_element(const Tensor& l, int lindex, Tensor& r, int rinde
       } else {
         cudaMemcpyPeerAsync(&r.v[rindex], ((Device_GPU*)r.device)->cuda_device_id,
                             &l.v[lindex], ((Device_GPU*)l.device)->cuda_device_id,
-                            sizeof(real), dynet::default_stream);
+                            sizeof(real));
       }
     } else { throw std::runtime_error("Bad device type"); }
 #endif
@@ -173,7 +212,7 @@ void TensorTools::copy_elements(Tensor& v, const Tensor& v_src) {
       } else {
         cudaMemcpyPeerAsync(v.v, ((Device_GPU*)v.device)->cuda_device_id,
                             v_src.v, ((Device_GPU*)v_src.device)->cuda_device_id,
-                            sizeof(real) * v.d.size(), dynet::default_stream);
+                            sizeof(real) * v.d.size());
       }
     }
 #endif
@@ -217,11 +256,10 @@ void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
     generate(val.v, val.v + val.d.size(), b);
 #if HAVE_CUDA
   } else if (val.device->type == DeviceType::GPU) {
-    float* t = new float[val.d.size()];
-    generate(t, t + val.d.size(), b);
-    CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
-    CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-    delete[] t;
+    CURAND_CHECK(curandGenerateUniform(curandeng, val.v, val.d.size()));
+    TensorTools::uniform_to_bernoulli_dev<Device_GPU>(*(Device_GPU*)val.device, val, p);
+    if(scale != 1.0)
+      TensorTools::scale_dev<Device_GPU>(*(Device_GPU*)val.device, val, scale, 0);
 #endif
   } else { throw std::runtime_error("Bad device type"); }
 }
@@ -233,11 +271,7 @@ void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
     generate(val.v, val.v + val.d.size(), b);
 #if HAVE_CUDA
   } else if (val.device->type == DeviceType::GPU) {
-    float* t = new float[val.d.size()];
-    generate(t, t + val.d.size(), b);
-    CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
-    CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-    delete[] t;
+    CURAND_CHECK(curandGenerateNormal(curandeng, val.v, val.d.size(), mean, stddev));
 #endif
   } else { throw std::runtime_error("Bad device type"); }
 }
@@ -249,11 +283,9 @@ void TensorTools::randomize_uniform(Tensor& val, real left, real right) {
     generate(val.v, val.v + val.d.size(), b);
 #if HAVE_CUDA
   } else if (val.device->type == DeviceType::GPU) {
-    float* t = new float[val.d.size()];
-    generate(t, t + val.d.size(), b);
-    CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
-    CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
-    delete[] t;
+    CURAND_CHECK(curandGenerateUniform(curandeng, val.v, val.d.size()));
+    if(left != 0 || right != 1)
+      TensorTools::scale_dev<Device_GPU>(*(Device_GPU*)val.device, val, right-left, left);
 #endif
   } else { throw std::runtime_error("Bad device type"); }
 }
@@ -263,8 +295,8 @@ void TensorTools::randomize_orthonormal(Tensor& val, real scale) {
     throw std::runtime_error("Attempt to set a tensor that is not a square matrix to an orthogonal matrix");
   if (val.device->type == DeviceType::CPU) {
     randomize_uniform(val, -1.0, 1.0);
-    Eigen::JacobiSVD<Eigen::MatrixXf> svd(*val, Eigen::ComputeFullU | Eigen::ComputeThinV);
-    *val = scale * svd.matrixU();
+    Eigen::JacobiSVD<Eigen::MatrixXf> svd(mat(val), Eigen::ComputeFullU | Eigen::ComputeThinV);
+    mat(val) = scale * svd.matrixU();
 #ifdef HAVE_CUDA
   } else if (val.device->type == DeviceType::GPU) {
     DYNET_NO_CUDA_IMPL_ERROR("Orthonormal initialization");
@@ -306,7 +338,7 @@ real rand_normal() {
 template <class MyDevice>
 void TensorTools::accumulate_dev(const MyDevice & dev, Tensor& v, const Tensor& v_src) {
   DYNET_ASSERT(v.d.size() == v_src.d.size(), "TensorTools::accumulate can only be used with tensors of identical size");
-  v.tvec().device(*dev.edevice) += v_src.tvec();
+  tvec(v).device(*dev.edevice) += tvec(v_src);
 }
 #ifdef __CUDACC__
 template void TensorTools::accumulate_dev<Device_GPU>(const Device_GPU & dev, Tensor& v, const Tensor& v_src);
@@ -331,7 +363,7 @@ void TensorTools::accumulate(Tensor& v, const Tensor& v_src) {
 
 template <class MyDevice>
 void TensorTools::constant_dev(const MyDevice & dev, Tensor& d, float c) {
-  d.tvec().device(*dev.edevice) = d.tvec().constant(c);
+  tvec(d).device(*dev.edevice) = tvec(d).constant(c);
 }
 #ifdef __CUDACC__
 template void TensorTools::constant_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float c);
@@ -354,7 +386,7 @@ void TensorTools::constant(Tensor& d, float c) {
 
 template <class MyDevice>
 void TensorTools::clip_dev(const MyDevice & dev, Tensor& d, float left, float right) {
-  d.tvec().device(*dev.edevice) = d.tvec().cwiseMax(left).cwiseMin(right);
+  tvec(d).device(*dev.edevice) = tvec(d).cwiseMax(left).cwiseMin(right);
 }
 #ifdef __CUDACC__
 template void TensorTools::clip_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float left, float right);
@@ -376,40 +408,86 @@ void TensorTools::clip(Tensor& d, float left, float right) {
 #endif
 
 template <class MyDevice>
+void TensorTools::scale_dev(const MyDevice & dev, Tensor& x, float a, float b) {
+  tvec(x).device(*dev.edevice) = tvec(x) * a + b;
+}
+#ifdef __CUDACC__
+template void TensorTools::scale_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float a, float b);
+#else
+template void TensorTools::scale_dev<Device_CPU>(const Device_CPU & dev, Tensor& d, float a, float b);
+#ifdef HAVE_CUDA
+extern template void TensorTools::scale_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float a, float b);
+void TensorTools::scale(Tensor& d, float a, float b) {
+  if (d.device->type == DeviceType::CPU) { return scale_dev(*(const Device_CPU*)d.device, d, a, b); }
+  else if (d.device->type == DeviceType::GPU) { return scale_dev(*(const Device_GPU*)d.device, d, a, b); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+void TensorTools::scale(Tensor& d, float a, float b) {
+  if (d.device->type == DeviceType::CPU) { return scale_dev(*(const Device_CPU*)d.device, d, a, b); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+#endif
+
+template <class MyDevice>
+void TensorTools::uniform_to_bernoulli_dev(const MyDevice & dev, Tensor& x, float p) {
+  tvec(x).device(*dev.edevice) = (tvec(x) + p).floor();
+}
+#ifdef __CUDACC__
+template void TensorTools::uniform_to_bernoulli_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float p);
+#else
+template void TensorTools::uniform_to_bernoulli_dev<Device_CPU>(const Device_CPU & dev, Tensor& d, float p);
+#ifdef HAVE_CUDA
+extern template void TensorTools::uniform_to_bernoulli_dev<Device_GPU>(const Device_GPU & dev, Tensor& d, float p);
+void TensorTools::uniform_to_bernoulli(Tensor& d, float p) {
+  if (d.device->type == DeviceType::CPU) { return uniform_to_bernoulli_dev(*(const Device_CPU*)d.device, d, p); }
+  else if (d.device->type == DeviceType::GPU) { return uniform_to_bernoulli_dev(*(const Device_GPU*)d.device, d, p); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+void TensorTools::uniform_to_bernoulli(Tensor& d, float p) {
+  if (d.device->type == DeviceType::CPU) { return uniform_to_bernoulli_dev(*(const Device_CPU*)d.device, d, p); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+#endif
+
+template <class MyDevice>
 void TensorTools::logsumexp_dev(const MyDevice & dev, const Tensor& x, Tensor & m, Tensor& z, unsigned axis) {
   DYNET_ARG_CHECK(x.d.nd <= 2, "TensorTools::logsumexp currently only supports tensors of dimension <= 2");
   unsigned other_axis = axis ^ 1;
   if(x.d.bd == 1 && x.d[other_axis] == 1) {
-    m.t<0>().device(*dev.edevice) = x.tvec().maximum();
+    t<0>(m).device(*dev.edevice) = tvec(x).maximum();
 #ifdef __CUDACC__
     Eigen::array<int, 1> bcast;
     bcast[0] = x.d[0];
     // This needs to be split into two lines to prevent memory allocation
     // TODO? Here and in logsoftmax: Is there a better way to subtract a scalar that is already on the GPU without using broadcasting (and without copying the scalar back to the host first)
-    z.t<0>().device(*dev.edevice) = (x.tvec() - m.tvec().broadcast(bcast)).exp().sum();
-    z.t<0>().device(*dev.edevice) = z.tvec().log() + m.t<0>();
+    t<0>(z).device(*dev.edevice) = (tvec(x) - tvec(m).broadcast(bcast)).exp().sum();
+    t<0>(z).device(*dev.edevice) = tvec(z).log() + t<0>(m);
 #else
     float mval = as_scalar(m);
     // This needs to be split into two lines to prevent memory allocation
-    z.t<0>().device(*dev.edevice) = (x.tvec() - mval).exp().sum();
-    z.t<0>().device(*dev.edevice) = z.t<0>().log() + mval;
+    t<0>(z).device(*dev.edevice) = (tvec(x) - mval).exp().sum();
+    t<0>(z).device(*dev.edevice) = t<0>(z).log() + mval;
 #endif
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = axis;
-    m.tb<1>().device(*dev.edevice) = x.tb<2>().maximum(red_axis);
+    tb<1>(m).device(*dev.edevice) = tb<2>(x).maximum(red_axis);
     // TODO: Currently, the first version is slower on CPU, hence the switch
 #ifdef __CUDACC__
     Eigen::array<int, 3> bcast = {1, 1, 1}; bcast[axis] = (int)x.d[axis];
     Eigen::array<int, 3> morph = {1, 1, (int)m.d.bd}; morph[other_axis] = (int)m.d[0];
     // This needs to be split into two lines to prevent memory allocation
-    z.tb<1>().device(*dev.edevice) = (x.tb<2>() - m.tb<2>().reshape(morph).broadcast(bcast)).exp().sum(red_axis);
-    z.tb<1>().device(*dev.edevice) = z.tb<1>().log() + m.tb<1>();
+    tb<1>(z).device(*dev.edevice) = (tb<2>(x) - tb<2>(m).reshape(morph).broadcast(bcast)).exp().sum(red_axis);
+    tb<1>(z).device(*dev.edevice) = tb<1>(z).log() + tb<1>(m);
 #else
     auto miter = m.v;
     for(size_t b = 0; b < x.d.bd; ++b) {
       for(size_t i = 0; i < x.d[1]; ++i, ++miter) {
-        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = (x.tb<2>().chip<2>(b).chip(i,other_axis) - *miter).exp().sum();
-        z.tb<1>().chip<1>(b).chip<0>(i).device(*dev.edevice) = z.tb<1>().chip<1>(b).chip<0>(i).log() + *miter;
+        tb<1>(z).chip<1>(b).chip<0>(i).device(*dev.edevice) = (tb<2>(x).chip<2>(b).chip(i,other_axis) - *miter).exp().sum();
+        tb<1>(z).chip<1>(b).chip<0>(i).device(*dev.edevice) = tb<1>(z).chip<1>(b).chip<0>(i).log() + *miter;
       }
     }
 #endif
@@ -443,7 +521,7 @@ IndexTensor TensorTools::argmax_dev(const MyDevice & dev, const Tensor& v, unsig
   IndexTensor ids(ids_dim, nullptr, v.device, v.mem_pool);
   AlignedMemoryPool* pool = v.device->pools[(size_t)v.mem_pool];
   ids.v = static_cast<Eigen::DenseIndex*>(pool->allocate(ids_dim.size() * sizeof(Eigen::DenseIndex)));
-  ids.tb<3>().device(*dev.edevice) = v.tb<4>().argmax(dim);
+  tb<3>(ids).device(*dev.edevice) = tb<4>(v).argmax(dim);
   return ids;
 }
 #ifdef __CUDACC__
@@ -478,7 +556,7 @@ IndexTensor TensorTools::categorical_sample_log_prob_dev(const MyDevice & dev, c
   Tensor copy(copy_dim, nullptr, v.device, v.mem_pool);
   copy.v = static_cast<float*>(scratch_allocator->allocate(v.d.size() * sizeof(float)));
   TensorTools::randomize_uniform(copy);
-  ids.tb<3>().device(*dev.edevice) = (v.tb<4>() - (-copy.tb<4>().log()).log()).argmax(dim);
+  tb<3>(ids).device(*dev.edevice) = (tb<4>(v) - (-tb<4>(copy).log()).log()).argmax(dim);
   scratch_allocator->free();
   return ids;
 }

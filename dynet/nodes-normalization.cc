@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-normalization.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 using namespace std;
 
@@ -33,8 +34,8 @@ void WeightNormalization::forward_dev_impl(const MyDevice & dev, const vector<co
   AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
   Tensor tmp(Dim({1}, 1), nullptr, fx.device, fx.mem_pool);
   tmp.v = static_cast<float*>(scratch_allocator->allocate(tmp.d.size() * sizeof(float)));
-  tmp.tvec().device(*dev.edevice) = xs[0]->tvec().square().sum(red_axis).sqrt().reshape(morph);
-  fx.tvec().device(*dev.edevice) = (xs[0]->tvec() / tmp.tvec().broadcast(bcast)) * as_scalar(*xs[1]);
+  tvec(tmp).device(*dev.edevice) = tvec(*xs[0]).square().sum(red_axis).sqrt().reshape(morph);
+  tvec(fx).device(*dev.edevice) = (tvec(*xs[0]) / tvec(tmp).broadcast(bcast)) * as_scalar(*xs[1]);
   scratch_allocator->free();
 }
 
@@ -52,13 +53,13 @@ void WeightNormalization::backward_dev_impl(const MyDevice & dev,
   if (i==0){
     Tensor tmp(Dim({1}, 1), nullptr, fx.device, fx.mem_pool);
     tmp.v = static_cast<float*>(scratch_allocator->allocate(tmp.d.size() * sizeof(float)));
-    tmp.tvec().device(*dev.edevice) = xs[0]->tvec().square().sum(red_axis).sqrt().reshape(morph);
+    tvec(tmp).device(*dev.edevice) = tvec(*xs[0]).square().sum(red_axis).sqrt().reshape(morph);
     Tensor tmp2(Dim({1}, 1), nullptr, fx.device, fx.mem_pool);
     tmp2.v = static_cast<float*>(scratch_allocator->allocate(tmp2.d.size() * sizeof(float)));
-    tmp2.tvec().device(*dev.edevice) = (((dEdf.tvec() * xs[0]->tvec()).sum(red_axis)) / xs[0]->tvec().square().sum(red_axis)).reshape(morph);
-    dEdxi.tvec().device(*dev.edevice) += (dEdf.tvec() / tmp.tvec().broadcast(bcast)) * as_scalar(*xs[1]) - fx.tvec() * tmp2.tvec().broadcast(bcast);
+    tvec(tmp2).device(*dev.edevice) = (((tvec(dEdf) * tvec(*xs[0])).sum(red_axis)) / tvec(*xs[0]).square().sum(red_axis)).reshape(morph);
+    tvec(dEdxi).device(*dev.edevice) += (tvec(dEdf) / tvec(tmp).broadcast(bcast)) * as_scalar(*xs[1]) - tvec(fx) * tvec(tmp2).broadcast(bcast);
   }else{
-    dEdxi.t<0>().device(*dev.edevice) += ((dEdf.tvec() * xs[0]->tvec()).sum(red_axis)) /  xs[0]->tvec().square().sum(red_axis).sqrt();
+    t<0>(dEdxi).device(*dev.edevice) += ((tvec(dEdf) * tvec(*xs[0])).sum(red_axis)) /  tvec(*xs[0]).square().sum(red_axis).sqrt();
   }
   scratch_allocator->free();
 }

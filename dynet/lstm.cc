@@ -293,13 +293,13 @@ void CoupledLSTMBuilder::disable_dropout() {
 enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
 enum { LN_GH, LN_BH, LN_GX, LN_BX, LN_GC, LN_BC};
 
-VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false), dropout_masks_valid(false) { }
+VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false), forget_bias(1.f), dropout_masks_valid(false) { }
 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        unsigned input_dim,
                                        unsigned hidden_dim,
                                        ParameterCollection& model,
-                                       bool ln_lstm) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm), dropout_masks_valid(false) {
+                                       bool ln_lstm, float forget_bias) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm), forget_bias(forget_bias), dropout_masks_valid(false) {
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -442,7 +442,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   if ((dropout_rate > 0.f || dropout_rate_h > 0.f) && !dropout_masks_valid) set_dropout_masks(x.dim().bd);
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
-    
+
     Expression i_h_tm1, i_c_tm1;
     bool has_prev_state = (prev >= 0 || has_initial_state);
     if (prev < 0) {
@@ -485,8 +485,12 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     i_aot = pick_range(tmp, hid * 2, hid * 3);
     i_agt = pick_range(tmp, hid * 3, hid * 4);
     Expression i_it = logistic(i_ait);
-    // TODO(odashi): Should the forget bias be a hyperparameter?
-    Expression i_ft = logistic(i_aft + 1.f);
+    if (forget_bias != 0.0)
+        tmp = logistic(i_aft + forget_bias);
+    else
+        tmp= logistic(i_aft);
+
+    Expression i_ft = tmp;
     Expression i_ot = logistic(i_aot);
     Expression i_gt = tanh(i_agt);
 

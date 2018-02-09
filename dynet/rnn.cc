@@ -21,7 +21,7 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
                        unsigned input_dim,
                        unsigned hidden_dim,
                        ParameterCollection& model,
-                       bool support_lags) : layers(layers), lagging(support_lags) {
+                       bool support_lags) : layers(layers), input_dim_(input_dim),hidden_dim_(hidden_dim),lagging(support_lags) {
   local_model = model.add_subcollection("simple-rnn-builder");
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
@@ -35,7 +35,7 @@ SimpleRNNBuilder::SimpleRNNBuilder(unsigned layers,
     params.push_back(ps);
     layer_input_dim = hidden_dim;
   }
-  dropout_rate = 0.f;
+  dropout_rate = dropout_rate_h = 0.f;
 }
 
 void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
@@ -57,6 +57,7 @@ void SimpleRNNBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
 
     param_vars.push_back(vars);
   }
+  _cg = &cg;
 }
 
 void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
@@ -64,6 +65,7 @@ void SimpleRNNBuilder::start_new_sequence_impl(const vector<Expression>& h_0) {
   h0 = h_0;
   DYNET_ARG_CHECK(h0.empty() || h0.size() == layers,
                           "Number of inputs passed to initialize RNNBuilder (" << h0.size() << ") is not equal to the number of layers (" << layers << ")");
+  dropout_masks_valid = false;
 }
 
 Expression SimpleRNNBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
@@ -78,27 +80,81 @@ Expression SimpleRNNBuilder::set_h_impl(int prev, const vector<Expression>& h_ne
   return h[t].back();
 }
 
+void SimpleRNNBuilder::set_dropout(float d){
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = dropout_rate_h = d;
+}
+
+void SimpleRNNBuilder::set_dropout(float d, float d_h){
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h >= 0.f && d_h <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = d;
+  dropout_rate_h = d_h;
+}
+
+void SimpleRNNBuilder::disable_dropout(){
+  dropout_rate = dropout_rate_h = 0.f;
+}
+
+void SimpleRNNBuilder::set_dropout_masks(unsigned batch_size){
+  masks.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    std::vector<Expression> masks_i;
+    unsigned idim = (i == 0) ? input_dim_ : hidden_dim_;
+    if (dropout_rate > 0.f || dropout_rate_h > 0.f) {
+      float retention_rate = 1.f - dropout_rate;
+      float retention_rate_h = 1.f - dropout_rate_h;
+      float scale = 1.f / retention_rate;
+      float scale_h = 1.f / retention_rate_h;
+
+      // input
+      masks_i.push_back(random_bernoulli(*_cg, Dim({idim}, batch_size), retention_rate, scale));
+
+      // hidden
+      masks_i.push_back(random_bernoulli(*_cg, Dim({hidden_dim_}, batch_size), retention_rate_h, scale_h));
+
+      masks.push_back(masks_i);
+    }
+  }
+  dropout_masks_valid = true;
+}
+
 Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
-  if(dropout_rate != 0.f)
-    throw std::runtime_error("SimpleRNNBuilder doesn't support dropout yet");
+  if((dropout_rate != 0.f || dropout_rate_h !=0.f) && !dropout_masks_valid)
+    set_dropout_masks(in.dim().bd);
   const unsigned t = h.size();
   h.push_back(vector<Expression>(layers));
 
   Expression x = in;
+  Expression h_prev;
 
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
 
-    // y <--- g(y_prev)
-    if(prev >= 0) {
-      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h[prev][i]}) );
-    } else if(h0.size() > 0) {
-      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h0[i]}) );
-    } else {
-      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x}) );
+    if(dropout_rate > 0.f){
+      x = cmult(x,masks[i][0]);
     }
 
-  }
+    bool exists_h_prev = false;
+    // y <--- g(y_prev)
+    if(prev >= 0) {
+      h_prev = h[prev][i];
+      exists_h_prev = true;
+    } else if(h0.size() > 0) {
+      h_prev = h0[i];
+      exists_h_prev = true;
+    }
+
+    if(exists_h_prev) {
+      if(dropout_rate_h > 0.f)
+        h_prev = cmult(h_prev,masks[i][1]);
+        x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h_prev}) );
+    }
+    else{
+      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x}) );
+    }
+  } 
   return h[t].back();
 }
 

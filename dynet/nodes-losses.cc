@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-losses.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
 
 using namespace std;
@@ -30,7 +31,7 @@ Dim PairwiseRankLoss::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void PairwiseRankLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec().binaryExpr(xs[1]->tvec(), FPairwiseRankLoss(margin));
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).binaryExpr(tvec(*xs[1]), FPairwiseRankLoss(margin));
 }
 
 template<class MyDevice>
@@ -41,9 +42,9 @@ void PairwiseRankLoss::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   if (i == 0) {
-    dEdxi.tvec().device(*dev.edevice) -= fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
+    tvec(dEdxi).device(*dev.edevice) -= tvec(fx).cast<bool>().cast<float>() * tvec(dEdf);
   } else {
-    dEdxi.tvec().device(*dev.edevice) += fx.tvec().binaryExpr(dEdf.tvec(), FRectifyBackward());
+    tvec(dEdxi).device(*dev.edevice) += tvec(fx).cast<bool>().cast<float>() * tvec(dEdf);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(PairwiseRankLoss)
@@ -69,7 +70,7 @@ Dim BinaryLogLoss::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void BinaryLogLoss::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  fx.t<0>().device(*dev.edevice) = xs[0]->tvec().binaryExpr(xs[1]->tvec(), FBinaryLogLoss()).sum();
+  t<0>(fx).device(*dev.edevice) = tvec(*xs[0]).binaryExpr(tvec(*xs[1]), FBinaryLogLoss()).sum();
 }
 
 template<class MyDevice>
@@ -79,7 +80,7 @@ void BinaryLogLoss::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) += xs[i]->tvec().binaryExpr(xs[1-i]->tvec(), FBinaryLogLossBackward(as_scalar(dEdf)));
+  tvec(dEdxi).device(*dev.edevice) += tvec(*xs[i]).binaryExpr(tvec(*xs[1-i]), FBinaryLogLossBackward(as_scalar(dEdf)));
 }
 DYNET_NODE_INST_DEV_IMPL(BinaryLogLoss)
 
@@ -105,7 +106,7 @@ void PoissonRegressionLoss::forward_dev_impl(const MyDevice & dev, const vector<
   const real y = *pty;
   const auto z = std::lgamma(y + 1);
   // const auto x = as_scalar(*xs[0]);
-  fx.t<0>().device(*dev.edevice) = xs[0]->t<0>().exp() + z - xs[0]->t<0>() * y;
+  t<0>(fx).device(*dev.edevice) = t<0>(*xs[0]).exp() + z - t<0>(*xs[0]) * y;
 }
 
 template<class MyDevice>
@@ -116,7 +117,7 @@ void PoissonRegressionLoss::backward_dev_impl(const MyDevice & dev,
                             unsigned i,
                             Tensor& dEdxi) const {
   const real y = *pty;
-  dEdxi.t<0>().device(*dev.edevice) += xs[0]->t<0>().exp() - y;
+  t<0>(dEdxi).device(*dev.edevice) += t<0>(*xs[0]).exp() - y;
 }
 DYNET_NODE_INST_DEV_IMPL(PoissonRegressionLoss)
 

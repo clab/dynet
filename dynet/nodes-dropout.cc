@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-dropout.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 using namespace std;
 
@@ -31,7 +32,7 @@ template<class MyDevice>
 void Dropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   TensorTools::randomize_bernoulli(m, (1.f-p), 1.f / (1.f-p));
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec() * m.tvec();
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]) * tvec(m);
 }
 
 template<class MyDevice>
@@ -42,7 +43,7 @@ void Dropout::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * m.tvec();
+  tvec(dEdxi).device(*dev.edevice) += tvec(dEdf) * tvec(m);
 }
 DYNET_NODE_INST_DEV_IMPL(Dropout)
 
@@ -76,7 +77,7 @@ void DropoutDim::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   TensorTools::randomize_bernoulli(m, (1.f-p), 1.f / (1.f-p));
   Eigen::array<ptrdiff_t, 4> bcast = {1, 1, 1, 1}; bcast[dimension] = xs[0]->d[dimension];
-  fx.tb<3>().device(*dev.edevice) = xs[0]->tb<3>() * m.tb<3>().broadcast(bcast);
+  tb<3>(fx).device(*dev.edevice) = tb<3>(*xs[0]) * tb<3>(m).broadcast(bcast);
 }
 
 template<class MyDevice>
@@ -90,7 +91,7 @@ void DropoutDim::backward_dev_impl(const MyDevice & dev,
   mask_dim.d[dimension]=1;
   Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Eigen::array<ptrdiff_t, 4> bcast = {1, 1, 1, 1}; bcast[dimension] = dEdf.d[dimension];
-  dEdxi.tb<3>().device(*dev.edevice) += dEdf.tb<3>() * m.tb<3>().broadcast(bcast);
+  tb<3>(dEdxi).device(*dev.edevice) += tb<3>(dEdf) * tb<3>(m).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(DropoutDim)
 
@@ -121,7 +122,7 @@ void DropoutBatch::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   TensorTools::randomize_bernoulli(m, (1.f-p), 1.f / (1.f-p));
   Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
-  fx.tbvec().device(*dev.edevice) = xs[0]->tbvec() * m.tbvec().broadcast(bcast);
+  tbvec(fx).device(*dev.edevice) = tbvec(*xs[0]) * tbvec(m).broadcast(bcast);
 }
 
 template<class MyDevice>
@@ -134,7 +135,7 @@ void DropoutBatch::backward_dev_impl(const MyDevice & dev,
   Dim mask_dim({1},xs[0]->d.batch_elems());
   Tensor m(mask_dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
-  dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec() * m.tbvec().broadcast(bcast);
+  tbvec(dEdxi).device(*dev.edevice) += tbvec(dEdf) * tbvec(m).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(DropoutBatch)
 
@@ -164,12 +165,12 @@ template<class MyDevice>
 void BlockDropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   bernoulli_distribution distribution(1.0 - dropout_probability);
   float block_multiplier = distribution(*rndeng)? 1.0 : 0.0;
-  block_multiplier = 
+  block_multiplier =
     dropout_probability == 1.0? 0.0 : block_multiplier / (1.0 - dropout_probability);
   if (dropout_probability > 1.0 || dropout_probability < 0.0)
     DYNET_INVALID_ARG("Dropout probability must be in the range [0, 1]");
   *(static_cast<float*>(aux_mem)) = block_multiplier;
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec() * block_multiplier;
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]) * block_multiplier;
 }
 
 template<class MyDevice>
@@ -180,7 +181,7 @@ void BlockDropout::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   float block_multiplier = *(static_cast<float*>(aux_mem));
-  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec() * block_multiplier;
+  tvec(dEdxi).device(*dev.edevice) += tvec(dEdf) * block_multiplier;
 }
 DYNET_NODE_INST_DEV_IMPL(BlockDropout)
 

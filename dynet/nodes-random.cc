@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-random.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 
 using namespace std;
 
@@ -31,7 +32,7 @@ void GaussianNoise::forward_dev_impl(const MyDevice & dev, const vector<const Te
   noise.v = static_cast<float*>(scratch_allocator->allocate(noise.d.size() * sizeof(float)));
   TensorTools::randomize_normal(noise, 0, stddev);
 
-  fx.tvec().device(*dev.edevice) = xs[0]->tvec() + noise.tvec();
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]) + tvec(noise);
 
   scratch_allocator->free();
 }
@@ -43,7 +44,7 @@ void GaussianNoise::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  dEdxi.tvec().device(*dev.edevice) += dEdf.tvec();
+  tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
 }
 DYNET_NODE_INST_DEV_IMPL(GaussianNoise)
 
@@ -66,7 +67,7 @@ Dim RandomNormal::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void RandomNormal::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 0, "Failed dimension check in RandomNormal::forward");
-  TensorTools::randomize_normal(fx);
+  TensorTools::randomize_normal(fx, mean, stddev);
 }
 
 template<class MyDevice>
@@ -168,7 +169,7 @@ void RandomGumbel::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   DYNET_ARG_CHECK(mu == 0.0 && beta == 1.0, "RandomGumbel only supports Gumbel(0,1) at the moment (pull requests welcome)");
   TensorTools::randomize_uniform(fx, 0, 1);
   float eps = 1e-20;
-  fx.tvec().device(*dev.edevice) = -(-fx.tvec().cwiseMax(eps).log()).cwiseMax(eps).log();
+  tvec(fx).device(*dev.edevice) = -(-tvec(fx).cwiseMax(eps).log()).cwiseMax(eps).log();
 }
 
 template<class MyDevice>

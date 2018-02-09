@@ -1,4 +1,5 @@
-#include "aligned-mem-pool.h"
+#include "dynet/aligned-mem-pool.h"
+#include "dynet/devices.h"
 
 #include <sstream>
 
@@ -23,7 +24,7 @@ void InternalMemoryPool::sys_alloc(size_t cap) {
 }
 
 AlignedMemoryPool::AlignedMemoryPool(const std::string &name, size_t initial_cap, MemAllocator *a, size_t expanding_unit) : name(name), cap(initial_cap), current(0), a(a), expanding_unit(expanding_unit) {
-  DYNET_ASSERT(cap > 0, "Attempt to allocate memory of size 0 in AlignedMemoryPool");
+  DYNET_ARG_CHECK(cap > 0, "Attempt to allocate memory of size 0 in AlignedMemoryPool");
   pools.push_back(new InternalMemoryPool(name, cap, a));
 }
 AlignedMemoryPool::~AlignedMemoryPool() {
@@ -40,6 +41,7 @@ void* AlignedMemoryPool::allocate(size_t n) {
     current++;
     res = pools[current]->allocate(n);
   }
+  if (res == nullptr) show_pool_mem_info();
   return res;
 }
 
@@ -81,4 +83,8 @@ void AlignedMemoryPool::set_used(size_t s) {
   // // s <= pools[c]->used
   // pools[c]->used = s;
   // current = c;
+}
+
+size_t AlignedMemoryPool::get_cap() {
+  return cap;
 }

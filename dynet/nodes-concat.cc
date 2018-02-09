@@ -1,6 +1,7 @@
+#include "dynet/tensor-eigen.h"
 #include "dynet/nodes-concat.h"
 
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-impl-macros.h"
 #include "dynet/functors.h"
 
 using namespace std;
@@ -57,10 +58,10 @@ void Concatenate::forward_dev_impl(const MyDevice & dev, const vector<const Tens
     const unsigned row_size = xs[i]->d[dimension];
     sizes[dimension] = row_size;
     if(fx.d.bd == xs[i]->d.bd) {
-      fx.tb<4>().slice(indices, sizes).device(*dev.edevice) = xs[i]->tb<4>();
+      tb<4>(fx).slice(indices, sizes).device(*dev.edevice) = tb<4>(*xs[i]);
     } else {
       Eigen::array<ptrdiff_t, 5> bcast; bcast[0] = bcast[1] = bcast[2] = bcast[3] = 1; bcast[4] = fx.d.bd;
-      fx.tb<4>().slice(indices, sizes).device(*dev.edevice) = xs[i]->tb<4>().broadcast(bcast);
+      tb<4>(fx).slice(indices, sizes).device(*dev.edevice) = tb<4>(*xs[i]).broadcast(bcast);
     }
     curr_row += row_size;
   }
@@ -81,10 +82,10 @@ void Concatenate::backward_dev_impl(const MyDevice & dev,
                                     static_cast<ptrdiff_t>(dEdxi.d[3]),
                                     static_cast<ptrdiff_t>(fx.d.bd));
   if(dEdxi.d.bd == dEdf.d.bd) {
-    dEdxi.tb<4>().device(*dev.edevice) += dEdf.tb<4>().slice(indices, sizes);
+    tb<4>(dEdxi).device(*dev.edevice) += tb<4>(dEdf).slice(indices, sizes);
   } else {
     Eigen::array<int, 1> red_axis; red_axis[0] = 4;
-    dEdxi.t<4>().device(*dev.edevice) += dEdf.tb<4>().slice(indices, sizes).sum(red_axis);
+    t<4>(dEdxi).device(*dev.edevice) += tb<4>(dEdf).slice(indices, sizes).sum(red_axis);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(Concatenate)
@@ -117,7 +118,7 @@ Dim ConcatenateToBatch::dim_forward(const vector<Dim>& xs) const {
 #endif
 
 template<class MyDevice>
-void ConcatenateToBatch::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const { 
+void ConcatenateToBatch::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   unsigned curr_e = 0;
   src_element_indices.resize(xs.size());
   Eigen::DSizes<ptrdiff_t, 2> indices(0,0);
@@ -125,10 +126,10 @@ void ConcatenateToBatch::forward_dev_impl(const MyDevice & dev, const vector<con
   for (unsigned i = 0; i < xs.size(); ++i) {
     indices[1] = src_element_indices[i] = curr_e;
     sizes[1] = xs[i]->d.bd;
-    fx.tbvec().slice(indices, sizes).device(*dev.edevice) = xs[i]->tbvec();
+    tbvec(fx).slice(indices, sizes).device(*dev.edevice) = tbvec(*xs[i]);
     curr_e += xs[i]->d.bd;
   }
-  
+
 }
 
 template<class MyDevice>
@@ -141,7 +142,7 @@ void ConcatenateToBatch::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(i < src_element_indices.size(), "Failed boundary check in ConcatenateToBatch::backward: " << i << " >= " << src_element_indices.size());
   Eigen::DSizes<ptrdiff_t, 2> indices(0, static_cast<ptrdiff_t>(src_element_indices[i]));
   Eigen::DSizes<ptrdiff_t, 2> sizes(static_cast<ptrdiff_t>(fx.d.batch_size()), static_cast<ptrdiff_t>(xs[i]->d.bd));
-  dEdxi.tbvec().device(*dev.edevice) += dEdf.tbvec().slice(indices, sizes);
+  tbvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).slice(indices, sizes);
 }
 DYNET_NODE_INST_DEV_IMPL(ConcatenateToBatch)
 

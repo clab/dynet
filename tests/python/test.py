@@ -181,6 +181,23 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(self.lp1.is_updated())
         self.assertFalse(self.lp2.is_updated())
 
+        dy.renew_cg()
+        pp1 = dy.parameter(self.p1)
+        pp2 = dy.parameter(self.p2)
+
+        a = pp1 * self.lp1[1]
+        b = pp2 * self.lp2[1]
+        l = dy.dot_product(a, b) / 100
+        l.backward()
+
+        self.trainer.update()
+
+        ones = np.ones((10, 10))
+        self.assertTrue(np.allclose(self.p1.as_array(), ones),
+                        msg=np.array_str(self.p1.as_array()))
+        self.assertTrue(np.allclose(self.lp2.as_array()[1], ones[
+                        0]), msg=np.array_str(self.lp2.as_array()))
+
     def test_update(self):
         ones = np.ones((10, 10))
         updated = np.ones((10, 10)) * 0.99
@@ -311,15 +328,31 @@ class TestBatchManipulation(unittest.TestCase):
         w = dy.concatenate_to_batch([y, z])
         self.assertTrue(np.allclose(w.npvalue(), self.pval.T))
 
-
-class TestIO_1(unittest.TestCase):
-
+class TestIOPartialWeightDecay(unittest.TestCase):
     def setUp(self):
-        self.file = "bilstm.model"
-        # create models
+        self.file = "tmp.model"
         self.m = dy.ParameterCollection()
         self.m2 = dy.ParameterCollection()
-        # Create birnn
+        self.p = self.m.add_parameters(1)
+        self.t = dy.SimpleSGDTrainer(self.m)
+
+    def test_save_load(self):
+        self.p.expr().forward()
+        self.p.expr().backward()
+        self.t.update()
+        dy.renew_cg()
+        v1 = self.p.expr().value()
+        dy.save(self.file, [self.p])
+        [p2] = dy.load(self.file, self.m2)
+        v2 = p2.expr().value()
+        self.assertTrue(np.allclose(v1, v2))
+
+
+class TestIOEntireModel(unittest.TestCase):
+    def setUp(self):
+        self.file = "bilstm.model"
+        self.m = dy.ParameterCollection()
+        self.m2 = dy.ParameterCollection()
         self.b = dy.BiRNNBuilder(2, 10, 10, self.m, dy.LSTMBuilder)
 
     def test_save_load(self):
@@ -328,8 +361,24 @@ class TestIO_1(unittest.TestCase):
         self.m2.populate(self.file)
 
 
-class TestIO_2(unittest.TestCase):
+class TestIOPartial(unittest.TestCase):
+    def setUp(self):
+        self.file = "tmp.model"
+        self.m = dy.ParameterCollection()
+        self.m2 = dy.ParameterCollection()
+        self.L = self.m.add_lookup_parameters((10, 2), name="la")
+        self.a = self.m.add_parameters(10, name="a")
 
+    def test_save_load(self):
+        self.L.save(self.file, "/X")
+        self.a.save(self.file, append=True)
+        a = self.m2.add_parameters(10)
+        L = self.m2.add_lookup_parameters((10, 2))
+        L.populate(self.file, "/X")
+        a.populate(self.file, "/a")
+
+
+class TestIOHighLevelAPI(unittest.TestCase):
     def setUp(self):
         self.file = "bilstm.model"
         # create models
@@ -341,6 +390,10 @@ class TestIO_2(unittest.TestCase):
     def test_save_load(self):
         dy.save(self.file, [self.b])
         [b] = dy.load(self.file, self.m2)
+
+    def test_save_load_generator(self):
+        dy.save(self.file, (x for x in [self.b]))
+        [b] = list(dy.load_generator(self.file, self.m2))
 
 
 class TestExpression(unittest.TestCase):

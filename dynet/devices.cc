@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <unsupported/Eigen/CXX11/Tensor>
 
 #include "dynet/cuda.h"
 #include "dynet/dynet.h"
@@ -14,10 +15,15 @@ using namespace std;
 namespace dynet {
 
 DeviceMempoolSizes::DeviceMempoolSizes(size_t total_size) {
-  used[0] = total_size / 4;
-  used[1] = total_size / 4;
-  used[2] = total_size / 4;
-  used[3] = total_size / 4;
+  DYNET_ARG_CHECK(total_size > 0, "Attempt to allocate memory of size 0 in DeviceMempoolSizes");
+  if (total_size < 4) {
+    used[0] = used[1] = used[2] = used[3] = 1;
+  } else {
+    used[0] = total_size / 4;
+    used[1] = total_size / 4;
+    used[2] = total_size / 4;
+    used[3] = total_size / 4;
+  }
 }
 
 DeviceMempoolSizes::DeviceMempoolSizes(size_t fx_s, size_t dEdfs_s, size_t ps_s, size_t sc_s) {
@@ -31,10 +37,15 @@ DeviceMempoolSizes::DeviceMempoolSizes(const std::string & descriptor) {
   vector<string> strs = str_split(descriptor, ',');
   if (strs.size() == 1) {
     size_t total_size = stoi(strs[0]);
-    used[0] = total_size / 4;
-    used[1] = total_size / 4;
-    used[2] = total_size / 4;
-    used[3] = total_size / 4;
+    DYNET_ARG_CHECK(total_size > 0, "Attempt to allocate memory of size 0 in DeviceMempoolSizes");
+    if (total_size < 4) {
+      used[0] = used[1] = used[2] = used[3] = 1;
+    } else {
+      used[0] = total_size / 4;
+      used[1] = total_size / 4;
+      used[2] = total_size / 4;
+      used[3] = total_size / 4;
+    }
   } else if (strs.size() == 4) {
     used[0] = stoi(strs[0]);
     used[1] = stoi(strs[1]);
@@ -97,9 +108,7 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id)
   CUDA_CHECK(cudaMemcpyAsync(kSCALAR_ZERO, &zero, sizeof(float), cudaMemcpyHostToDevice));
 
   // Initialize the Eigen device
-  CUDA_CHECK(cudaStreamCreate(&stream));
-  estream = new EigenCudaStreamDevice(device_id);
-  estream->set_stream(&stream);
+  estream = new Eigen::CudaStreamDevice(device_id);
   edevice = new Eigen::GpuDevice(estream);
 
   // this is the big memory allocation.

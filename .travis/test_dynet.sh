@@ -26,7 +26,6 @@ else
   else  # PYTHON_INSTALL is pip
     if [[ "$TRAVIS_OS_NAME" == osx ]]; then
       source activate "$PYVER"
-      export DYLD_LIBRARY_PATH="$(dirname $(which python))/../lib:$DYLD_LIBRARY_PATH"
     fi
     pip install dynet --no-index -f dist
   fi

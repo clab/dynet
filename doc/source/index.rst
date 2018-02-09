@@ -50,6 +50,7 @@ Mode advanced topics are below:
    minibatch
    multiprocessing
    unorthodox
+   projects
 
 And we welcome your contributions!
 
@@ -67,4 +68,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

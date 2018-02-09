@@ -2,7 +2,7 @@
 #define DYNET_NODES_RANDOM_H_
 
 #include "dynet/dynet.h"
-#include "dynet/nodes-macros.h"
+#include "dynet/nodes-def-macros.h"
 
 namespace dynet {
 
@@ -17,9 +17,10 @@ struct GaussianNoise : public Node {
 
 // draw random noise from Normal(0, 1)
 struct RandomNormal : public Node {
-  explicit RandomNormal(const Dim& d) : dim(d) {}
+  explicit RandomNormal(const Dim& d, float m=0.f, float s=1.f) : dim(d), mean(m), stddev(s) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
   Dim dim;
+  float mean, stddev;
 };
 
 // draw from Bernoulli(p)

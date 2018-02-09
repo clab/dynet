@@ -1,3 +1,5 @@
+#include <iomanip>
+
 #include "dynet/dynet.h"
 
 #include "dynet/exec.h"
@@ -5,6 +7,8 @@
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/dynet-helper.h"
 #include "dynet/expr.h"
+#include "dynet/devices.h"
+#include "dynet/timing.h"
 
 using namespace std;
 
@@ -150,6 +154,22 @@ void ComputationGraph::clear() {
   nodes.clear();
 
   ee->invalidate();
+}
+
+VariableIndex ComputationGraph::add_function_node(Node *node) {
+  VariableIndex new_node_index((VariableIndex)nodes.size());
+  nodes.push_back(node);
+  if (node->device == nullptr) {
+    if (node->arity() > 0) {
+      node->device = nodes[node->args[0]]->device;
+    } else {
+      node->device = dynet::default_device;
+    }
+  }
+  if (node->device->type == DeviceType::GPU && !node->has_cuda_implemented)
+    DYNET_NO_CUDA_IMPL_ERROR(node->as_dummy_string())
+  set_dim_for_new_node(new_node_index);
+  return new_node_index;
 }
 
 CGCheckpoint ComputationGraph::_get_checkpoint() {
@@ -399,12 +419,50 @@ void ComputationGraph::print_graphviz() const {
     for (auto arg : node->args)
       var_names.push_back(string("v") + to_string((unsigned)arg));
     cerr << "  N" << nc << " [label=\"v" << nc << " = "
-         << node->as_string(var_names) << "\"];\n";
+         << node->as_string(var_names);
+    if (profiling_flag){
+      cerr << " (MEM: ";
+      // if inplaced, note that no memory is used
+      if(node->forward_inplaced()) {
+        if(node->backward_inplaced()) {
+          cerr << "         0 KiB (forward/backward inplaced))";
+        } else {
+          cerr << std::setprecision(4) << std::setw(11) << node->dim.size() * sizeof(real) / 1024.0
+               << " KiB (forward inplaced))";
+        }
+      } else {
+        cerr << std::setprecision(4) << std::setw(11) << (node->aux_storage_size() + 2*node->dim.size() * sizeof(real)) / 1024.0
+             << " KiB)";
+      }
+    }
+    cerr << "\"];\n";
     for (auto arg : node->args)
       cerr << "  N" << ((unsigned)arg) << " -> N" << nc << ";\n";
     ++nc;
   }
   cerr << "}\n";
+
+  if(profiling_flag>1){
+    cerr << "\nAggregated nodes, sorted by memory consumption:\n";
+    std::map<string,unsigned> nodes_map, count_map;
+    double total_memory = 0;
+    for (auto node : nodes) {
+      unsigned mem = node->aux_storage_size() + 2*node->dim.size() * sizeof(real);
+      if(nodes_map.count(node->as_dummy_string()) == 0){
+        nodes_map[node->as_dummy_string()] = 0;
+        count_map[node->as_dummy_string()] = 0;
+      }
+      nodes_map[node->as_dummy_string()] += mem;
+      count_map[node->as_dummy_string()] += 1;
+      total_memory += mem;
+    }
+    std::multimap<unsigned,string> nodes_map_dst = flip_map(nodes_map);
+    for (auto &item : nodes_map_dst) {
+      std::cerr << std::setprecision(4) << std::setw(11) << (item.first/1024.0) << " KiB\t" << (100.0*(double)item.first/total_memory) << "%\t" << "called " << count_map[item.second] << "x\t" << item.second << std::endl;
+    }
+    std::cerr << std::setprecision(4) << std::setw(11) << (total_memory/1024.0) << " KiB\t100%\t(total)" << std::endl;
+    show_pool_mem_info();
+  }
 }
 
 }  // namespace dynet

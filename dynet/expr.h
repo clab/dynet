@@ -31,7 +31,7 @@
 #include "dynet/nodes-moments.h"
 #include "dynet/nodes-contract.h"
 
-#include "dynet/devices.h"
+// #include "dynet/devices.h"
 
 #include <stdexcept>
 
@@ -59,11 +59,7 @@ struct Expression {
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg),
     i(i), graph_id(pg->get_id()) {}
 
-  inline std::string get_device_name() const {
-    if (pg->nodes[i]->device == nullptr)
-      throw std::runtime_error("Unknown device for node:" + std::to_string(i));
-    return pg->nodes[i]->device->name;
-  }
+  std::string get_device_name() const;
 
   const bool is_stale() const {
     return (get_number_of_active_graphs() != 1 || graph_id != get_current_graph_id());
@@ -438,15 +434,16 @@ Expression constant(ComputationGraph& g, const Dim& d, float val);
 /**
  * \ingroup inputoperations
  * \brief Create a random normal vector
- * \details Create a vector distributed according to normal distribution with mean
- *          0, variance 1.
+ * \details Create a vector distributed according to normal distribution with specified mean and standard deviation.
  *
  * \param g Computation graph
  * \param d The dimensions of the input
+ * \param mean The mean of the distribution (default: 0.0)
+ * \param stddev The standard deviation of the distribution (default: 1.0)
  *
  * \return A "d" dimensioned normally distributed vector
  */
-Expression random_normal(ComputationGraph& g, const Dim& d);
+Expression random_normal(ComputationGraph& g, const Dim& d, float mean=0.f, float stddev=1.0);
 
 /**
  * \ingroup inputoperations
@@ -860,6 +857,94 @@ Expression erf(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Inverse sine
+ * \details Elementwise calculation of the inverse sine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to asin(x_i)
+ */
+Expression asin(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse cosine
+ * \details Elementwise calculation of the inverse cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to acos(x_i)
+ */
+Expression acos(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse tangent
+ * \details Elementwise calculation of the inverse tangent
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to atan(x_i)
+ */
+Expression atan(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Sine
+ * \details Elementwise calculation of the sine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to sin(x_i)
+ */
+Expression sin(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Cosine
+ * \details Elementwise calculation of the cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to cos(x_i)
+ */
+Expression cos(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Tangent
+ * \details Elementwise calculation of the tangent
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to tan(x_i)
+ */
+Expression tan(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Hyperbolic sine
+ * \details Elementwise calculation of the hyperbolic sine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to sinh(x_i)
+ */
+Expression sinh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Hyperbolic cosine
+ * \details Elementwise calculation of the hyperbolic cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to cosh(x_i)
+ */
+Expression cosh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Hyperbolic tangent
  * \details Elementwise calculation of the hyperbolic tangent
  *
@@ -868,6 +953,39 @@ Expression erf(const Expression& x);
  * \return An expression where the ith element is equal to tanh(x_i)
  */
 Expression tanh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse hyperbolic sine
+ * \details Elementwise calculation of the inverse hyperbolic sine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to asinh(x_i)
+ */
+Expression asinh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse hyperbolic cosine
+ * \details Elementwise calculation of the inverse hyperbolic cosine
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to acosh(x_i)
+ */
+Expression acosh(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Inverse hyperbolic tangent
+ * \details Elementwise calculation of the inverse hyperbolic tangent
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to atanh(x_i)
+ */
+Expression atanh(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
@@ -901,6 +1019,18 @@ Expression square(const Expression& x);
  * \return An expression where the ith element is equal to x_i^3
  */
 Expression cube(const Expression& x);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Log sigmoid
+ * \details Calculate elementwise \f$y_i = \ln(\frac{1}{1+e^{-x_i}})\f$
+ * This is more numerically stable than `log(logistic(x))`
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to \f$y_i = \ln(\frac{1}{1+e^{-x_i}})\f$
+ */
+Expression log_sigmoid(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
@@ -997,6 +1127,21 @@ Expression selu(const Expression& x);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief SILU / SiL / Swish
+ * \details Calculate elementwise y_i = x_i / (1 + e^{-beta * x_i})
+ *
+ * Reference: [Hendrycks and Gimpel, 2016](https://openreview.net/pdf?id=Bk0MRI5lg),
+ * [Elfwing et al, 2017](https://arxiv.org/pdf/1702.03118.pdf), and
+ * [Ramachandran et al., 2017](https://arxiv.org/pdf/1710.05941)
+ *
+ * \param x The input expression
+ *
+ * \return An expression where the ith element is equal to y_i = x_i / (1 + e^{-beta * x_i})
+ */
+Expression silu(const Expression& x, float beta=1.f);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Soft Sign
  * \details Calculate elementwise the softsign function y_i = x_i/(1+|x_i|)
  *
@@ -1069,6 +1214,30 @@ Expression dot_product(const Expression& x, const Expression& y);
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Circular convolution
+ * \details Calculate the circular convolution
+ *
+ * \param x The input expression
+ * \param y The input expression
+ *
+ * \return An expression equal to the circular convolution
+ */
+Expression circ_conv(const Expression& u, const Expression& v);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Circular correlation
+ * \details Calculate the circular correlation
+ *
+ * \param x The input expression
+ * \param y The input expression
+ *
+ * \return An expression equal to the circular correlation
+ */
+Expression circ_corr(const Expression& u, const Expression& v);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Componentwise multiply
  * \details Multiply two expressions component-wise, broadcasting dimensions if necessary as follows:
  *          - When number of dimensions differ, we add dimensions of size 1 to make the number of dimensions match
@@ -1123,10 +1292,11 @@ Expression colwise_add(const Expression& x, const Expression& bias);
  *          e^{x[i]}/{sum_j e^{x[j]}}.
  *
  * \param x A vector or matrix
+ * \param d dimension to normalize over (default: 0)
  *
  * \return A vector or matrix after calculating the softmax
  */
-Expression softmax(const Expression& x);
+Expression softmax(const Expression& x, unsigned d=0);
 
 /**
  * \ingroup lossoperations
@@ -1408,6 +1578,19 @@ Expression sparsemax_loss(const Expression& x, const std::vector<unsigned>* ptar
 
 /**
  * \ingroup lossoperations
+ * \brief Constrained softmax
+ * \details The constrained softmax function.
+ *          **Note:** This function is not yet implemented on GPU.
+ *
+ * \param x A vector of scores
+ * \param y A vector of upper bound constraints on probabilities
+ *
+ * \return The constrained softmax of the scores.
+ */
+Expression constrained_softmax(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup lossoperations
  * \brief Squared norm
  * \details The squared L2 norm of the values of x: \f$\sum_i x_i^2\f$.
  *
@@ -1547,15 +1730,62 @@ Expression nobackprop(const Expression& x);
 
 /**
  * \ingroup flowoperations
- * \brief Negative backprop
- * \details This node has no effect on the forward pass, but takes negative on backprop process.
+ * \brief Flip gradient
+ * \details This node has no effect on the forward pass, but inverts the gradient on backprop.
  *          This operation is widely used in adversarial networks.
  *
  * \param x The input expression
  *
- * \return An output expression containing the same as input (only effects on backprop process)
+ * \return An output expression containing the same as input (only effects the backprop process)
  */
 Expression flip_gradient(const Expression& x);
+
+/**
+ * \ingroup flowoperations
+ * \brief Scale gradient by constant
+ * \details This node has no effect on the forward pass, but scales the gradient by lambda
+ *          on backprop
+ *
+ * \param x The input expression
+ *
+ * \return An output expression containing the same as input (only effects the backprop process)
+ */
+Expression scale_gradient(const Expression& x, float lambd = 1.0f);
+
+/**
+ * \ingroup flowoperations
+ * \brief Gradient modes for the argmax operation
+ */
+enum ArgmaxGradient {
+    zero_gradient,              /* Standard gradient (=no gradient) */
+    straight_through_gradient   /* Straight-through estimator (=gradient of the identity)*/
+};
+
+/**
+ * \ingroup flowoperations
+ * \brief Argmax
+ * \details This node takes an input vector \f$x\f$ and returns a one hot vector \f$y\f$ such that \f$y_{\text{argmax} x}=1\f$
+ * 
+ * There are two gradient modes for this operation:
+ *
+ *     argmax(x, zero_gradient)
+ * 
+ * is the standard argmax operation. Note that this almost everywhere differentiable and its gradient is 0. **It will stop your gradient**
+ *
+ *     argmax(x, straight_through_gradient)
+ *
+ * This gradient mode implements the straight-through estimator [(Bengio et al., 2013)](https://arxiv.org/abs/1308.3432).
+ * Its forward pass is the same as the argmax operation, but its gradient is the same as the identity function.
+ * Note that this does not technically correspond to a differentiable function (hence the name "estimator").
+ *
+ * Tensors of order \f$>1\f$ are not supported yet
+ *  
+ * \param x The input vector (can be batched)
+ * \param gradient_mode Specify the gradient type (zero or straight-through)
+ *
+ * \return The one hot argmax vector
+ */
+Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
 
 /**
  * \ingroup flowoperations
@@ -1588,6 +1818,7 @@ Expression flip_gradient(const Expression& x);
  *
  * \return The reshaped expression
  */
+
 Expression reshape(const Expression& x, const Dim& d);
 
 /**
@@ -1851,6 +2082,21 @@ inline Expression concatenate_to_batch(const T& xs) { return detail::f<Concatena
 
 /**
  * \ingroup flowoperations
+ * \brief Strided select in multiple dimensions
+ * \details Select a range and/or stride of elements from an expression.
+ *
+ * \param x The input expression
+ * \param strides List of strides for each dimension, must be >= 1. Dimensions not included default to 1. Batch dimension can be included as very last dimension.
+ * \param from    List of 0-based offsets (inclusive) for each dimension, must be >= 0. Dimensions not included default to 0. Batch dimension can be included as very last dimension.
+ * \param to      List of highest 0-based index to select (exclusive) for each dimension, must be >= 0. Dimensions not included default to the corresponding dim size. Batch dimension can be included as very last dimension.
+ *
+ * \return The value of x[from[0]:to[0]:strides[0],..] (as it would be in numpy syntax)
+ */
+Expression strided_select(const Expression& x, const std::vector<int>& strides, const std::vector<int>& from = {}, const std::vector<int>& to = {});
+
+
+/**
+ * \ingroup flowoperations
  * \brief Concatenate columns
  * \details Perform a concatenation of the columns in multiple expressions.
  *          All expressions must have the same number of rows.
@@ -1872,7 +2118,7 @@ inline Expression concatenate_cols(const T& xs) { return detail::f<Concatenate>(
  *          the dimension to be concatenated (rows by default).
  *
  * \param xs The input expressions
- * \param xs The dimension along which to perform concatenation
+ * \param d The dimension along which to perform concatenation
  *
  * \return The expression with the specified dimension concatenated
  */

@@ -134,10 +134,10 @@ struct Trainer {
 protected:
   Trainer() {}
   virtual unsigned alloc_impl() {
-      return model->parameters_list().size() - aux_allocated;
+      return static_cast<unsigned>(model->parameters_list().size()) - aux_allocated;
   }
   virtual unsigned alloc_lookup_impl() {
-      return model->lookup_parameters_list().size() - aux_allocated_lookup;
+      return static_cast<unsigned>(model->lookup_parameters_list().size()) - aux_allocated_lookup;
   }
   /**
    * \brief The actual rule to update the parameters
@@ -454,6 +454,51 @@ private:
 /**
  * \ingroup optimizers
  *
+ * \brief AMSGrad optimizer
+ * \details The AMSGrad optimizer is similar to Adam which uses unbiased estimates
+ * of the first and second moments of the gradient, however AMSGrad keeps the maximum of 
+ * all the second moments and uses that instead of the actual second moments
+ *
+ * Reference : [On the Convergence of Adam and Beyond](https://openreview.net/forum?id=ryQu7f-RZ)
+ *
+ */
+struct AmsgradTrainer : public Trainer {
+  /**
+   * \brief Constructor
+   *
+   * \param m ParameterCollection to be trained
+   * \param learning_rate Initial learning rate
+   * \param beta_1 Moving average parameter for the mean
+   * \param beta_2 Moving average parameter for the variance
+   * \param eps Bias parameter \f$\epsilon\f$
+   */
+  explicit AmsgradTrainer(ParameterCollection& m, float learning_rate = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, float eps = 1e-8) :
+    Trainer(m, learning_rate), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
+
+  void restart() override;
+  using Trainer::restart;
+
+protected:
+  DYNET_TRAINER_DEFINE_DEV_IMPL()
+  virtual unsigned alloc_impl() override;
+  virtual unsigned alloc_lookup_impl() override;
+
+  float beta_1;
+  float beta_2;
+  float epsilon;
+  std::vector<ShadowParameters> m; // History of gradients
+  std::vector<ShadowLookupParameters> lm;
+  std::vector<ShadowParameters> v; // History of deltas
+  std::vector<ShadowLookupParameters> lv;
+  std::vector<ShadowParameters> vhat; // History of max moments
+  std::vector<ShadowLookupParameters> lvhat;
+private:
+  AmsgradTrainer() {}
+};
+
+/**
+ * \ingroup optimizers
+ *
  * \brief Exponentiated gradient optimizer with momentum and cyclical learning rate
  * \details FIXME
  *
@@ -461,13 +506,7 @@ private:
  *
 */
 struct EGTrainer : public Trainer {
-  explicit EGTrainer(ParameterCollection& mod, real learning_rate = 0.1, real mom = 0.9, real ne = 0.0)
-    : Trainer(mod, learning_rate), momentum(mom), isCyclical(false) {
-    zeg.d = meg.d = {1};
-    zeg.device = meg.device = default_device;
-    default_device->allocate_tensor(DeviceMempool::PS, zeg);
-    default_device->allocate_tensor(DeviceMempool::PS, meg);
-  }
+  explicit EGTrainer(ParameterCollection& mod, real learning_rate = 0.1, real mom = 0.9, real ne = 0.0);
 
 //-----------------------------------------------------------------------------------------
   void enableCyclicalLR(float _learning_rate_min = 0.01, float _learning_rate_max = 0.1, float _step_size = 2000, float _gamma = 0.0) {

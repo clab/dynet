@@ -175,8 +175,6 @@ Arithmetic operations
 
 .. autofunction:: dynet.l2_norm
 
-.. autofunction:: dynet.tanh
-
 .. autofunction:: dynet.exp
 
 .. autofunction:: dynet.square
@@ -191,7 +189,33 @@ Arithmetic operations
 
 .. autofunction:: dynet.log
 
+.. autofunction:: dynet.log_sigmoid
+
 .. autofunction:: dynet.lgamma
+
+.. autofunction:: dynet.sin
+
+.. autofunction:: dynet.cos
+
+.. autofunction:: dynet.tan
+
+.. autofunction:: dynet.asin
+
+.. autofunction:: dynet.acos
+
+.. autofunction:: dynet.atan
+
+.. autofunction:: dynet.sinh
+
+.. autofunction:: dynet.cosh
+
+.. autofunction:: dynet.tanh
+
+.. autofunction:: dynet.asinh
+
+.. autofunction:: dynet.acosh
+
+.. autofunction:: dynet.atanh
 
 .. autofunction:: dynet.logistic
 
@@ -310,6 +334,8 @@ Flow/Shaping operations
 
 .. autofunction:: dynet.flip_gradient
 
+.. autofunction:: dynet.argmax
+
 Noise operations
 ^^^^^^^^^^^^^^^^
 
@@ -350,6 +376,10 @@ Convolution/Pooling operations
 .. autofunction:: dynet.filter1d_narrow
 
 .. autofunction:: dynet.kmax_pooling
+
+.. autofunction:: dynet.circ_conv
+
+.. autofunction:: dynet.circ_corr
 
 Tensor operations
 ^^^^^^^^^^^^^^^^^

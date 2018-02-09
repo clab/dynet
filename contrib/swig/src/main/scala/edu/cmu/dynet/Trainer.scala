@@ -4,6 +4,8 @@ package edu.cmu.dynet
 class Trainer private[dynet](_trainer: internal.Trainer) {
   def update(): Unit = _trainer.update()
   def updateEpoch(r: Float = 1.0f): Unit = _trainer.update_epoch(r)
+  def restart(): Unit = _trainer.restart()
+  def restart(lr: Float): Unit = _trainer.restart(lr)
 
   def clipGradients(): Float = _trainer.clip_gradients()
   def rescaleAndResetWeightDecay(): Unit = _trainer.rescale_and_reset_weight_decay()
@@ -18,6 +20,10 @@ class Trainer private[dynet](_trainer: internal.Trainer) {
 
   def learningRate:Float = _trainer.getLearning_rate()
   def learningRate_=(x:Float): Unit = _trainer.setLearning_rate(x)
+
+  def enableSparseUpdates(): Unit = _trainer.setSparse_updates_enabled(true)
+  def disableSparseUpdates(): Unit = _trainer.setSparse_updates_enabled(false)
+  def isSparseUpdatesEnabled: Boolean = _trainer.getSparse_updates_enabled()
 }
 
 class SimpleSGDTrainer private[dynet] (private[dynet] val trainer: internal.SimpleSGDTrainer)
@@ -76,3 +82,23 @@ class AdamTrainer private[dynet] (private[dynet] val trainer: internal.AdamTrain
     this(new internal.AdamTrainer(m.model, learningRate, beta1, beta2, eps))
   }
 }
+
+class AmsgradTrainer private[dynet] (private[dynet] val trainer: internal.AmsgradTrainer)
+  extends Trainer(trainer)
+{
+  def this(m: ParameterCollection, learningRate: Float = 0.001f, beta1: Float = 0.9f, beta2: Float = 0.999f,
+           eps: Float = 1e-8f) {
+    this(new internal.AmsgradTrainer(m.model, learningRate, beta1, beta2, eps))
+  }
+}
+
+//class EGTrainer private[dynet] (private[dynet] val trainer: internal.EGTrainer) extends Trainer(trainer)
+//{
+//  def this(m: ParameterCollection, learningRate: Float = 0.1f, mom: Float = 0.9f, ne: Float = 0.0f) {
+//    this(new internal.EGTrainer(m.model, learningRate, mom, ne))
+//  }
+//
+//  def enableCyclicalLR(learningRateMin: Float = 0.01f, learningRateMax: Float = 0.1f, stepSize: Float = 2000f, gamma: Float = 0.0f) = {
+//    trainer.enableCyclicalLR(learningRateMin, learningRateMax, stepSize, gamma)
+//  }
+//}
