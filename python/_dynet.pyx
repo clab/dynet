@@ -1202,14 +1202,15 @@ cdef class ParameterCollection: # {{{
             p = m.add_parameters((5,5), init='saxe')                    # Creates 5x5 orthogonal matrix (NOT SUPPORTED YET)
             p = m.add_parameters((3,5), init='glorot')                  # Creates 3x5 matrix with glorot init
             p = m.add_parameters((3,5), init='he')                      # Creates 3x5 matrix with he init
-            p = m.add_parameters(np.zeros((3,5)))                       # Creates 3x5 matrix from a numpy array (size is inferred)
+            arr = np.zeros((3, 5)
+            p = m.add_parameters(arr.shape, init=arr)                   # Creates 3x5 matrix from a numpy array
             p = m.add_parameters((3,5), init=dy.PyInitializer())        # Any parameter initializer
         
         Args:
-            dim (tuple, np.ndarray): Shape of the parameter. If only a numpy array is passed the dimension is inferred
+            dim (tuple, np.ndarray): Shape of the parameter.
         
         Keyword Arguments:
-            init (number, string, dynet.PyInitializer): Initializer, see description for details (default: GlorotInitializer)
+            init (number, string, dynet.PyInitializer, np.ndarray): Initializer, see description for details (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
             device (string)           : Optional device name for this parameter (default: "", default device)
             scale (number): Scale for uniform initialization
@@ -1219,11 +1220,11 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.Parameters): Created Parameter
         """
-        assert (isinstance(dim,(tuple, int, np.ndarray))), 'First argument of add_parameters should be a valid dimension or a numpy array'
-        if isinstance(dim, np.ndarray):
-            return self.parameters_from_numpy(dim, name=name, device=device)
-        elif isinstance(dim, int):
+        assert (isinstance(dim,(list, tuple, int))), 'First argument of add_parameters should be a valid dimension or a numpy array'
+        if isinstance(dim, int):
             dim = (dim,)
+        if isinstance(init, np.ndarray):
+            return self.parameters_from_numpy(init, name=name, device=device)
         cdef CParameters p
         cdef CParameterInit *initializer
         cdef CDevice *dev
@@ -1271,14 +1272,15 @@ cdef class ParameterCollection: # {{{
             lp = m.add_lookup_parameters((3,5), init='normal', mean=a, std=b)   # Creates 3 vectors of dimension 5 initialized with N(a, b)
             lp = m.add_lookup_parameters((3,5), init='glorot')                  # Creates 3 vectors of dimension 5 with glorot init
             lp = m.add_lookup_parameters((3,5), init='he')                      # Creates 3 vectors of dimension 5 with he init
-            lp = m.add_lookup_parameters(np.zeros((3,5)))                       # Creates 3 vectors of dimension 5 from a numpy array (first dimension is the lookup dimension)
+            arr = np.zeros((3, 5))
+            lp = m.add_lookup_parameters(arr.shape, init=arr)                   # Creates 3 vectors of dimension 5 from a numpy array (first dimension is the lookup dimension)
             lp = m.add_lookup_parameters((3,5), init=dy.PyInitializer())        # Any parameter initializer
         
         Args:
-            dim (tuple, np.ndarray): Shape of the parameter. The first dimension is the lookup dimension (number of records in the lookup table). If only a numpy array is passed the dimension is inferred
+            dim (tuple, np.ndarray): Shape of the parameter. The first dimension is the lookup dimension (number of records in the lookup table).
         
         Keyword Arguments:
-            init (number, string, dynet.PyInitializer): Initializer, see description for details (default: GlorotInitializer)
+            init (number, string, dynet.PyInitializer, np.ndarray): Initializer, see description for details (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
             device (string)           : Optional device name for this parameter (default: "", default device)
             scale (number)            : Scale for uniform initialization
@@ -1288,9 +1290,11 @@ cdef class ParameterCollection: # {{{
         Returns:
             (dynet.LookupParameters): Created LookupParameter
         """
-        assert (isinstance(dim,(tuple, np.ndarray))), 'First argument of add_parameters should be a valid dimension or a numpy array'
-        if isinstance(dim, np.ndarray):
-            return self.lookup_parameters_from_numpy(dim, name=name, device=device)
+        assert (isinstance(dim,(tuple, list, int))), 'First argument of add_parameters should be a valid dimension or a numpy array'
+        if isinstance(dim, int):
+            dim = (dim, 1)
+        if isinstance(init, np.ndarray):
+            return self.lookup_parameters_from_numpy(init, name=name, device=device)
         cdef CLookupParameters p
         cdef CParameterInit *initializer
         cdef CDevice *dev

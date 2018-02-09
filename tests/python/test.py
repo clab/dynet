@@ -267,7 +267,8 @@ class TestParameters(unittest.TestCase):
         #p = self.m.add_parameters((5,5), init='saxe')
         p = self.m.add_parameters((3, 5), init='glorot')
         p = self.m.add_parameters((3, 5), init='he')
-        p = self.m.add_parameters(np.zeros((3, 5)))
+        arr = np.zeros((3,5))
+        p = self.m.add_parameters(arr.shape, init=arr)
         p = self.m.add_parameters((3, 5), init=dy.ConstInitializer(2.0))
 
     def test_lookup_parameters_initializers(self):
@@ -277,11 +278,12 @@ class TestParameters(unittest.TestCase):
         p = self.m.add_lookup_parameters((3, 5), init='normal', mean=-1.0, std=2.5)
         p = self.m.add_lookup_parameters((3, 5), init='glorot')
         p = self.m.add_lookup_parameters((3, 5), init='he')
-        p = self.m.add_lookup_parameters(np.zeros((3, 5)))
+        arr = np.zeros((3,5))
+        p = self.m.add_lookup_parameters(arr.shape, init=arr)
         p = self.m.add_lookup_parameters((3, 5), init=dy.ConstInitializer(2.0))
 
         array = np.arange(50).reshape(10, 5)
-        p = self.m.add_lookup_parameters(array)
+        p = self.m.add_lookup_parameters(array.shape, init=array)
 
         slice_array = array[8]
         slice_param = p.batch([8]).npvalue()
