@@ -189,6 +189,8 @@ Arithmetic operations
 
 .. autofunction:: dynet.log
 
+.. autofunction:: dynet.log_sigmoid
+
 .. autofunction:: dynet.lgamma
 
 .. autofunction:: dynet.sin

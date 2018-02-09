@@ -893,6 +893,15 @@ BOOST_AUTO_TEST_CASE( cube_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression log_sigmoid(const Expression& x);
+BOOST_AUTO_TEST_CASE( log_sigmoid_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x2 = parameter(cg, param2);
+  Expression y = log_sigmoid(x2);
+  Expression z = to_scalar(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression lgamma(const Expression& x);
 BOOST_AUTO_TEST_CASE( lgamma_gradient ) {
   dynet::ComputationGraph cg;
