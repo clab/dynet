@@ -6,6 +6,7 @@ env:
   global:
     - PYTHON=python TWINE_USERNAME=danielh
     - secure: "j8Ro21/7h5FKuJHPJRHYfOiZHMoAfD/dfpqXZreGrl79jVSEdPZmmOdvFH++CqrRdttpxOf2Lg5qOfpXfziC5ecJx1USslBSo2qwAG9JwPkwjCK7MhouM64yhVedj9Es/H635aufbyRsDIhKr5poPrrH+UebEq/63QpEdDWIWq8="
+    - secure: "F115kko2LxjQGU/hRzN7iBVh80DbfsKVpSq2clBfTBu5aKAYroPEhQunf4o5uECN71kyP/qld9JUtEbFySsRYYMtTGRAcexg2C935Ax65mLYDLvpZjQf7xpLjAEwkUYZp1prlrJi4E/pDofsGy4NP9QbarQveuaFzFAG4tJKkkU="
 branches:
   only:
     - master
@@ -187,5 +188,4 @@ deploy:
     - .travis/deploy.sh
   on:
     repo: clab/dynet
-    tags: true
     condition: "$PYTHON_INSTALL = pip"

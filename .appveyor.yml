@@ -12,6 +12,8 @@ environment:
     TWINE_USERNAME: danielh
     TWINE_PASSWORD:
       secure: cpMn69tLzuhwO7EPhhiVwA==
+    TWINE_PASSWORD_TEST:
+      secure: PgevW/oQiBa2F4u+FciQBA==
   matrix:
     - PYTHON_VERSION: 3.5
     - PYTHON_VERSION: 3.6
@@ -35,7 +37,15 @@ install:
   - conda create -q -n test-env python=%PYTHON_VERSION% cython numpy pypandoc
   - activate test-env
   - cinst pandoc
-  - ps: if ($env:APPVEYOR_REPO_TAG -eq $True) { (gc setup.py) -replace '. (version=.)0.0.0', "`${1}$env:APPVEYOR_REPO_TAG_NAME" | Out-File -encoding 'UTF8' setup.py }
+  - ps: >-
+      if ($env:APPVEYOR_REPO_TAG -eq $True) {
+        $VERSION = $env:APPVEYOR_REPO_TAG_NAME
+        $env:TWINE_SERVER = "pypi"
+      } else {
+        $VERSION = "0.0.0+git." + (git describe --tags --always)
+        $env:TWINE_SERVER = "testpypi"
+      }
+      (gc setup.py) -replace '. (version=.)0.0.0', "`${1}$VERSION" | Out-File -encoding 'UTF8' setup.py
 
 before_build:
   - cmd: md build
@@ -67,8 +77,13 @@ deploy_script:
   - echo [distutils]                                  > %USERPROFILE%\\.pypirc
   - echo index-servers =                             >> %USERPROFILE%\\.pypirc
   - echo     pypi                                    >> %USERPROFILE%\\.pypirc
+  - echo     testpypi                                >> %USERPROFILE%\\.pypirc
   - echo [pypi]                                      >> %USERPROFILE%\\.pypirc
-  - echo username=%PYPI_USERNAME%                    >> %USERPROFILE%\\.pypirc
-  - echo password=%PYPI_PASSWORD%                    >> %USERPROFILE%\\.pypirc
+  - echo username=%TWINE_USERNAME%                   >> %USERPROFILE%\\.pypirc
+  - echo password=%TWINE_PASSWORD%                   >> %USERPROFILE%\\.pypirc
+  - echo [testpypi]                                  >> %USERPROFILE%\\.pypirc
+  - echo username=%TWINE_USERNAME%                   >> %USERPROFILE%\\.pypirc
+  - echo password=%TWINE_PASSWORD_TEST%              >> %USERPROFILE%\\.pypirc
   - python -m pip install twine
-  - if "%APPVEYOR_REPO_TAG%"=="true" ( python -m twine upload --skip-existing dist/* build/python/dist/* )
+  - python -m twine upload --repository %TWINE_SERVER% --skip-existing dist/* build/python/dist/*
+
