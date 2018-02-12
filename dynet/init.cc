@@ -251,7 +251,7 @@ void initialize(DynetParams& params) {
   // Set weight decay rate
   if (params.weight_decay < 0 || params.weight_decay >= 1)
     throw std::invalid_argument("[dynet] weight decay parameter must be between 0 and 1 (probably very small like 1e-6)\n");
-  weight_decay_lambda = params.weight_decay;
+  default_weight_decay_lambda = params.weight_decay;
 
   // Set autobatch
   if(params.autobatch)

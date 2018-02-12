@@ -10,7 +10,7 @@ namespace dynet {
 
 std::mt19937* rndeng = nullptr;
 Device* default_device = nullptr;
-float weight_decay_lambda;
+float default_weight_decay_lambda;
 int autobatch_flag; 
 int profiling_flag = 0;
 NamedTimer timer;
