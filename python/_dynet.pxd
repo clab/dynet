@@ -276,7 +276,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_zeros "dynet::zeros" (CComputationGraph& g, CDim& d) except + #
     CExpression c_ones "dynet::ones" (CComputationGraph& g, CDim& d) except + #
     CExpression c_constant "dynet::constant" (CComputationGraph& g, CDim& d, float val) except + #
-    CExpression c_random_normal "dynet::random_normal" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_random_normal "dynet::random_normal" (CComputationGraph& g, CDim& d, float m, float s) except + #
     CExpression c_random_bernoulli "dynet::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale) except +
     CExpression c_random_uniform "dynet::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) except + #
     CExpression c_random_gumbel "dynet::random_gumbel" (CComputationGraph& g, CDim& d, float left, float right) except + #
@@ -284,6 +284,12 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_nobackprop "dynet::nobackprop" (CExpression& x) except + #
     CExpression c_flip_gradient "dynet::flip_gradient" (CExpression& x) except + #
     CExpression c_scale_gradient "dynet::scale_gradient" (CExpression& x, float lambd) except + #
+    
+    cdef enum c_ArgmaxGradient "dynet:ArgmaxGradient":
+        zero_gradient,
+        straight_through_gradient
+
+    CExpression c_argmax "dynet::argmax" (CExpression& x, c_ArgmaxGradient gradient_mode) except + #
     
     CExpression c_op_neg "dynet::operator-" (CExpression& x) except + #
     CExpression c_op_add "dynet::operator+" (CExpression& x, CExpression& y) except + #
@@ -320,6 +326,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_erf "dynet::erf" (CExpression& x) except + #
     CExpression c_cube "dynet::cube" (CExpression& x) except + #
     CExpression c_log "dynet::log" (CExpression& x) except + #
+    CExpression c_log_sigmoid "dynet::log_sigmoid" (CExpression& x) except + #
     CExpression c_lgamma "dynet::lgamma" (CExpression& x) except + #
     CExpression c_logistic "dynet::logistic" (CExpression& x) except + #
     CExpression c_rectify "dynet::rectify" (CExpression& x) except + #        
@@ -378,6 +385,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_sum_batches "dynet::sum_batches" (CExpression& x) except +
     CExpression c_sum_rows "dynet::sum_rows" (CExpression& x) except +               #
     CExpression c_sum_cols "dynet::sum_cols" (CExpression& x) except +               #
+    CExpression c_cumsum "dynet::cumsum" (CExpression& x, unsigned d) except +               #
     CExpression c_moment_elems "dynet::moment_elems" (CExpression& x, unsigned r) except +
     CExpression c_moment_dim "dynet::moment_dim" (CExpression& x, vector[unsigned] dims, unsigned r, bool b, unsigned n) except +
     CExpression c_moment_batches "dynet::moment_batches" (CExpression& x, unsigned r) except +

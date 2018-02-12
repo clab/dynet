@@ -2554,7 +2554,7 @@ cpdef Expression constant(dim, float val, int batch_size=1):
     """
     return Expression.from_cexpr(_cg.version(), c_constant(_cg.thisptr[0], Dim(dim, batch_size), val))
 
-cpdef Expression random_normal(dim, int batch_size=1): 
+cpdef Expression random_normal(dim, float mean=0., float stddev=1., int batch_size=1): 
     """Create a random normal vector
     
     Create a vector distributed according to normal distribution with mean 0, variance 1.
@@ -2563,12 +2563,14 @@ cpdef Expression random_normal(dim, int batch_size=1):
         dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
+        mean (float): mean of the distribution (default: 0.0)
+        stddev (float): standard deviation of distribution (default: 1.0)
         batch_size (number): Batch size of the tensor  (default: (1))
     
     Returns:
         dynet.Expression: A "d" dimensioned normally distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], Dim(dim, batch_size)))
+    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], Dim(dim, batch_size), mean, stddev))
 cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=1):
     """Create a random bernoulli tensor
     
@@ -2659,6 +2661,43 @@ cpdef Expression scale_gradient(Expression x, float lambd = 1.0):
         dynet.Expression: An output expression containing the same as input (only effects on backprop process)
     """
     return Expression.from_cexpr(x.cg_version, c_scale_gradient(x.c(), lambd))
+
+
+cpdef Expression argmax(Expression x, str gradient_mode):
+    """Argmax
+    
+    This node takes an input vector :math:`x` and returns a one hot vector :math:`y` such that :math:`y_{\\text{argmax} x}=1`
+    There are two gradient modes for this operation:
+
+    .. code-block:: python
+        
+        argmax(x, gradient_mode="zero_gradient")
+
+    is the standard argmax operation. Note that this almost everywhere differentiable and its gradient is 0. **It will stop your gradient**
+
+    .. code-block:: python
+        
+        argmax(x, gradient_mode="straight_through_gradient")
+    
+    This gradient mode implements the straight-through estimator `(Bengio et al., 2013) <https://arxiv.org/abs/1308.3432>`_.
+    Its forward pass is the same as the argmax operation, but its gradient is the same as the identity function.
+    Note that this does not technically correspond to a differentiable function (hence the name "estimator").
+    Tensors of order :math:`>1` are not supported yet. If you really need to use this operation on matrices, tensors, etc... feel free to open an issue on github.
+    
+    Args:
+        x (dynet.Expression): The input vector (can be batched)
+        gradient_mode (str): Gradient mode for the backward pass (one of :code:`"zero_gradient"` or :code:`"straight_through_gradient"`
+    
+    Returns:
+        dynet.Expression: The one hot argmax vector
+    """
+    if gradient_mode == "zero_gradient":
+        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_ArgmaxGradient.zero_gradient))
+    elif gradient_mode == "straight_through_gradient":
+        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_ArgmaxGradient.straight_through_gradient))
+    else:
+        raise ValueError("Unknown gradient mode for argmax: " + gradient_mode)
+
 
 # binary-exp
 cpdef Expression cdiv(Expression x, Expression y):
@@ -3230,6 +3269,19 @@ cpdef Expression log(Expression x):
         dynet.Expression: :math:`y_i = \ln(x_i)`
     """
     return Expression.from_cexpr(x.cg_version, c_log(x.c()))
+cpdef Expression log_sigmoid(Expression x): 
+    """Log sigmoid
+    
+    Calculate elementwise log gamma function :math:`y_i = \ln(\\frac{1}{1+e^{x_i}})`
+    This is more numerically stable than `log(logistic(x))`
+    
+    Args:
+        x (dynet.Expression): Input expression
+    
+    Returns:
+        dynet.Expression: :math:`y_i = \ln(\\frac{1}{1+e^{x_i}})`
+    """
+    return Expression.from_cexpr(x.cg_version, c_log_sigmoid(x.c()))
 cpdef Expression lgamma(Expression x): 
     """Log gamma
     
@@ -3516,7 +3568,7 @@ cpdef Expression sum_elems(Expression x):
     return Expression.from_cexpr(x.cg_version, c_sum_elems(x.c()))
 
 cpdef Expression sum_dim(Expression x, list d, bool b=False, unsigned n=0):
-    """Mean along an arbitrary dimension
+    """Sum along an arbitrary dimension
     
     Computes the sum :math:`\sum_ix_i`  along an arbitrary dimension or dimensions.
 
@@ -3543,6 +3595,21 @@ cpdef Expression sum_batches(Expression x):
         dynet.Expression: An expression with a single batch
     """
     return Expression.from_cexpr(x.cg_version, c_sum_batches(x.c()))
+
+cpdef Expression cumsum(Expression x, unsigned d=0):
+    """Cumulative sum along an arbitrary dimension
+    
+    Computes the cumulative sum :math:`y_i=\sum_{j\leq i}x_j`  along an arbitrary dimension.
+
+    Args:
+        x (dynet.Expression): Input expression
+        d (int): Dimension along which to compute the cumulative sums (default: 0)
+    
+    Returns:
+        dynet.Expression: An expression with the same dimension as the input
+    """
+    return Expression.from_cexpr(x.cg_version, c_cumsum(x.c(), d))
+
 
 cpdef Expression mean_elems(Expression x):
     """Mean of elements of the tensor
@@ -4665,21 +4732,23 @@ cdef class _RNNBuilder: # {{{
         Args:
             vecs (list): Initial hidden state for each layer as a list of :code:`dynet.Expression` s  (default: {None})
             update (bool): trainer updates internal parameters (default: {True})
+                           NOTE: subsequent calls without calling dynet.renew_cg() will not change the `update` behavior.
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
+        # if we didn't initialize for this CG yet, create a new _init_state
         if self.cg_version != _cg.version():
             self.new_graph(update)
-            if vecs is not None:
-                self.start_new_sequence(vecs)
-            else:
-                self.start_new_sequence()
+            self.start_new_sequence()
             self._init_state = RNNState(self, -1)
+        # if we have vecs, return a new state based on the initial state
+        if vecs is not None:
+            return self._init_state.set_s(vecs)
         return self._init_state
 
-    cpdef RNNState initial_state_from_raw_vectors(self,vecs=None, update=True):
+    cpdef RNNState initial_state_from_raw_vectors(self,vecs, update=True):
         """Get a :code:`dynet.RNNState`
         
         This initializes a :code:`dynet.RNNState` by loading the parameters in the computation graph
@@ -4689,24 +4758,13 @@ cdef class _RNNBuilder: # {{{
         Args:
             vecs (list): Initial hidden state for each layer as a list of numpy arrays  (default: {None})
             update (bool): trainer updates internal parameters (default: {True})
+                           NOTE: subsequent calls without calling dynet.renew_cg() will not change the `update` behavior.
         
         Returns:
             :code:`dynet.RNNState` used to feed inputs/transduces sequences, etc...
             dynet.RNNState
         """
-        if self.cg_version != _cg.version():
-            self.new_graph(update)
-            if vecs is not None:
-                es = []
-                for v in vecs:
-                    e = vecInput(len(v))
-                    e.set(v)
-                    es.append(e)
-                self.start_new_sequence(es)
-            else:
-                self.start_new_sequence()
-            self._init_state = RNNState(self, -1)
-        return self._init_state
+        return self.initial_state([inputTensor(v) for v in vecs],update)
 
     cpdef ParameterCollection param_collection(self):
         return ParameterCollection.wrap(self.thisptr.get_parameter_collection())

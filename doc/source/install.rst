@@ -35,7 +35,7 @@ following command:
 
 ::
 
-    hg clone https://bitbucket.org/eigen/eigen/ -r 699b659
+    hg clone https://bitbucket.org/eigen/eigen/ -r 2355b22
     
 The `-r NUM` specified a revision number that is known to work.  Adventurous
 users can remove it and use the very latest version, at the risk of the code

@@ -69,6 +69,15 @@ struct Abs : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
 };
 
+// y = log_sigmoid x_1
+struct LogSigmoid : public Node {
+  explicit LogSigmoid(const std::initializer_list<VariableIndex>& a) : Node(a) {}
+  virtual bool supports_multibatch() const override { return true; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::logsigmoid); return sm.get_idx(s); }
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }  
+  DYNET_NODE_DEFINE_DEV_IMPL()
+};
+
 // y = lgamma x_1
 struct LogGamma : public Node {
   explicit LogGamma(const std::initializer_list<VariableIndex>& a) : Node(a) {}

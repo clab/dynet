@@ -189,6 +189,8 @@ Arithmetic operations
 
 .. autofunction:: dynet.log
 
+.. autofunction:: dynet.log_sigmoid
+
 .. autofunction:: dynet.lgamma
 
 .. autofunction:: dynet.sin
@@ -232,6 +234,8 @@ Arithmetic operations
 .. autofunction:: dynet.bmin
 
 .. autofunction:: dynet.bmax
+
+.. autofunction:: dynet.cumsum
 
 Reduction/moment operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -331,6 +335,8 @@ Flow/Shaping operations
 .. autofunction:: dynet.nobackprop
 
 .. autofunction:: dynet.flip_gradient
+
+.. autofunction:: dynet.argmax
 
 Noise operations
 ^^^^^^^^^^^^^^^^
@@ -498,6 +504,10 @@ Optimizers
    :show-inheritance:
 
 .. autoclass:: dynet.AdamTrainer
+   :members:
+   :show-inheritance:
+
+.. autoclass:: dynet.AmsgradTrainer
    :members:
    :show-inheritance:
 

@@ -313,6 +313,18 @@ BOOST_AUTO_TEST_CASE( sum_batch_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression sum(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( cumsum_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x = parameter(cg, param_cube1);
+  vector<Expression> y;
+  for (unsigned d=0;d<3;d++){
+      y.push_back(squared_norm(cumsum(x, d)));
+  }
+  Expression z = sum(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression logsumexp(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( logsumexp_gradient ) {
   dynet::ComputationGraph cg;
@@ -893,6 +905,15 @@ BOOST_AUTO_TEST_CASE( cube_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression log_sigmoid(const Expression& x);
+BOOST_AUTO_TEST_CASE( log_sigmoid_gradient ) {
+  dynet::ComputationGraph cg;
+  Expression x2 = parameter(cg, param2);
+  Expression y = log_sigmoid(x2);
+  Expression z = to_scalar(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
 // Expression lgamma(const Expression& x);
 BOOST_AUTO_TEST_CASE( lgamma_gradient ) {
   dynet::ComputationGraph cg;
@@ -1198,6 +1219,53 @@ BOOST_AUTO_TEST_CASE( dropout_dim_forward ) {
 
 // TODO: Dropout scales the gradients at training time, so they don't match.
 // Expression block_dropout(const Expression& x, real p);
+
+// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+BOOST_AUTO_TEST_CASE( argmax_forward ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = argmax(x, zero_gradient);
+  std::vector<float> v = as_vector(y.value());
+  BOOST_CHECK_EQUAL(v[0], 0.0);
+  BOOST_CHECK_EQUAL(v[1], 0.0);
+  BOOST_CHECK_EQUAL(v[2], 1.0);
+  BOOST_CHECK_EQUAL(v[3], 0.0);
+  BOOST_CHECK_EQUAL(v[4], 0.0);
+  BOOST_CHECK_EQUAL(v[5], 1.0);
+}
+
+// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+BOOST_AUTO_TEST_CASE( argmax_backward ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = argmax(x, zero_gradient);
+  Expression z = sum_batches(squared_norm(y));
+  cg.backward(z, true);
+  std::vector<float> g_x = as_vector(x.gradient());
+  BOOST_CHECK_EQUAL(g_x[0], 0.0);
+  BOOST_CHECK_EQUAL(g_x[1], 0.0);
+  BOOST_CHECK_EQUAL(g_x[2], 0.0);
+  BOOST_CHECK_EQUAL(g_x[3], 0.0);
+  BOOST_CHECK_EQUAL(g_x[4], 0.0);
+  BOOST_CHECK_EQUAL(g_x[5], 0.0);
+}
+
+// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+BOOST_AUTO_TEST_CASE( straight_through_backward ) {
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression x_ = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = argmax(x, straight_through_gradient);
+  Expression z = sum_batches(dot_product(y, x_));
+  cg.backward(z, true);
+  std::vector<float> g_x = as_vector(x.gradient());
+  BOOST_CHECK_EQUAL(g_x[0], batch_vals[0]);
+  BOOST_CHECK_EQUAL(g_x[1], batch_vals[1]);
+  BOOST_CHECK_EQUAL(g_x[2], batch_vals[2]);
+  BOOST_CHECK_EQUAL(g_x[3], batch_vals[3]);
+  BOOST_CHECK_EQUAL(g_x[4], batch_vals[4]);
+  BOOST_CHECK_EQUAL(g_x[5], batch_vals[5]);
+}
 
 // Expression reshape(const Expression& x, const Dim& d);
 BOOST_AUTO_TEST_CASE( reshape_gradient ) {
@@ -1651,6 +1719,40 @@ BOOST_AUTO_TEST_CASE( conv2d_valid_gradient ) {
   Expression y = conv2d(x, kernel, stride, is_valid);
   Expression z = sum_batches(to_scalar(y));
   BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression log_softmax(const Expression& x);
+BOOST_AUTO_TEST_CASE( conv2d_autobatch_gradient ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  dynet::autobatch_flag = 1;
+  dynet::ComputationGraph cg;
+  Parameter param_kernel = mod.add_parameters({2, 2, 2, 3});
+  std::vector<float> param_kernel_vals = {.011f, .022f, .033f, .012f, .022f, .032f, .013f, .023f, .033f,
+                                          .111f, -.122f, -.033f, -.112f, -.022f, -.132f, -.113f, -.123f, -.133f,
+                                          .211f, .222f, .233f, .212f, .222f, .232f
+                                         };
+  TensorTools::set_elements(param_kernel.get_storage().values, param_kernel_vals);
+  Expression kernel = parameter(cg, param_kernel);
+  vector<unsigned> stride = {3, 3}; bool is_valid = true;
+  std::vector<float> conv2d_vals1(50 * 50 * 2), conv2d_vals2(50 * 50 * 2);
+  for (unsigned i = 0; i < conv2d_vals1.size(); ++i) {
+    conv2d_vals1[i] = i * 0.011f + (i + 1) * 0.001f;
+    conv2d_vals2[i] = i * 0.015f + (i + 1) * -0.001f;
+  }
+  vector<Expression> zs;
+  {
+    Expression x = input(cg, Dim({50, 50, 2}), conv2d_vals1);
+    Expression y = conv2d(x, kernel, stride, is_valid);
+    zs.push_back(to_scalar(y));
+  }
+  {
+    Expression x = input(cg, Dim({50, 50, 2}), conv2d_vals2);
+    Expression y = conv2d(x, kernel, stride, is_valid);
+    zs.push_back(to_scalar(y));
+  }
+  Expression z = sum(zs);
+  BOOST_CHECK(check_grad(mod, z, 0));
+  dynet::autobatch_flag = autobatch_cache;
 }
 
 // Expression conv2d(const Expression& x ,const Expression& f, const std::vector<unsigned>& stride, bool is_valid);

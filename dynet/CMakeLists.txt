@@ -23,6 +23,7 @@ set(dynet_library_SRCS
     model.cc
     nodes-activations.cc
     nodes-affinetransform.cc
+    nodes-argmax.cc
     nodes-arith-const.cc
     nodes-arith-cwise.cc
     nodes-arith-sum.cc
@@ -43,6 +44,7 @@ set(dynet_library_SRCS
     nodes-maxpooling2d.cc
     nodes-minmax.cc
     nodes-moments.cc
+    nodes-cumulative.cc
     nodes-normalization.cc
     nodes-norms.cc
     nodes-pickneglogsoftmax.cc
@@ -101,6 +103,7 @@ set(dynet_library_HDRS
     model.h
     nodes-activations.h
     nodes-affinetransform.h
+    nodes-argmax.h
     nodes-arith-const.h
     nodes-arith-cwise.h
     nodes-arith-sum.h
@@ -123,6 +126,7 @@ set(dynet_library_HDRS
     nodes-maxpooling2d.h
     nodes-minmax.h
     nodes-moments.h
+    nodes-cumulative.h
     nodes-normalization.h
     nodes-norms.h
     nodes-pickneglogsoftmax.h
@@ -157,6 +161,7 @@ endif()
 set(dynet_gpu_mergeable_SRCS
     nodes-activations
     nodes-affinetransform
+    nodes-argmax
     nodes-arith-const
     nodes-arith-cwise
     nodes-arith-sum
@@ -177,6 +182,7 @@ set(dynet_gpu_mergeable_SRCS
     nodes-maxpooling2d
     nodes-minmax
     nodes-moments
+    nodes-cumulative
     nodes-normalization
     nodes-norms
     nodes-pickneglogsoftmax

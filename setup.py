@@ -117,7 +117,7 @@ if (EIGEN3_INCLUDE_DIR is not None and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
 
-EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/699b6595fc47.zip") 
+EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/2355b229ea4c.zip") 
 # EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/3.3.4.tar.bz2")
     
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
@@ -346,7 +346,10 @@ class build_ext(_build_ext):
             for d in os.listdir("build"):
                 target_dir = os.path.join(SCRIPT_DIR, "build", d)
                 rmtree(target_dir, ignore_errors=True)
-                copytree(os.path.join("build", d), target_dir)
+                try:
+                    copytree(os.path.join("build", d), target_dir)
+                except OSError as e:
+                    log.info("Cannot copy %s %s" % (os.path.join("build",d), e))
 
 
 try:
