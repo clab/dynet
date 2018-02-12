@@ -105,6 +105,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         #float gradient_l2_norm() const
         CParameters add_parameters(CDim& d)
         CParameters set_weight_decay_lambda(float lam)
+        float get_weight_decay_lambda()
         CParameters add_parameters(CDim& d, CParameterInit initializer, string name) except +
         CParameters add_parameters(CDim& d, CParameterInit initializer, string name, CDevice *device) except +
         #CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)

@@ -719,6 +719,11 @@ public:
    */
   L2WeightDecay& get_weight_decay() { return get_storage().weight_decay; }
 
+  /**
+   * \brief Get the weight decay lambda value.
+   */
+  float get_weight_decay_lambda() { return get_weight_decay().get_lambda(); }
+
   ParameterCollectionStorage& get_storage();
   const ParameterCollectionStorage& get_storage() const;
 
