@@ -746,7 +746,7 @@ cdef class Parameters(Expression): # {{{
         return self._expr.c()
 
     def dim(self):
-        return self._expr().dim()
+        return self._iexpr().dim()
 
     def __repr__(self):
         return str(self)
@@ -767,7 +767,7 @@ cdef class Parameters(Expression): # {{{
 
 # Parameters }}}
 
-cdef class LookupParameters: # {{{
+cdef class LookupParameters(Expression): # {{{
     """LookupParameters represents a table of parameters.
 
     They are used to embed a set of discrete objects (e.g. word embeddings). These are sparsely updated.
@@ -985,7 +985,7 @@ cdef class LookupParameters: # {{{
         """
         self.thisptr.scale_gradient(s)
         
-    cpdef Expression expr(self,bool update=True):
+    cdef Expression _iexpr(self,bool update=True):
         """Returns an expression for the whole parameter
 
         Same as :code:`dynet.parameter`
@@ -1003,6 +1003,10 @@ cdef class LookupParameters: # {{{
                 self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
         return self._expr
 
+    # for backward compatibility.
+    # deprecate.
+    cpdef expr(self): return self
+
     cpdef zero(self):
         """Set all values to zero
         """
@@ -1016,6 +1020,30 @@ cdef class LookupParameters: # {{{
         Return the full name of this lookup parameter.
         """
         return self.thisptr.get_fullname().decode("utf8")
+
+    # needed for Expression
+    cdef CExpression c(self):
+        if cg_version() != self._version:
+            self._version = cg_version()
+            self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+        return self._expr.c()
+
+    def dim(self):
+        return self._iexpr().dim()
+
+    def __repr__(self):
+        return str(self)
+    def __str__(self):
+        return "LookupParameter %s" % self.name()
+
+    cpdef scalar_value(self, bool recalculate=False): raise Exception("scalar_value not applicable for LookupParameters.")
+    cpdef vec_value(self, bool recalculate=False):    return self._iexpr().vec_value(recalculate)
+    cpdef npvalue(self, bool recalculate=False):      return self._iexpr().npvalue(recalculate)
+    cpdef tensor_value(self, bool recalculate=False): return self._iexpr().tensor_value(recalculate)
+    cpdef value(self, bool recalculate=False):        return self._iexpr().value(recalculate)
+    cpdef gradient(self):                             return self._iexpr().gradient()
+    cpdef forward(self, bool recalculate=False):      return self._iexpr().forward(recalculate)
+    cpdef backward(self, bool full=False):            return self._iexpr().backward(full)
 # }}}
 
 cdef class ParameterCollection: # {{{
