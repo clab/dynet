@@ -462,7 +462,7 @@ struct LookupParameter {
 // This is an internal class to store parameters in the collection
 struct ParameterCollectionStorage {
 
-  ParameterCollectionStorage();
+  ParameterCollectionStorage(float weight_decay_lambda);
 
   ~ParameterCollectionStorage();
 
@@ -500,10 +500,17 @@ public:
   friend struct LookupParameter;
 
   /**
-   * \brief Constructor
+   * \brief Constructor.
+   * \details Weight-decay value is taken from commandline option.
    */
   ParameterCollection();
   ~ParameterCollection();
+
+  /**
+   * \brief Constructor.
+   * \param weight_decay_lambda Default weight-decay value for this collection.
+   */
+  ParameterCollection(float weight_decay_lambda);
   /**
    * \brief Returns the l2 of your gradient
    * \details Use this to look for gradient vanishing/exploding
@@ -699,9 +706,11 @@ public:
    *          (possibly named) subset of the original collection. This is
    *          useful if you want to save/load/update only part of the
    *          parameters in the model.
+   * \param name 
+   * \param weight_decay_lambda if negative/omitted, inherit from parent.
    * \return The subcollection
    */
-  ParameterCollection add_subcollection(const std::string& name = "");
+  ParameterCollection add_subcollection(const std::string& name = "", float weight_decay_lambda = -1);
 
   /**
    * \brief Get size
@@ -719,6 +728,11 @@ public:
    */
   L2WeightDecay& get_weight_decay() { return get_storage().weight_decay; }
 
+  /**
+   * \brief Get the weight decay lambda value.
+   */
+  float get_weight_decay_lambda() { return get_weight_decay().get_lambda(); }
+
   ParameterCollectionStorage& get_storage();
   const ParameterCollectionStorage& get_storage() const;
 
@@ -727,7 +741,7 @@ protected:
   void add_lookup_parameters_to_storage(std::shared_ptr<LookupParameterStorage> p);
 
 private:
-  ParameterCollection(const std::string & name, ParameterCollection* parent);
+  ParameterCollection(const std::string & name, ParameterCollection* parent, float weight_decay_lambda);
   std::string name;
   std::unordered_map<std::string,int> name_cntr, collec_name_cntr;
   ParameterCollectionStorage * storage;

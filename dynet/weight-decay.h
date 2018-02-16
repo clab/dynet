@@ -19,6 +19,7 @@ struct L2WeightDecay {
     if (lam < 0) throw std::domain_error("Bad value of lambda in set_lambda");
     lambda = lam;
   }
+  float get_lambda() { return lambda; }
   void update_weight_decay(unsigned num_updates = 1) {
     if (num_updates == 0) return;
     if (num_updates == 1)

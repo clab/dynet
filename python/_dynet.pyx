@@ -1279,9 +1279,23 @@ cdef class ParameterCollection: # {{{
         """
         return ParameterCollection.wrap(self.thisptr.add_subcollection((name or "").encode()), self)
 
-    cpdef set_weight_decay_lambda(self, lam):
+    cpdef float get_weight_decay(self):
+        """Get the weight decay lambda value.
+        """
+        return self.thisptr.get_weight_decay_lambda()
+
+    cpdef set_weight_decay(self, float lam):
         """Set the weight decay coefficient.
         
+        Args:
+            lam (float): Weight decay coefficient
+        """
+        assert isinstance(lam,float), "Weight decay lambda must be float: %s" % lam
+        self.thisptr.set_weight_decay_lambda(lam)
+
+    cpdef set_weight_decay_lambda(self, lam):
+        """Set the weight decay coefficient. (alias to set_weight_decay)
+
         Args:
             lam (float): Weight decay coefficient
         """

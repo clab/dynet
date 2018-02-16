@@ -257,7 +257,7 @@ float LookupParameter::current_weight_decay() const {
   return get_storage().owner->get_weight_decay().current_weight_decay();
 }
 
-ParameterCollectionStorage::ParameterCollectionStorage()
+ParameterCollectionStorage::ParameterCollectionStorage(float weight_decay_lambda)
     : gradient_norm_scratch(nullptr), device_manager(get_device_manager()) {
   weight_decay.set_lambda(weight_decay_lambda);
 }
@@ -287,18 +287,19 @@ void ParameterCollectionStorage::project_weights(float radius) {
   cerr << "NORM: " << sqrt(gg) << endl;
 }
 
-ParameterCollection::ParameterCollection() : name("/"), storage(new ParameterCollectionStorage), parent(nullptr) { }
+ParameterCollection::ParameterCollection() : name("/"), storage(new ParameterCollectionStorage(default_weight_decay_lambda)), parent(nullptr) { }
 
-ParameterCollection::ParameterCollection(const string & my_name, ParameterCollection* my_parent) :
-    name(my_name), storage(new ParameterCollectionStorage), parent(my_parent) { }
+ParameterCollection::ParameterCollection(const string & my_name, ParameterCollection* my_parent, float weight_decay_lambda) :
+    name(my_name), storage(new ParameterCollectionStorage(weight_decay_lambda)), parent(my_parent) { }
 
-ParameterCollection ParameterCollection::add_subcollection(const string & sub_name) {
+ParameterCollection ParameterCollection::add_subcollection(const string & sub_name, float weight_decay_lambda) {
+  if (weight_decay_lambda < 0) { weight_decay_lambda = get_weight_decay_lambda(); }
   if (valid_parameter(sub_name)) {
     ostringstream oss; oss << name << sub_name;
     int idx = collec_name_cntr[sub_name]++;
     if (idx > 0 || sub_name.size() == 0) oss << "_" << idx;
     oss << "/";
-    return ParameterCollection(oss.str(), this);
+    return ParameterCollection(oss.str(), this, weight_decay_lambda);
   } else {
     throw std::runtime_error("Submodel name could not include '/' and '_'");
   }
@@ -492,7 +493,7 @@ size_t ParameterCollection::updated_parameter_count() const {
 ParameterCollectionStorage& ParameterCollection::get_storage() {
   if(storage == nullptr) {
     if (parent == nullptr)
-      storage = new ParameterCollectionStorage;
+      storage = new ParameterCollectionStorage(default_weight_decay_lambda);
     else
       DYNET_RUNTIME_ERR("ParameterCollection::get_storage() not implemented yet for subsets");
   }
@@ -502,7 +503,7 @@ ParameterCollectionStorage& ParameterCollection::get_storage() {
 const ParameterCollectionStorage& ParameterCollection::get_storage() const {
   if(storage == nullptr) {
     if (parent == nullptr)
-      const_cast<ParameterCollectionStorage*&>(storage) = new ParameterCollectionStorage;
+      const_cast<ParameterCollectionStorage*&>(storage) = new ParameterCollectionStorage(default_weight_decay_lambda);
     else
       DYNET_RUNTIME_ERR("ParameterCollection::get_storage() not implemented yet for subsets");
   }
