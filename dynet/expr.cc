@@ -275,4 +275,53 @@ Expression to_device(const Expression & x, Device *device) {
   return Expression(x.pg, x.pg->add_function<ToDevice>({x.i}, device));
 }
 
+////////////////////////////////////////////////
+// Functions with variable argument lengths   //
+////////////////////////////////////////////////
+
+namespace detail {
+template <typename F, typename T>
+inline Expression f(const T& xs) {
+  DYNET_ARG_CHECK(xs.size() > 0, "Zero-size argument passed to function");
+  ComputationGraph *pg = xs.begin()->pg;
+  std::vector<VariableIndex> xis(xs.size());
+  int i = 0;
+  for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
+  return Expression(pg, pg->add_function<F>(xis));
+}
+template <typename F, typename T, typename T1>
+inline Expression f(const T& xs, const T1& arg1) {
+  DYNET_ARG_CHECK(xs.size() > 0, "Zero-size argument passed to function");
+  ComputationGraph *pg = xs.begin()->pg;
+  std::vector<VariableIndex> xis(xs.size());
+  int i = 0;
+  for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
+  return Expression(pg, pg->add_function<F>(xis, arg1));
+}
+} // namespace detail
+
+Expression affine_transform(const std::initializer_list<Expression> &xs) { return detail::f<AffineTransform>(xs); }
+Expression affine_transform(const std::vector<Expression> &xs) { return detail::f<AffineTransform>(xs); }
+
+Expression sum(const std::initializer_list<Expression> &xs) { return detail::f<Sum>(xs); }
+Expression sum(const std::vector<Expression> &xs) { return detail::f<Sum>(xs); }
+
+Expression concatenate_to_batch(const std::initializer_list<Expression> &xs) { return detail::f<ConcatenateToBatch>(xs); }
+Expression concatenate_to_batch(const std::vector<Expression> &xs) { return detail::f<ConcatenateToBatch>(xs); }
+
+Expression average(const std::initializer_list<Expression> &xs) { return detail::f<Average>(xs); }
+Expression average(const std::vector<Expression> &xs) { return detail::f<Average>(xs); }
+
+Expression max(const std::initializer_list<Expression> &xs) { return detail::f<Max>(xs); }
+Expression max(const std::vector<Expression> &xs) { return detail::f<Max>(xs); }
+
+Expression logsumexp(const std::initializer_list<Expression> &xs) { return detail::f<LogSumExp>(xs); }
+Expression logsumexp(const std::vector<Expression> &xs) { return detail::f<LogSumExp>(xs); }
+
+Expression concatenate_cols(const std::initializer_list<Expression> &xs) { return detail::f<Concatenate>(xs, 1); }
+Expression concatenate_cols(const std::vector<Expression> &xs) { return detail::f<Concatenate>(xs, 1); }
+
+Expression concatenate(const std::initializer_list<Expression> &xs, unsigned d) { return detail::f<Concatenate>(xs, d); }
+Expression concatenate(const std::vector<Expression> &xs, unsigned d) { return detail::f<Concatenate>(xs, d); }
+
 }  // namespace dynet

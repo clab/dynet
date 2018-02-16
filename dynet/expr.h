@@ -21,18 +21,6 @@
 
 #include "dynet/dynet.h"
 
-// TODO: Ideally, we would not include these, but these are inlined at the moment.
-// If we can figure out a way to move the inlined functions to expr.cc that would be better.
-#include "dynet/nodes-affinetransform.h"
-#include "dynet/nodes-arith-sum.h"
-#include "dynet/nodes-concat.h"
-#include "dynet/nodes-logsumexp.h"
-#include "dynet/nodes-minmax.h"
-#include "dynet/nodes-moments.h"
-#include "dynet/nodes-contract.h"
-
-// #include "dynet/devices.h"
-
 #include <stdexcept>
 
 
@@ -104,25 +92,6 @@ struct Expression {
     return pg->get_dimension(i);
   }
 };
-
-namespace detail {
-template <typename F, typename T>
-Expression f(const T& xs) {
-  ComputationGraph *pg = xs.begin()->pg;
-  std::vector<VariableIndex> xis(xs.size());
-  int i = 0;
-  for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
-  return Expression(pg, pg->add_function<F>(xis));
-}
-template <typename F, typename T, typename T1>
-Expression f(const T& xs, const T1& arg1) {
-  ComputationGraph *pg = xs.begin()->pg;
-  std::vector<VariableIndex> xis(xs.size());
-  int i = 0;
-  for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
-  return Expression(pg, pg->add_function<F>(xis, arg1));
-}
-} // namespace detail
 
 ////////////////////////////////////////////////
 // Input operations                           //
@@ -639,9 +608,8 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
  *
  * \return An expression equal to: xs[0] + xs[1]*xs[2] + xs[3]*xs[4] + ...
  */
-inline Expression affine_transform(const std::initializer_list<Expression>& xs) { return detail::f<AffineTransform>(xs); }
-template <typename T>
-inline Expression affine_transform(const T& xs) { return detail::f<AffineTransform>(xs); }
+Expression affine_transform(const std::initializer_list<Expression> &xs);
+Expression affine_transform(const std::vector<Expression> &xs);
 
 /**
  * \ingroup arithmeticoperations
@@ -652,9 +620,8 @@ inline Expression affine_transform(const T& xs) { return detail::f<AffineTransfo
  *
  * \return An expression where the ith element is equal to xs[0][i] + xs[1][i] + ...
  */
-inline Expression sum(const std::initializer_list<Expression>& xs) { return detail::f<Sum>(xs); }
-template <typename T>
-inline Expression sum(const T& xs) { return detail::f<Sum>(xs); }
+Expression sum(const std::initializer_list<Expression> &xs);
+Expression sum(const std::vector<Expression> &xs);
 
 /**
  * \ingroup arithmeticoperations
@@ -828,9 +795,8 @@ Expression std_dim(const Expression& x, const std::vector<unsigned>& dims, bool 
  *
  * \return An expression where the ith element is equal to (xs[0][i] + xs[1][i] + ...)/|xs|
  */
-inline Expression average(const std::initializer_list<Expression>& xs) { return detail::f<Average>(xs); }
-template <typename T>
-inline Expression average(const T& xs) { return detail::f<Average>(xs); }
+Expression average(const std::initializer_list<Expression> &xs);
+Expression average(const std::vector<Expression> &xs);
 
 /**
  * \ingroup arithmeticoperations
@@ -1207,9 +1173,8 @@ Expression max(const Expression& x, const Expression& y);
  *
  * \return An expression where the ith element is equal to max(xs[0][i], xs[1][i], ...)
  */
-inline Expression max(const std::initializer_list<Expression>& xs) { return detail::f<Max>(xs); }
-template <typename T>
-inline Expression max(const T& xs) { return detail::f<Max>(xs); }
+Expression max(const std::initializer_list<Expression> &xs);
+Expression max(const std::vector<Expression> &xs);
 
 /**
  * \ingroup arithmeticoperations
@@ -1359,9 +1324,8 @@ Expression logsumexp_dim(const Expression& x, unsigned d);
  *
  * \return The result.
  */
-inline Expression logsumexp(const std::initializer_list<Expression>& xs) { return detail::f<LogSumExp>(xs); }
-template <typename T>
-inline Expression logsumexp(const T& xs) { return detail::f<LogSumExp>(xs); }
+Expression logsumexp(const std::initializer_list<Expression> &xs);
+Expression logsumexp(const std::vector<Expression> &xs);
 
 /**
  * \ingroup lossoperations
@@ -2087,9 +2051,8 @@ Expression pick_batch_elems(const Expression& x, const std::vector<unsigned> * p
  *
  * \return The expression with the batch dimensions concatenated
  */
-inline Expression concatenate_to_batch(const std::initializer_list<Expression>& xs) { return detail::f<ConcatenateToBatch>(xs); }
-template <typename T>
-inline Expression concatenate_to_batch(const T& xs) { return detail::f<ConcatenateToBatch>(xs); }
+Expression concatenate_to_batch(const std::initializer_list<Expression> &xs);
+Expression concatenate_to_batch(const std::vector<Expression> &xs);
 
 /**
  * \ingroup flowoperations
@@ -2116,9 +2079,8 @@ Expression strided_select(const Expression& x, const std::vector<int>& strides, 
  *
  * \return The expression with the columns concatenated
  */
-inline Expression concatenate_cols(const std::initializer_list<Expression>& xs) { return detail::f<Concatenate>(xs, 1); }
-template <typename T>
-inline Expression concatenate_cols(const T& xs) { return detail::f<Concatenate>(xs, 1); }
+Expression concatenate_cols(const std::initializer_list<Expression> &xs);
+Expression concatenate_cols(const std::vector<Expression> &xs);
 
 /**
  * \ingroup flowoperations
@@ -2133,9 +2095,8 @@ inline Expression concatenate_cols(const T& xs) { return detail::f<Concatenate>(
  *
  * \return The expression with the specified dimension concatenated
  */
-inline Expression concatenate(const std::initializer_list<Expression>& xs, unsigned d = 0) { return detail::f<Concatenate>(xs, d); }
-template <typename T>
-inline Expression concatenate(const T& xs, unsigned d = 0) { return detail::f<Concatenate>(xs, d); }
+Expression concatenate(const std::initializer_list<Expression> &xs, unsigned d = 0);
+Expression concatenate(const std::vector<Expression> &xs, unsigned d = 0);
 
 /**
  * \ingroup flowoperations
