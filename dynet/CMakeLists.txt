@@ -72,87 +72,91 @@ endif()
 
 # Headers:
 set(dynet_library_HDRS
-    aligned-mem-pool.h
-    c2w.h
-    cfsm-builder.h
-    cuda.h
-    cudnn-ops.h
-    deep-lstm.h
-    devices.h
-    dict.h
-    dim.h
-    dynet-helper.h
-    dynet.h
-    except.h
-    exec.h
-    expr.h
-    fast-lstm.h
-    functors.h
-    globals.h
-    gpu-kernels.h
-    gpu-ops.h
-    grad-check.h
-    graph.h
-    gru.h
-    hsm-builder.h
-    init.h
-    io.h
-    lstm.h
-    matrix-multiply.h
-    mem.h
-    model.h
-    nodes-activations.h
-    nodes-affinetransform.h
-    nodes-argmax.h
-    nodes-arith-const.h
-    nodes-arith-cwise.h
-    nodes-arith-sum.h
-    nodes-arith-unary.h
-    nodes-concat.h
-    nodes-const.h
-    nodes-contract.h
-    nodes-conv.h
-    nodes-conv2d.h
-    nodes-dropout.h
-    nodes-flow.h
-    nodes-hinge.h
-    nodes-linalg.h
-    nodes-logsumexp.h
-    nodes-losses.h
-    nodes-lstm.h
-    nodes-def-macros.h
-    nodes-impl-macros.h
-    nodes-matrixmultiply.h
-    nodes-maxpooling2d.h
-    nodes-minmax.h
-    nodes-moments.h
-    nodes-cumulative.h
-    nodes-normalization.h
-    nodes-norms.h
-    nodes-pickneglogsoftmax.h
-    nodes-random.h
-    nodes-select.h
-    nodes-similarities.h
-    nodes-softmaxes.h
-    nodes-to-device.h
-    nodes-trig.h
-    nodes.h
-    param-init.h
-    param-nodes.h
-    pretrain.h
-    rnn-state-machine.h
-    rnn.h
-    saxe-init.h
-    shadow-params.h
-    sig.h
-    simd-functors.h
-    str-util.h
-    tensor.h
-    timing.h
-    training.h
-    treelstm.h
-    virtual-cudnn.h
-    weight-decay.h
+aligned-mem-pool.h
+c2w.h
+cfsm-builder.h
+cuda.h
+cudnn-ops.h
+deep-lstm.h
+devices.h
+device-structs.h
+dict.h
+dim.h
+dynet.h
+dynet-helper.h
+except.h
+exec.h
+expr.h
+fast-lstm.h
+functors.h
+globals.h
+gpu-kernels.h
+gpu-ops.h
+grad-check.h
+graph.h
+gru.h
+hsm-builder.h
+index-tensor.h
+init.h
+io.h
+lstm.h
+matrix-multiply.h
+mem.h
+model.h
+mp.h
+nodes-activations.h
+nodes-affinetransform.h
+nodes-argmax.h
+nodes-arith-const.h
+nodes-arith-cwise.h
+nodes-arith-sum.h
+nodes-arith-unary.h
+nodes-concat.h
+nodes-const.h
+nodes-contract.h
+nodes-conv2d.h
+nodes-conv.h
+nodes-cumulative.h
+nodes-def-macros.h
+nodes-dropout.h
+nodes-flow.h
+nodes.h
+nodes-hinge.h
+nodes-impl-macros.h
+nodes-linalg.h
+nodes-logsumexp.h
+nodes-losses.h
+nodes-lstm.h
+nodes-matrixmultiply.h
+nodes-maxpooling2d.h
+nodes-minmax.h
+nodes-moments.h
+nodes-normalization.h
+nodes-norms.h
+nodes-pickneglogsoftmax.h
+nodes-random.h
+nodes-select.h
+nodes-similarities.h
+nodes-softmaxes.h
+nodes-to-device.h
+nodes-trig.h
+param-init.h
+param-nodes.h
+pretrain.h
+rnn.h
+rnn-state-machine.h
+saxe-init.h
+shadow-params.h
+sig.h
+simd-functors.h
+str-util.h
+tensor-eigen.h
+tensor.h
+timing.h
+training.h
+treelstm.h
+virtual-cudnn.h
+weight-decay.h
 )
 if(ENABLE_BOOST)
   list(APPEND dynet_library_HDRS mp.h)
