@@ -242,10 +242,12 @@ void initialize(DynetParams& params) {
   cerr << "[dynet] random seed: " << params.random_seed << endl;
   rndeng = new mt19937(params.random_seed);
 #if HAVE_CUDA
-  CURAND_CHECK(curandCreateGenerator(&curandeng, 
-                                     CURAND_RNG_PSEUDO_PHILOX4_32_10));
-  CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curandeng, 
-                                                  params.random_seed+1));
+  if (!(params.cpu_requested && (params.requested_gpus == -1))) {
+    CURAND_CHECK(curandCreateGenerator(&curandeng, 
+                                       CURAND_RNG_PSEUDO_PHILOX4_32_10));
+    CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curandeng, 
+                                                    params.random_seed+1));
+  }
 #endif
 
   // Set weight decay rate
