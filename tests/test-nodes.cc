@@ -314,6 +314,13 @@ BOOST_AUTO_TEST_CASE( sum_batch_gradient ) {
 }
 
 // Expression sum(const std::initializer_list<Expression>& xs);
+BOOST_AUTO_TEST_CASE( empty_sum ) {
+  dynet::ComputationGraph cg;
+  vector<Expression> y;
+  BOOST_CHECK_THROW(as_vector(sum(y).value()), std::invalid_argument);
+}
+
+// Expression sum(const std::initializer_list<Expression>& xs);
 BOOST_AUTO_TEST_CASE( cumsum_gradient ) {
   dynet::ComputationGraph cg;
   Expression x = parameter(cg, param_cube1);
@@ -2492,7 +2499,6 @@ BOOST_AUTO_TEST_CASE( gradient_sanity_test ) {
   Expression l = dot_product(x1, x2);
   cg.forward(l);
   BOOST_CHECK_THROW(x1.gradient() , std::runtime_error);
-
 }
 
 // This just makes sure that nothing crashes

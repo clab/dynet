@@ -20,6 +20,7 @@ string Sum::as_string(const vector<string>& arg_names) const {
 }
 
 Dim Sum::dim_forward(const vector<Dim>& xs) const {
+  DYNET_ARG_CHECK(xs.size() > 0, "Zero-length vector passed to Sum");
   Dim d = xs[0].truncate();
   unsigned int batch = d.bd;
   for (unsigned i = 1; i < xs.size(); ++i) {
