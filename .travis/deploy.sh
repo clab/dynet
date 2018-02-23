@@ -2,4 +2,10 @@
 set -xe
 
 cd "$TRAVIS_BUILD_DIR"
-twine upload --skip-existing dist/*  # Upload to PyPI
+if [[ -n "$TRAVIS_TAG" ]]; then
+  REPO=  # Upload to PyPI
+else
+  REPO="--repository-url https://test.pypi.org/legacy/"  # Upload to TestPyPI
+fi
+twine upload $REPO --skip-existing dist/*
+
