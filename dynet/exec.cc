@@ -280,7 +280,7 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
       pnode->accumulate_grad(ndEdfs[i]);
     }
   }
-  backward_computed = from_where;
+  backward_computed = from_where+1;
 }
 
 // To minimize the number of host-to-device memory copies, we put a bunch of
@@ -1107,7 +1107,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
   for (VariableIndex i : cg.parameter_nodes)
     if(i < (VariableIndex)ndEdfs.size() && ndEdfs[i].v != nullptr)
       static_cast<ParameterNodeBase*>(cg.nodes[i])->accumulate_grad(ndEdfs[i]);
-  backward_computed = from_where;
+  backward_computed = from_where + 1;
   // for(VariableIndex vi = (VariableIndex)0; vi <= backward_computed; ++vi) cerr << "ndEdfs[" << vi << "] == " << print_vec(as_vector(ndEdfs[vi])) << endl;
 
 }
