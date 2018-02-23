@@ -557,7 +557,7 @@ Expression colwise_add(const Expression& x, const Expression& bias);
 
 /* PROBABILITY / LOSS OPERATIONS */
 
-Expression softmax(const Expression& x);
+Expression softmax(const Expression& x, unsigned d=0);
 Expression log_softmax(const Expression& x);
 Expression log_softmax(const Expression& x, const std::vector<unsigned>& restriction);
 Expression logsumexp_dim(const Expression& x, unsigned d);

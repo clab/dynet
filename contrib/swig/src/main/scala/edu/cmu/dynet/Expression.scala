@@ -180,7 +180,7 @@ object Expression {
 
   /* PROBABILITY / LOSS OPERATIONS */
 
-  def softmax(e: Expression): Expression = unary(e, dn.softmax)
+  def softmax(e: Expression, d: Long = 0L): Expression = unary(e, e => dn.softmax(e, d))
   def logSoftmax(e: Expression): Expression = unary(e, dn.log_softmax)
   def logSoftmax(e: Expression, restriction: UnsignedVector) =
     unary(e, e => dn.log_softmax(e, restriction.vector))
