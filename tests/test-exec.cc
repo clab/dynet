@@ -140,5 +140,23 @@ BOOST_AUTO_TEST_CASE( param_after_node_2 ) {
   dynet::autobatch_flag = autobatch_cache;
 }
 
+BOOST_AUTO_TEST_CASE( loss_gradient ) {
+  auto autobatch_cache = dynet::autobatch_flag;
+  for(size_t i = 0; i < 2; ++i) {
+    dynet::autobatch_flag = i;
+	  ComputationGraph cg;
+	  ParameterCollection model;
+	  Parameter param = model.add_parameters({ 1 });
+
+	  Expression loss = zeroes(cg, { 1 });
+	  parameter(cg, param);
+
+	  cg.incremental_forward(loss);
+	  cg.backward(loss);
+    BOOST_CHECK_EQUAL(as_scalar(loss.gradient()), 1.f);
+
+  }
+  dynet::autobatch_flag = autobatch_cache;
+}
 
 BOOST_AUTO_TEST_SUITE_END()
