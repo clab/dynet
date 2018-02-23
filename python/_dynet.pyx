@@ -1177,7 +1177,7 @@ cdef class ParameterCollection: # {{{
         """
         vocab_size = array.shape[0]
         emb_dim = array.shape[1:]
-        init = NumpyInitializer(array.T)
+        init = NumpyInitializer(np.swapaxes(array, 0, array.ndim - 1))
         cdef CDevice* dev
         cdef CLookupParameters p
         cdef string _name = <string> name.encode("utf8")
@@ -1189,28 +1189,71 @@ cdef class ParameterCollection: # {{{
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
-    cpdef add_parameters(self, dim, PyInitializer init=None, name="", device=""):
-        """Add a parameter to the ParameterCollection
+
+    cpdef add_parameters(self, dim, init=None, name="", device="", scale=1.0, mean=0.0, std=1.0):
+        """Add a parameter to the ParameterCollection with a given initializer. There are different ways of specifying an initializer:
+
+        .. code-block:: python
+            
+            p = m.add_parameters((3,5), init=0)                         # Creates 3x5 matrix filled with 0 (or any other float)
+            p = m.add_parameters((3,5), init='uniform', scale=a)        # Creates 3x5 matrix initialized with U([-a,a])
+            p = m.add_parameters((3,5), init='normal', mean=a, std=b)   # Creates 3x5 matrix initialized with N(a, b)
+            p = m.add_parameters((5,5), init='identity')                # Creates 5x5 identity matrix
+            p = m.add_parameters((5,5), init='saxe')                    # Creates 5x5 orthogonal matrix (NOT SUPPORTED YET)
+            p = m.add_parameters((3,5), init='glorot')                  # Creates 3x5 matrix with glorot init
+            p = m.add_parameters((3,5), init='he')                      # Creates 3x5 matrix with he init
+            arr = np.zeros((3, 5)
+            p = m.add_parameters(arr.shape, init=arr)                   # Creates 3x5 matrix from a numpy array
+            p = m.add_parameters((3,5), init=dy.PyInitializer())        # Any parameter initializer
         
         Args:
-            dim (tuple): Shape of the parameter
+            dim (tuple, np.ndarray): Shape of the parameter.
         
         Keyword Arguments:
-            init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            init (number, string, dynet.PyInitializer, np.ndarray): Initializer, see description for details (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
             device (string)           : Optional device name for this parameter (default: "", default device)
+            scale (number): Scale for uniform initialization
+            mean (number): Mean for normal initialization
+            std (number): Standard deviation for normal initialization
         
         Returns:
             (dynet.Parameters): Created Parameter
         """
-        assert isinstance(dim,(tuple,int)), "Parameter dimension must be tuple or int: %s" % dim
+        assert (isinstance(dim,(list, tuple, int))), 'First argument of add_parameters should be a valid dimension or a numpy array'
+        if isinstance(dim, int):
+            dim = (dim,)
+        if isinstance(init, np.ndarray):
+            return self.parameters_from_numpy(init, name=name, device=device)
         cdef CParameters p
         cdef CParameterInit *initializer
         cdef CDevice *dev
         cdef string _name = <string> name.encode("utf8")
+        cdef PyInitializer pyinit
         if init is None:
-            init = GlorotInitializer()
-        initializer = init.initializer
+            pyinit = GlorotInitializer()
+        else:
+            if isinstance(init, (int, float)):
+                val = init
+                pyinit = ConstInitializer(val)
+            elif isinstance(init, str):
+                if init == 'identity':
+                    pyinit = IdentityInitializer()
+                elif init == 'glorot':
+                    pyinit = GlorotInitializer()
+                elif init == 'he':
+                    pyinit = NormalInitializer(0, 1 / (2 * dim[-1]))
+                elif init == 'uniform':
+                    pyinit = UniformInitializer(scale)
+                elif init == 'normal':
+                    pyinit = NormalInitializer(mean, std*std)
+                else:
+                    raise ValueError('Didn\'t recognize initializer')
+            elif isinstance(init, PyInitializer):
+                pyinit = init
+            else:
+                raise ValueError('Didn\'t recognize initializer')
+        initializer = pyinit.initializer
         if str(device) != "":
             dev = c_str2dev(device)
             p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name, dev)
@@ -1218,30 +1261,74 @@ cdef class ParameterCollection: # {{{
             p = self.thisptr.add_parameters(Dim(dim), deref(initializer), _name)
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
+
+    cpdef add_lookup_parameters(self, dim, init=None, name="", device="", scale=1.0, mean=0.0, std=1.0):
+        """Add a lookup parameter to the ParameterCollection with a given initializer
         
-    cpdef add_lookup_parameters(self, dim, PyInitializer init=None, name="", device=""):
-        """Add a lookup parameter to the ParameterCollection
+        .. code-block:: python
+            
+            lp = m.add_lookup_parameters((3,5), init=0)                         # Creates 3 vectors of dimension 5 filled with zeros
+            lp = m.add_lookup_parameters((3,5), init='uniform', scale=a)        # Creates 3 vectors of dimension 5 initialized with U([-a,a])
+            lp = m.add_lookup_parameters((3,5), init='normal', mean=a, std=b)   # Creates 3 vectors of dimension 5 initialized with N(a, b)
+            lp = m.add_lookup_parameters((3,5), init='glorot')                  # Creates 3 vectors of dimension 5 with glorot init
+            lp = m.add_lookup_parameters((3,5), init='he')                      # Creates 3 vectors of dimension 5 with he init
+            arr = np.zeros((3, 5))
+            lp = m.add_lookup_parameters(arr.shape, init=arr)                   # Creates 3 vectors of dimension 5 from a numpy array (first dimension is the lookup dimension)
+            lp = m.add_lookup_parameters((3,5), init=dy.PyInitializer())        # Any parameter initializer
         
         Args:
-            dim (tuple): Shape of the parameter. The first dimension is the vocab size
+            dim (tuple, np.ndarray): Shape of the parameter. The first dimension is the lookup dimension (number of records in the lookup table).
         
         Keyword Arguments:
-            init (dynet.PyInitializer): Initializer (default: GlorotInitializer)
+            init (number, string, dynet.PyInitializer, np.ndarray): Initializer, see description for details (default: GlorotInitializer)
             name (string)             : Optional name for this parameter (default: "")
             device (string)           : Optional device name for this parameter (default: "", default device)
+            scale (number)            : Scale for uniform initialization
+            mean (number)             : Mean for normal initialization
+            std (number)              : Standard deviation for normal initialization
         
         Returns:
             (dynet.LookupParameters): Created LookupParameter
         """
-        assert isinstance(dim, tuple), "Lookup parameter dimension must be tuple: %s" % dim
-        cdef CDevice *dev
+        assert (isinstance(dim,(tuple, list, int))), 'First argument of add_parameters should be a valid dimension or a numpy array'
+        if isinstance(dim, int):
+            dim = (dim, 1)
+        if isinstance(init, np.ndarray):
+            return self.lookup_parameters_from_numpy(init, name=name, device=device)
         cdef CLookupParameters p
-        cdef int nids = dim[0]
+        cdef CParameterInit *initializer
+        cdef CDevice *dev
         cdef string _name = <string> name.encode("utf8")
+        cdef PyInitializer pyinit
+        cdef int nids = dim[0]
         rest = tuple(dim[1:])
+
         if init is None:
-            init = GlorotInitializer(True)
-        initializer = init.initializer
+            pyinit = GlorotInitializer()
+        else:
+            if isinstance(init, (int, float)):
+                val = init
+                pyinit = ConstInitializer(val)
+            elif isinstance(init, str):
+                if init == 'identity':
+                    pyinit = IdentityInitializer()
+                elif init == 'glorot':
+                    pyinit = GlorotInitializer()
+                elif init == 'he':
+                    pyinit = NormalInitializer(0, 1 / (2 * rest[-1]))
+                elif init == 'uniform':
+                    pyinit = UniformInitializer(scale)
+                elif init == 'normal':
+                    pyinit = NormalInitializer(mean, std*std)
+                else:
+                    raise ValueError('Didn\'t recognize initializer')
+            elif isinstance(init, PyInitializer):
+                if isinstance(init, NumpyInitializer):
+                    raise ValueError('Do not use NumpyInitializer with add_lookup_parameters, use lookup_parameters_from_numpy instead')
+                pyinit = init
+            else:
+                raise ValueError('Didn\'t recognize initializer')
+        initializer = pyinit.initializer
         if str(device) != "":
             dev = c_str2dev(device)
             p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer), _name, dev)
