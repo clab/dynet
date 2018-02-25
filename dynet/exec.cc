@@ -841,7 +841,7 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
         for(size_t i = 0; i < arity; ++i) {
           // 1) the inputs don't need to be concatenated. Just use the tensor
           if(!my_batch.concat[i]) {
-            my_batch.arg_nfxs[i] = &batches[node2batch[node->args[i]]].nfx;
+            my_batch.arg_nfxs[i] = &get_nfx(node->args[i]);
           // 2) the inputs need to be concatenated
           } else {
             // 2.a) the inputs need to be concatenated, but are already in the
