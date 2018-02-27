@@ -8,8 +8,8 @@ import dynet as dy
 
 # To run this, download the four files from  http://yann.lecun.com/exdb/mnist/
 # and gunzip them into a single path. Pass this path to the program with the
-# --path option. You will also want to run with --dynet_autobatch 1.
-# To turn on GPU training, run with --dynet-gpus 1.
+# --path option. You will also want to run with --dynet_autobatch=1.
+# To turn on GPU training, run with --dynet_gpus=1.
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--path", default=".",
@@ -19,7 +19,7 @@ parser.add_argument("--minibatch_size", default=16,
 parser.add_argument("--conv", dest="conv", action="store_true")
 parser.add_argument("--dynet_autobatch", default=0,
                     help="Set to 1 to turn on autobatching.")
-parser.add_argument("--dynet-gpus", default=0,
+parser.add_argument("--dynet_gpus", default=0,
                     help="Set to 1 to train on GPU.")
 
 HIDDEN_DIM = 1024
@@ -58,23 +58,16 @@ class MNISTClassify(object):
   def __init__(self, m):
     if args.conv:
       # architecture from https://www.tensorflow.org/get_started/mnist/pros
-      self.pF1 = m.add_parameters((5, 5, 1, 32))
-      self.pb1 = m.add_parameters((32, ))
-      self.pF2 = m.add_parameters((5, 5, 32, 64))
-      self.pb2 = m.add_parameters((64, ))
+      self.F1 = m.add_parameters((5, 5, 1, 32))
+      self.b1 = m.add_parameters((32, ))
+      self.F2 = m.add_parameters((5, 5, 32, 64))
+      self.b2 = m.add_parameters((64, ))
       input_size = 7 * 7 * 64
     else:
       input_size = 28 * 28
-    self.pW1 = m.add_parameters((HIDDEN_DIM, input_size))
-    self.phbias = m.add_parameters((HIDDEN_DIM, ))
-    self.pW2 = m.add_parameters((10, HIDDEN_DIM))
-
-  def renew_cg(self):
-    if args.conv:
-      self.F1, self.b1, self.F2, self.b2 = dy.parameter(
-          self.pF1, self.pb1, self.pF2, self.pb2)
-    self.W1, self.hbias, self.W2 = dy.parameter(
-        self.pW1, self.phbias, self.pW2)
+    self.W1 = m.add_parameters((HIDDEN_DIM, input_size))
+    self.hbias = m.add_parameters((HIDDEN_DIM, ))
+    self.W2 = m.add_parameters((10, HIDDEN_DIM))
 
   def __call__(self, x, dropout=False):
     if args.conv:
@@ -111,7 +104,6 @@ if __name__ == "__main__":
     i = 0
     while i < len(training):
       dy.renew_cg()
-      classify.renew_cg()
       mbsize = min(args.minibatch_size, len(training) - i)
       minibatch = training[i:i+mbsize]
       losses = []
@@ -137,7 +129,6 @@ if __name__ == "__main__":
         dev_start = time.time()
         for s in range(0, len(testing), args.minibatch_size):
           dy.renew_cg()
-          classify.renew_cg()
           e = min(len(testing), s + args.minibatch_size)
           minibatch = testing[s:e]
           scores = []
