@@ -2020,7 +2020,10 @@ def parameter(*args):
         NotImplementedError: Only works with Parameters and LookupParameters.
     """
     global __deprecation_shown
-    if not __deprecation_shown: print("Depracated: there is no longer need to explicitly add parameters to the computation graph.")
+    if not __deprecation_shown:
+        print("""The dy.parameter(...) call is now DEPRECATED.
+        There is no longer need to explicitly add parameters to the computation graph.
+        Any used parameter will be added automatically.""")
     __deprecation_shown=True
 
     if len(args) == 1: return args[0]
