@@ -1578,7 +1578,7 @@ Expression squared_norm(const Expression& x);
 /**
  * \ingroup lossoperations
  * \brief L2 norm
- * \details The L2 norm of the values of x: \f$\sum_i x_i^2\f$.
+ * \details The L2 norm of the values of x: \f$\sqrt{\sum_i x_i^2}\f$.
  *
  * \param x A vector of values
  *
