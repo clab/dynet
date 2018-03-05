@@ -53,7 +53,7 @@ namespace dynet {
 ParameterStorageBase::~ParameterStorageBase() {}
 
 ParameterStorage::ParameterStorage(const Dim& d, float scale, const std::string & name, Device *dev)
-    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev) {
+    : name(name), dim(d), updated(true), nonzero_grad(false), owner(nullptr), device(dev), weight_decay(0) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
 #if HAVE_CUDA
@@ -130,7 +130,7 @@ bool valid_parameter(const std::string & s) {
 LookupParameterStorage::LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
                                                const std::string & name, Device *dev)
     : name(name), dim(d), updated(true), all_updated(false),
-    nonzero_grad(false), owner(nullptr), device(dev) {
+    nonzero_grad(false), owner(nullptr), device(dev), weight_decay(0) {
   DYNET_ARG_CHECK(default_device != nullptr,
                   "Attempting to define parameters before initializing DyNet. Be sure to call dynet::initialize() before defining your model.");
   all_dim = dim; all_dim.d[all_dim.nd++] = n;
@@ -221,7 +221,12 @@ bool Parameter::is_updated() {
 }
 
 float Parameter::current_weight_decay() const {
-  return get_storage().owner->get_weight_decay().current_weight_decay();
+  return get_storage().current_weight_decay();
+}
+
+void Parameter::set_weight_decay_lambda(float lambda) {
+    get_storage().set_weight_decay_lambda(lambda);
+
 }
 
 LookupParameter::LookupParameter() : p(nullptr) { }
@@ -254,13 +259,15 @@ bool LookupParameter::is_updated() {
 }
 
 float LookupParameter::current_weight_decay() const {
-  return get_storage().owner->get_weight_decay().current_weight_decay();
+  return get_storage().current_weight_decay();
+}
+
+void LookupParameter::set_weight_decay_lambda(float lambda) {
+    get_storage().set_weight_decay_lambda(lambda);
 }
 
 ParameterCollectionStorage::ParameterCollectionStorage(float weight_decay_lambda)
-    : gradient_norm_scratch(nullptr), device_manager(get_device_manager()) {
-  weight_decay.set_lambda(weight_decay_lambda);
-}
+    : gradient_norm_scratch(nullptr), weight_decay_lambda(weight_decay_lambda), device_manager(get_device_manager()) { }
 
 ParameterCollectionStorage::~ParameterCollectionStorage() {
   if (gradient_norm_scratch)
@@ -311,7 +318,7 @@ ParameterCollection::~ParameterCollection() {
 }
 
 void ParameterCollection::set_weight_decay_lambda(float lambda) {
-  get_storage().weight_decay.set_lambda(lambda);
+  get_storage().set_weight_decay_lambda(lambda);
 }
 
 void ParameterCollection::project_weights(float radius) {
@@ -342,6 +349,7 @@ Parameter ParameterCollection::add_parameters(const Dim& d, const ParameterInit 
 
     std::shared_ptr<ParameterStorage> p = ParameterStorageCreator::create(d, init, oss.str(), device);
     add_parameters_to_storage(p);
+    p->set_weight_decay_lambda(this->get_weight_decay_lambda());
     return Parameter(p);
   } else {
     throw std::runtime_error("Parameter name could not include '/' and '_'");
@@ -425,6 +433,7 @@ LookupParameter ParameterCollection::add_lookup_parameters(unsigned n, const Dim
 
     std::shared_ptr<LookupParameterStorage> p = LookupParameterStorageCreator::create(n, d, init, oss.str(), device);
     add_lookup_parameters_to_storage(p);
+    p->set_weight_decay_lambda(this->get_weight_decay_lambda());
     return LookupParameter(p);
   } else {
     throw std::runtime_error("LookupParameter name could not include '/' and '_'");

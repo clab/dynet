@@ -9,24 +9,24 @@
 // Macros for defining parameter update functions
 #ifdef __CUDACC__
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
-  template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real gscale, const std::vector<Tensor*> & values);
+  template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real gscale, const std::vector<Tensor*> & values, real wd);
 #elif defined(HAVE_CUDA)
 // This is correct, but dying when models are read and written.
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
-  extern template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real gscale, const std::vector<Tensor*> & values); \
-  template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real gscale, const std::vector<Tensor*> & values); \
-  void MyTrainer::update_rule(real gscale, const std::vector<Tensor*> & values) { \
-    if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,gscale,values); } \
+  extern template void MyTrainer::update_rule_dev<Device_GPU>(const Device_GPU & dev, real gscale, const std::vector<Tensor*> & values, real wd); \
+  template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real gscale, const std::vector<Tensor*> & values, real wd); \
+  void MyTrainer::update_rule(real gscale, const std::vector<Tensor*> & values, real wd) { \
+    if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,gscale,values, wd); } \
     else if(values[0]->device->type == DeviceType::GPU) { \
       cudaSetDevice(((Device_GPU*)values[0]->device)->cuda_device_id); \
-      update_rule_dev(*(Device_GPU*)values[0]->device,gscale,values); } \
+      update_rule_dev(*(Device_GPU*)values[0]->device,gscale,values,wd); } \
     else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #else
 #define DYNET_TRAINER_INST_DEV_IMPL(MyTrainer) \
-  template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real gscale, const std::vector<Tensor*> & values); \
-  void MyTrainer::update_rule(real gscale, const std::vector<Tensor*> & values) { \
-    if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,gscale,values); } \
+  template void MyTrainer::update_rule_dev<Device_CPU>(const Device_CPU & dev, real gscale, const std::vector<Tensor*> & values, real wd); \
+  void MyTrainer::update_rule(real gscale, const std::vector<Tensor*> & values, real wd) { \
+    if(values[0]->device->type == DeviceType::CPU) { update_rule_dev(*(Device_CPU*)values[0]->device,gscale,values,wd); } \
     else { throw std::runtime_error("Bad device in MyTrainer::update_rule"); } \
   }
 #endif
@@ -47,15 +47,25 @@ bool is_valid(const Eigen::MatrixBase<Derived>& x) {
 
 Trainer::~Trainer() {}
 
-void Trainer::rescale_and_reset_weight_decay() {
-  const float weight_decay = model->get_weight_decay().current_weight_decay();
-  for (auto p : model->parameters_list())
-    if (p->is_updated())
-      p->scale_parameters(weight_decay);
-  for (auto p : model->lookup_parameters_list())
-    if (p->is_updated())
-      p->scale_parameters(weight_decay);
-  model->get_weight_decay().reset_weight_decay();
+void Trainer::rescale_and_reset_weight_decay(bool force=true) {
+    for (auto p : model->parameters_list()) {
+        if (p->is_updated()) {
+            L2WeightDecay & wd = p->get_weight_decay();
+            if (force || wd.parameters_need_rescaled()) {
+                p->scale_parameters(p->current_weight_decay());
+                p->get_weight_decay().reset_weight_decay();
+            }
+        }
+    }
+    for (auto p : model->lookup_parameters_list()) {
+        if (p->is_updated()) {
+            L2WeightDecay & wd = p->get_weight_decay();
+            if (force || wd.parameters_need_rescaled()) {
+                p->scale_parameters(p->current_weight_decay());
+                p->get_weight_decay().reset_weight_decay();
+            }
+        }
+    }
 }
 
 float Trainer::clip_gradients() {
@@ -99,6 +109,7 @@ void Trainer::update() {
       update_params(gscale, i);
       params[i]->clear();
     }
+    params[i]->get_weight_decay().update_weight_decay(); // update global weight scale.
   }
   for(size_t i = 0; i < lparams.size(); ++i) {
     auto &p = lparams[i];
@@ -111,14 +122,13 @@ void Trainer::update() {
       }
       p->clear();
     }
+    p->get_weight_decay().update_weight_decay(); // update global weight scale.
   }
   ++updates;
   ++updates_since_status;
 
-  L2WeightDecay & wd = model->get_weight_decay();
-  wd.update_weight_decay(); // update global weight scale
-  if (wd.parameters_need_rescaled())
-    rescale_and_reset_weight_decay();  // if wdscale is getting to small multiply all weights by wdscale, and set wdscale to 1
+  // rescale and reset weight decay if needed.
+  rescale_and_reset_weight_decay(false);
 }
 
 void Trainer::restart(real lr) {
@@ -133,23 +143,23 @@ void Trainer::restart(real lr) {
 
 // Perform update of ts[0]=parameters, ts[1]=gradients
 template <class MyDevice>
-void SimpleSGDTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
-  tvec(*ts[0]).device(*dev.edevice) -= tvec(*ts[1]) * (learning_rate * gscale / model->get_weight_decay().current_weight_decay());
+void SimpleSGDTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts, real wd) {
+  tvec(*ts[0]).device(*dev.edevice) -= tvec(*ts[1]) * (learning_rate * gscale / wd);
 }
 DYNET_TRAINER_INST_DEV_IMPL(SimpleSGDTrainer)
 
 #ifndef __CUDACC__
 void SimpleSGDTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g});
+  update_rule(gscale, {&p->values, &p->g}, p->current_weight_decay());
 }
 void SimpleSGDTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx]});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx]},p->current_weight_decay());
 }
 void SimpleSGDTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_values, &p->all_grads});
+  update_rule(gscale, {&p->all_values, &p->all_grads},p->current_weight_decay());
 }
 #endif
 
@@ -157,23 +167,23 @@ void SimpleSGDTrainer::update_lookup_params(real gscale, size_t idx) {
 
 // Perform update of ts[0]=parameters, ts[1]=gradients
 template <class MyDevice>
-void CyclicalSGDTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
-  tvec(*ts[0]).device(*dev.edevice) -= tvec(*ts[1]) * (learning_rate * gscale / model->get_weight_decay().current_weight_decay());
+void CyclicalSGDTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts, real wd) {
+  tvec(*ts[0]).device(*dev.edevice) -= tvec(*ts[1]) * (learning_rate * gscale / wd);
 }
 DYNET_TRAINER_INST_DEV_IMPL(CyclicalSGDTrainer)
 
 #ifndef __CUDACC__
 void CyclicalSGDTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g});
+  update_rule(gscale, {&p->values, &p->g}, p->current_weight_decay());
 }
 void CyclicalSGDTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx]});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx]}, p->current_weight_decay());
 }
 void CyclicalSGDTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_values, &p->all_grads});
+  update_rule(gscale, {&p->all_values, &p->all_grads}, p->current_weight_decay());
 }
 #endif
 
@@ -181,24 +191,24 @@ void CyclicalSGDTrainer::update_lookup_params(real gscale, size_t idx) {
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=momentum
 template <class MyDevice>
-void MomentumSGDTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
+void MomentumSGDTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts, real wd) {
   tvec(*ts[2]).device(*dev.edevice) = tvec(*ts[2]) * momentum - tvec(*ts[1]) * (learning_rate * gscale);
-  tvec(*ts[0]).device(*dev.edevice) += tvec(*ts[2]) / model->get_weight_decay().current_weight_decay();
+  tvec(*ts[0]).device(*dev.edevice) += tvec(*ts[2]) / wd;
 }
 DYNET_TRAINER_INST_DEV_IMPL(MomentumSGDTrainer)
 
 #ifndef __CUDACC__
 void MomentumSGDTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g, &vp[idx].h});
+  update_rule(gscale, {&p->values, &p->g, &vp[idx].h}, p->current_weight_decay());
 }
 void MomentumSGDTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]}, p->current_weight_decay());
 }
 void MomentumSGDTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h});
+  update_rule(gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h}, p->current_weight_decay());
 }
 unsigned MomentumSGDTrainer::alloc_impl() {
   allocate_shadow_parameters(*model, aux_allocated, vp);
@@ -222,25 +232,25 @@ void MomentumSGDTrainer::restart() {
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=stddev
 template <class MyDevice>
-void AdagradTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
+void AdagradTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts, real wd) {
   tvec(*ts[1]).device(*dev.edevice) = tvec(*ts[1]) * gscale;
   tvec(*ts[2]).device(*dev.edevice) += tvec(*ts[1]).square();
-  tvec(*ts[0]).device(*dev.edevice) += tvec(*ts[1]) / (tvec(*ts[2]) + epsilon).sqrt() * (-learning_rate / model->get_weight_decay().current_weight_decay());
+  tvec(*ts[0]).device(*dev.edevice) += tvec(*ts[1]) / (tvec(*ts[2]) + epsilon).sqrt() * (-learning_rate / wd);
 }
 DYNET_TRAINER_INST_DEV_IMPL(AdagradTrainer)
 
 #ifndef __CUDACC__
 void AdagradTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g, &vp[idx].h});
+  update_rule(gscale, {&p->values, &p->g, &vp[idx].h}, p->current_weight_decay());
 }
 void AdagradTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &vlp[idx].h[lidx]}, p->current_weight_decay());
 }
 void AdagradTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h});
+  update_rule(gscale, {&p->all_values, &p->all_grads, &vlp[idx].all_h}, p->current_weight_decay());
 }
 unsigned AdagradTrainer::alloc_impl() {
   allocate_shadow_parameters(*model, aux_allocated, vp);
@@ -264,27 +274,27 @@ void AdagradTrainer::restart() {
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=hg, ts[3]=hd
 template <class MyDevice>
-void AdadeltaTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
+void AdadeltaTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts, real wd) {
   tvec(*ts[1]).device(*dev.edevice) = tvec(*ts[1]) * gscale;
   tvec(*ts[2]).device(*dev.edevice) = tvec(*ts[2]) * rho + tvec(*ts[1]).square() * (1.f - rho);
   tvec(*ts[1]).device(*dev.edevice) = - tvec(*ts[1]) * (tvec(*ts[3]) + epsilon).sqrt() / (tvec(*ts[2]) + epsilon).sqrt();
   tvec(*ts[3]).device(*dev.edevice) = tvec(*ts[3]) * rho + tvec(*ts[1]).square() * (1.f - rho);
-  tvec(*ts[0]).device(*dev.edevice) += tvec(*ts[1]) / model->get_weight_decay().current_weight_decay();
+  tvec(*ts[0]).device(*dev.edevice) += tvec(*ts[1]) / wd;
 }
 DYNET_TRAINER_INST_DEV_IMPL(AdadeltaTrainer)
 
 #ifndef __CUDACC__
 void AdadeltaTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g, &hg[idx].h, &hd[idx].h});
+  update_rule(gscale, {&p->values, &p->g, &hg[idx].h, &hd[idx].h}, p->current_weight_decay());
 }
 void AdadeltaTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &hlg[idx].h[lidx], &hld[idx].h[lidx]});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &hlg[idx].h[lidx], &hld[idx].h[lidx]}, p->current_weight_decay());
 }
 void AdadeltaTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_values, &p->all_grads, &hlg[idx].all_h, &hld[idx].all_h});
+  update_rule(gscale, {&p->all_values, &p->all_grads, &hlg[idx].all_h, &hld[idx].all_h}, p->current_weight_decay());
 }
 unsigned AdadeltaTrainer::alloc_impl() {
   allocate_shadow_parameters(*model, aux_allocated, hg);
@@ -316,11 +326,11 @@ void AdadeltaTrainer::restart() {
 
 // Perform update of ts[0]=parameters, ts[1]=gradients
 template <class MyDevice>
-void RMSPropTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
+void RMSPropTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts, real wd) {
   tvec(*ts[1]).device(*dev.edevice) = tvec(*ts[1]) * gscale; // Scale gradient
   tvec(*ts[2]).device(*dev.edevice) = tvec(*ts[2]) * rho + tvec(*ts[1]).square() * (1.f - rho); // Update square gradient exponential average
   tvec(*ts[1]).device(*dev.edevice) = - tvec(*ts[1]) / (tvec(*ts[2]) + epsilon).sqrt(); // Divide by the RMS
-  tvec(*ts[0]).device(*dev.edevice) += learning_rate * tvec(*ts[1]) / model->get_weight_decay().current_weight_decay(); // Apply weight decay (should we do this?)
+  tvec(*ts[0]).device(*dev.edevice) += learning_rate * tvec(*ts[1]) / wd; // Apply weight decay (should we do this?)
   // real& d2 = hg[pi++];
   // real g2 = p->vec(g).squaredNorm();
   // d2 = rho * d2 + (1.f - rho) * g2;
@@ -331,15 +341,15 @@ DYNET_TRAINER_INST_DEV_IMPL(RMSPropTrainer)
 #ifndef __CUDACC__
 void RMSPropTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g, &hmsg[idx].h});
+  update_rule(gscale, {&p->values, &p->g, &hmsg[idx].h}, p->current_weight_decay());
 }
 void RMSPropTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &hlmsg[idx].h[lidx]});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &hlmsg[idx].h[lidx]}, p->current_weight_decay());
 }
 void RMSPropTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_values, &p->all_grads, &hlmsg[idx].all_h});
+  update_rule(gscale, {&p->all_values, &p->all_grads, &hlmsg[idx].all_h}, p->current_weight_decay());
 }
 unsigned RMSPropTrainer::alloc_impl() {
   allocate_shadow_parameters(*model, aux_allocated, hmsg);
@@ -363,11 +373,11 @@ void RMSPropTrainer::restart() {
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=mean, ts[3]=variance
 template <class MyDevice>
-void AdamTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
+void AdamTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts, real wd) {
   tvec(*ts[1]).device(*dev.edevice) = tvec(*ts[1]) * gscale;
   tvec(*ts[2]).device(*dev.edevice) = tvec(*ts[2]) * beta_1 + tvec(*ts[1]) * (1.f - beta_1);
   tvec(*ts[3]).device(*dev.edevice) = tvec(*ts[3]) * beta_2 + tvec(*ts[1]).square() * (1.f - beta_2);
-  float lr_t = learning_rate * sqrt(1-pow(beta_2, updates+1))/(1-pow(beta_1, updates+1))/ model->get_weight_decay().current_weight_decay();
+  float lr_t = learning_rate * sqrt(1-pow(beta_2, updates+1))/(1-pow(beta_1, updates+1))/ wd;
   tvec(*ts[0]).device(*dev.edevice) -= tvec(*ts[2]) / (tvec(*ts[3]).sqrt() + epsilon) * lr_t;
 }
 DYNET_TRAINER_INST_DEV_IMPL(AdamTrainer)
@@ -375,15 +385,15 @@ DYNET_TRAINER_INST_DEV_IMPL(AdamTrainer)
 #ifndef __CUDACC__
 void AdamTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g, &m[idx].h, &v[idx].h});
+  update_rule(gscale, {&p->values, &p->g, &m[idx].h, &v[idx].h}, p->current_weight_decay());
 }
 void AdamTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &lv[idx].h[lidx]});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &lv[idx].h[lidx]}, p->current_weight_decay());
 }
 void AdamTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_values, &p->all_grads, &lm[idx].all_h, &lv[idx].all_h});
+  update_rule(gscale, {&p->all_values, &p->all_grads, &lm[idx].all_h, &lv[idx].all_h}, p->current_weight_decay());
 }
 unsigned AdamTrainer::alloc_impl() {
   allocate_shadow_parameters(*model, aux_allocated, m);
@@ -413,12 +423,12 @@ void AdamTrainer::restart() {
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=mean, ts[3]=variance, t[4]=max
 template <class MyDevice>
-void AmsgradTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
+void AmsgradTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts, real wd) {
   tvec(*ts[1]).device(*dev.edevice) = tvec(*ts[1]) * gscale;
   tvec(*ts[2]).device(*dev.edevice) = tvec(*ts[2]) * beta_1 + tvec(*ts[1]) * (1.f - beta_1);
   tvec(*ts[3]).device(*dev.edevice) = tvec(*ts[3]) * beta_2 + tvec(*ts[1]).square() * (1.f - beta_2);
   tvec(*ts[4]).device(*dev.edevice) = tvec(*ts[4]).cwiseMax(tvec(*ts[3]));
-  float lr_t = learning_rate * sqrt(1-pow(beta_2, updates+1))/(1-pow(beta_1, updates+1))/ model->get_weight_decay().current_weight_decay();
+  float lr_t = learning_rate * sqrt(1-pow(beta_2, updates+1))/(1-pow(beta_1, updates+1))/ wd;
   tvec(*ts[0]).device(*dev.edevice) -= tvec(*ts[2]) / (tvec(*ts[4]).sqrt() + epsilon) * lr_t;
 }
 DYNET_TRAINER_INST_DEV_IMPL(AmsgradTrainer)
@@ -426,15 +436,15 @@ DYNET_TRAINER_INST_DEV_IMPL(AmsgradTrainer)
 #ifndef __CUDACC__
 void AmsgradTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g, &m[idx].h, &v[idx].h, &vhat[idx].h});
+  update_rule(gscale, {&p->values, &p->g, &m[idx].h, &v[idx].h, &vhat[idx].h}, p->current_weight_decay());
 }
 void AmsgradTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &lv[idx].h[lidx], &lvhat[idx].h[lidx]});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &lm[idx].h[lidx], &lv[idx].h[lidx], &lvhat[idx].h[lidx]}, p->current_weight_decay());
 }
 void AmsgradTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_values, &p->all_grads, &lm[idx].all_h, &lv[idx].all_h, &lvhat[idx].all_h});
+  update_rule(gscale, {&p->all_values, &p->all_grads, &lm[idx].all_h, &lv[idx].all_h, &lvhat[idx].all_h}, p->current_weight_decay());
 }
 unsigned AmsgradTrainer::alloc_impl() {
   allocate_shadow_parameters(*model, aux_allocated, m);
@@ -467,10 +477,10 @@ void AmsgradTrainer::restart() {
 #endif
 
 template <class MyDevice>
-void EGTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
+void EGTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts, real wd) {
   // Add momentum
   tvec(*ts[2]).device(*dev.edevice) = tvec(*ts[2]) * momentum - tvec(*ts[1]) * (learning_rate * gscale);
-  tvec(*ts[0]).device(*dev.edevice) = tvec(*ts[0]).log() + tvec(*ts[2]) / model->get_weight_decay().current_weight_decay();// with momentum only
+  tvec(*ts[0]).device(*dev.edevice) = tvec(*ts[0]).log() + tvec(*ts[2]) / wd;// with momentum only
   TensorTools::logsumexp_dev(dev, *ts[0], *ts[3], *ts[4]);// z refers to logZ
   tvec(*ts[0]).device(*dev.edevice) = (tvec(*ts[0]) - as_scalar(*ts[4])).exp();// FIXME: other way(s) of not using as_scalar(z)?
 }
@@ -487,15 +497,15 @@ EGTrainer::EGTrainer(ParameterCollection& mod, real learning_rate, real mom, rea
 }
 void EGTrainer::update_params(real gscale, size_t idx) {
   auto & p = model->parameters_list()[idx];
-  update_rule(gscale, {&p->values, &p->g, &hp[idx].h, &meg, &zeg});
+  update_rule(gscale, {&p->values, &p->g, &hp[idx].h, &meg, &zeg}, p->current_weight_decay());
 }
 void EGTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &hlp[idx].h[lidx], &meg, &zeg});
+  update_rule(gscale, {&p->values[lidx], &p->grads[lidx], &hlp[idx].h[lidx], &meg, &zeg}, p->current_weight_decay());
 }
 void EGTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
-  update_rule(gscale, {&p->all_grads, &p->all_grads, &hlp[idx].all_h, &meg, &zeg});
+  update_rule(gscale, {&p->all_grads, &p->all_grads, &hlp[idx].all_h, &meg, &zeg}, p->current_weight_decay());
 }
 unsigned EGTrainer::alloc_impl() {
   allocate_shadow_parameters(*model, aux_allocated, hp);

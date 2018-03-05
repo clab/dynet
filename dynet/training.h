@@ -22,8 +22,8 @@
   void update_lookup_params(real gscale, size_t idx, size_t lidx) override; \
   void update_lookup_params(real gscale, size_t idx) override; \
   template <class MyDevice> \
-  void update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & values); \
-  void update_rule(real gscale, const std::vector<Tensor*> & values) override;
+  void update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & values, real wd); \
+  void update_rule(real gscale, const std::vector<Tensor*> & values, real wd) override;
 
 namespace dynet {
 
@@ -94,7 +94,7 @@ struct Trainer {
   // TODO: This is unprotected temporarily until there is a better solution
   //       for serializing the weight decay when saving models
   // Rescale all the parameters handled by this model
-  void rescale_and_reset_weight_decay();
+  void rescale_and_reset_weight_decay(bool force);
 
   // learning rate
   real learning_rate;
@@ -146,7 +146,7 @@ protected:
    * \param gscale Gradient scale based on clipping
    * \param values Values specific to the particular update rule being implemented
    */
-  virtual void update_rule(real gscale, const std::vector<Tensor*> & values) = 0;
+  virtual void update_rule(real gscale, const std::vector<Tensor*> & values, real wd) = 0;
   /**
    * \brief Parameter update function
    *

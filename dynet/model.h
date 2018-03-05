@@ -138,6 +138,11 @@ struct ParameterStorage : public ParameterStorageBase {
   void clip(float left, float right);
   void set_value(const std::vector<float>& val);
   
+  void set_weight_decay_lambda(float lam) { weight_decay.set_lambda(lam); }
+  float get_weight_decay_lambda() const { return weight_decay.get_lambda(); }
+  float current_weight_decay() const { return weight_decay.current_weight_decay(); }
+
+  L2WeightDecay& get_weight_decay() { return weight_decay; }
 
   Dim dim; /**< Dimensions of the parameter tensor*/
   Tensor values;/**< Values of the parameter */
@@ -147,12 +152,14 @@ struct ParameterStorage : public ParameterStorageBase {
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
   Device *device;
 
+
 protected:
   ParameterStorage() : updated(true), owner(nullptr) {}
   explicit ParameterStorage(const Dim& d, float scale,
                             const std::string & name, Device *device); // initialize with a scale
   explicit ParameterStorage(const Dim& d, const ParameterInit & init,
                             const std::string & name, Device *device); // initialize with custom initializer
+  L2WeightDecay weight_decay;
 }; // struct ParameterStorage
 
 struct ParameterStorageCreator : public ParameterStorage {
@@ -245,6 +252,12 @@ struct LookupParameterStorage : public ParameterStorageBase {
   bool is_updated() const override { return updated; }
   bool has_grad() const override { return nonzero_grad; }
 
+  void set_weight_decay_lambda(float lam) { weight_decay.set_lambda(lam); }
+  float get_weight_decay_lambda() const { return weight_decay.get_lambda(); }
+  float current_weight_decay() const { return weight_decay.current_weight_decay(); }
+
+  L2WeightDecay& get_weight_decay() { return weight_decay; }
+
   std::string name; /**< Name of this parameter*/
   // Tensors for all dimensions at once
   Dim all_dim; /**< Total dimension */
@@ -261,10 +274,13 @@ struct LookupParameterStorage : public ParameterStorageBase {
   bool nonzero_grad; /**< Whether the gradient is zero */
   ParameterCollection* owner; /**< Pointer to the collection that "owns" this parameter */
   Device *device;
+
+
 protected:
   LookupParameterStorage() : updated(true), all_updated(false), owner(nullptr) {}
   LookupParameterStorage(unsigned n, const Dim& d, const ParameterInit & init,
                          const std::string & name, Device *device);
+  L2WeightDecay weight_decay;
 }; // struct LookupParameterStorage
 
 struct LookupParameterStorageCreator : public LookupParameterStorage {
@@ -339,6 +355,11 @@ struct Parameter {
    * \brief Get the current weight decay for the parameters
    */
   float current_weight_decay() const;
+
+  /**
+   * \brief Set the weight decay lambda value for the parameters
+   */
+  void set_weight_decay_lambda(float lambda);
 
   /**
    * @brief Set the parameter as updated
@@ -433,6 +454,11 @@ struct LookupParameter {
   float current_weight_decay() const;
 
   /**
+   * \brief Set the weight decay lambda for the parameters
+   */
+  void set_weight_decay_lambda(float lambda);
+
+  /**
    * @brief Scales the parameter (multiplies by `s`)
    *
    * @param s scale
@@ -477,9 +503,17 @@ struct ParameterCollectionStorage {
   std::vector<std::shared_ptr<LookupParameterStorage>> lookup_params;
 
   mutable float* gradient_norm_scratch;
-  L2WeightDecay weight_decay;
+
+  void set_weight_decay_lambda(float lam) {
+      // YG TODO change also all subcollections?
+      for (auto & p : params) { p->set_weight_decay_lambda(lam); }
+      for (auto & p : lookup_params) { p->set_weight_decay_lambda(lam); }
+      weight_decay_lambda = lam;
+  }
+  float get_weight_decay_lambda() const { return weight_decay_lambda; }
 
  private:
+  float weight_decay_lambda;
   DeviceManager* const device_manager;
 };
 
@@ -638,6 +672,10 @@ public:
    * \param lambda Weight decay coefficient
    */
   void set_weight_decay_lambda(float lambda);
+  /**
+   * \brief Get the weight decay coefficient
+   */
+  float get_weight_decay_lambda() const { return get_storage().get_weight_decay_lambda(); }
 
   //const std::vector<std::shared_ptr<ParameterStorageBase>>& all_parameters_list() const { return all_params; }
   /**
@@ -722,16 +760,6 @@ public:
    * @brief get namespace of current ParameterCollection object(end with a slash)
    */
   std::string get_fullname() const { return name; }
-
-  /**
-   * \brief Get the weight decay object
-   */
-  L2WeightDecay& get_weight_decay() { return get_storage().weight_decay; }
-
-  /**
-   * \brief Get the weight decay lambda value.
-   */
-  float get_weight_decay_lambda() { return get_weight_decay().get_lambda(); }
 
   ParameterCollectionStorage& get_storage();
   const ParameterCollectionStorage& get_storage() const;
