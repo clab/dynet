@@ -565,6 +565,303 @@ cdef class NumpyInitializer(PyInitializer):
         return vals
 # }}}
 
+cdef class Expression: #{{{
+    """Expressions are the building block of a Dynet computation graph.
+    
+    Expressions are the main data types being manipulated in a DyNet program. Each expression represents a sub-computation in a computation graph.
+    """
+    #cdef CComputationGraph* cg
+    # cg is a singleton, so there is no need to keep it inside the expression.
+    # not keeping cg() in the expression will preserve memory.
+    # if DYNET comes to support multiple computation graphs, this will need to change.
+    cdef inline ComputationGraph cg(self):
+        return cg()
+    cdef inline CComputationGraph* cgp(self):
+        return cg().thisptr
+
+    cdef VariableIndex vindex
+    cdef int cg_version
+    def __cinit__(self):
+        #self.cg = NULL
+        self.vindex = 0
+    @staticmethod
+    cdef Expression from_cexpr(int cgv, CExpression cexpr):
+        if cexpr.is_stale(): raise ValueError("Attempt to use a stale expression, from a previous Computation Graph.")
+        self = Expression()
+        #self.cg = cexpr.pg
+        self.vindex = cexpr.i
+        self.cg_version = _cg._cg_version
+        return self
+    cdef CExpression c(self):
+        return CExpression(self.cgp(), self.vindex)
+
+    def dim(self):
+        """Dimension of the expression
+
+        Returns a tuple (dims,batch_dim) where dims is the tuple of dimensions of each batch element
+        
+        Returns:
+            tuple: dimension
+        """
+        cdef CDim d;
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        d=self.c().dim()
+        return c_dim_as_dim(d)
+        # return (d.size(), d.rows(), d.cols(), d.batch_elems())
+
+    def __repr__(self):
+        return str(self)
+    def __str__(self):
+        """Returns a string representation of the expression
+        
+        The format is "expression [expression id]/[computation graph id]"
+        """
+        return "expression %s/%s" % (<int>self.vindex, self.cg_version)
+
+    # __getitem__ and __getslice__ in one for python 3 compatibility
+    def __getitem__(self, index):
+        """Access elements of the expression by rows
+        
+        This supports slices as well.
+        Example usage :
+
+            x = dy.inputTensor(np.arange(9).reshape(3,3))
+            # x = [[1, 2, 3],
+            #      [4, 5, 6],
+            #      [7, 8, 9]] 
+            y = x[1]
+            # y = [4, 5, 6]
+            z = x[0:1] 
+            # z = [[1, 2, 3],
+            #      [4, 5, 6]] 
+        
+        Args:
+            index(int,slice): Slice or index
+        
+        Returns:
+            Expression: Slice of the expression
+        
+        Raises:
+            IndexError: If the indices are too large
+            ValueError: In case of improper slice or if step is used
+        """
+        assert isinstance(index, (int, slice)), "Expression key must be int or slice: %s" % index
+        cdef int rows = self.c().dim().rows()
+        cdef int i, j
+        if isinstance(index, int):
+            i = index
+            if i > rows - 1:
+                raise IndexError("Index too large: %d > %d" % (i, rows - 1))
+            if i < -rows:
+                raise IndexError("Index too small: %d < %d" % (i, -rows))
+            if i < 0:
+                i += rows
+            return pick(self, i)
+        else:
+            i = 0
+            j = rows
+            if index.start is not None:
+                i = index.start
+                if i > rows - 1:
+                    raise IndexError("Start index too large: %d > %d" % (i, rows - 1))
+                if i < -rows:
+                    raise IndexError("Start index too small: %d < %d" % (i, -rows))
+                if i < 0:
+                    i += rows
+            if index.stop is not None:
+                j = index.stop
+                if j > rows:
+                    raise IndexError("Stop index too large: %d > %d" % (j, rows))
+                if j < -rows + 1:
+                    raise IndexError("Stop index too small: %d < %d" % (j, -rows + 1))
+                if j < 0:
+                    j += rows
+            if i >= j:
+                raise ValueError("Improper slice: start index must come strictly before stop index")
+            if index.step is not None:
+                raise ValueError("Step sizes not yet supported.")
+            return pick_range(self, i, j)
+
+    cpdef scalar_value(self, bool recalculate=False):
+        """Returns value of an expression as a scalar
+        
+        This only works if the expression is a scalar
+        
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
+        
+        Returns:
+            float: Scalar value of the expression
+        """
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        if recalculate: self.cg().forward(self.vindex) # TODO: make recalculate run on the entire graph, not only up to here?
+        return c_as_scalar(self.cgp().get_value(self.vindex))
+
+    cpdef vec_value(self, bool recalculate=False):
+        """Returns the value of the expression as a vector
+        
+        In case of a multidimensional expression, the values are flattened according to a column major ordering
+        
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
+        
+        Returns:
+            list: Array of values
+        """
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        if recalculate: self.cg().forward(self.vindex)
+        return c_as_vector(self.cgp().get_value(self.vindex))
+
+    cpdef npvalue(self, bool recalculate=False):
+        """Returns the value of the expression as a numpy array
+        
+        The last dimension is the batch size (if it's > 1)
+        
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
+        
+        Returns:
+            np.ndarray: numpy array of values
+        """
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        cdef CTensor t
+        cdef CDim dim
+        if recalculate: self.cg().forward(self.vindex)
+        t = self.cgp().get_value(self.vindex)
+        dim = t.d
+        arr = np.array(c_tensor_as_np(t))
+        return arr
+
+    cpdef tensor_value(self, bool recalculate=False):
+        """Returns the value of the expression as a Tensor.
+
+        This is useful if you want to use the value for other on-device calculations
+        that are not part of the computation graph, i.e. using argmax.
+        
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
+        
+        Returns:
+            Tensor: a dynet Tensor object.
+        """
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        cdef CTensor t
+        cdef CDim dim
+        if recalculate: self.cg().forward(self.vindex)
+        t = self.cgp().get_value(self.vindex)
+        return Tensor.wrap_ctensor(t)
+
+    cpdef value(self, bool recalculate=False):
+        """Gets the value of the expression in the most relevant format
+        
+        this returns the same thing as :code:`scalar_value`, :code:`vec_value`, :code:`npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
+        
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
+        
+        Returns:
+            float, list, np.ndarray: Value of the expression
+        """
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        cdef CTensor t
+        if recalculate: self.cg().forward(self.vindex)
+        t = self.cgp().get_value(self.vindex)
+        if t.d.ndims() >= 2:
+            return self.npvalue()
+        vec = self.vec_value()
+        if len(vec) == 1: return vec[0]
+        return vec
+
+    cpdef gradient(self):
+        """Returns the value of the expression as a numpy array
+        
+        The last dimension is the batch size (if it's > 1).
+
+        Make sure to call :code:`backward` on a downstream expression before calling this.
+
+        If the Expression is a constant expression (meaning it's not a function of a parameter), dynet won't compute it's gradient for the sake of efficiency. You need to manually force the gradient computation by adding the agument :code:`full=True` to :code:`backward`
+        
+        Returns:
+            np.ndarray: numpy array of values
+        """
+        cdef CTensor t
+        cdef CDim dim
+        t = self.c().gradient()
+        dim = t.d
+        arr = c_tensor_as_np(t)
+        return arr
+
+    # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
+    cpdef forward(self, bool recalculate=False):
+        """This runs incremental forward on the entire graph
+        
+        May not be optimal in terms of efficiency.
+        Prefer :code:`values`
+        
+        Keyword Args:
+            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
+        """
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        if recalculate: self.cg().forward(self.vindex)
+        else: self.cg().inc_forward(self.vindex)
+
+    cpdef backward(self, bool full=False):
+        """Run the backward pass based on this expression
+        
+        The parameter :code:`full` specifies whether the gradients should be computed for all nodes (:code:`True`) or only non-constant nodes (:code:`False`).
+        
+        By default, a node is constant unless
+        
+        1. it is a parameter node
+        2. it depends on a non-constant node
+        
+        Thus, functions of constants and inputs are considered as constants.
+        
+        Turn :code:`full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
+
+        Args:
+            full (bool): Whether to compute all gradients (including with respect to constant nodes).
+
+        """
+        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
+        self.cgp().backward(self.vindex, full)
+
+    def __add__(self, other):
+        if isinstance(self, Expression) and isinstance(other, Expression):
+            return _add(self,other)
+        elif isinstance(self, (int,float)):
+            return _cadd(other, self)
+        elif isinstance(other, (int,float)):
+            return _cadd(self, other)
+        else: raise NotImplementedError()
+    def __mul__(self, other):
+        if isinstance(self, Expression) and isinstance(other, Expression):
+            return _mul(self,other)
+        elif isinstance(self, (int,float)):
+            return _cmul(other, self)
+        elif isinstance(other, (int,float)):
+            return _cmul(self, other)
+        else: raise NotImplementedError()
+    def __div__(self, other):
+        if isinstance(self, Expression) and isinstance(other, (int,float)):
+            return _cdiv(self, other)
+        else: raise NotImplementedError()
+    def __truediv__(self, other):
+        if isinstance(self, Expression) and isinstance(other, (int,float)):
+            return _cdiv(self, other)
+        else: raise NotImplementedError()  
+    def __neg__(self):        return _neg(self)
+    def __sub__(self, other):
+        if isinstance(self,Expression) and isinstance(other,Expression):
+            return self+(-other)
+        elif isinstance(self,(int,float)) and isinstance(other,Expression):
+            return _scalarsub(self, other)
+        elif isinstance(self,Expression) and isinstance(other,(int, float)):
+            return _neg(_scalarsub(other, self))
+        else: raise NotImplementedError()
+#}}}
+
+
 # {{{ ParameterCollection / Parameters 
 cdef class Parameters(Expression): # {{{
     """Parameters class
@@ -1789,302 +2086,6 @@ cdef _scalarsub(float a, Expression b): ensure_freshness(b); return Expression.f
 cdef _cadd(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_add(a.c(), b))
 cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_mul(a.c(), b))
 cdef _cdiv(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_div(a.c(), b))
-
-cdef class Expression: #{{{
-    """Expressions are the building block of a Dynet computation graph.
-    
-    Expressions are the main data types being manipulated in a DyNet program. Each expression represents a sub-computation in a computation graph.
-    """
-    #cdef CComputationGraph* cg
-    # cg is a singleton, so there is no need to keep it inside the expression.
-    # not keeping cg() in the expression will preserve memory.
-    # if DYNET comes to support multiple computation graphs, this will need to change.
-    cdef inline ComputationGraph cg(self):
-        return cg()
-    cdef inline CComputationGraph* cgp(self):
-        return cg().thisptr
-
-    cdef VariableIndex vindex
-    cdef int cg_version
-    def __cinit__(self):
-        #self.cg = NULL
-        self.vindex = 0
-    @staticmethod
-    cdef Expression from_cexpr(int cgv, CExpression cexpr):
-        if cexpr.is_stale(): raise ValueError("Attempt to use a stale expression, from a previous Computation Graph.")
-        self = Expression()
-        #self.cg = cexpr.pg
-        self.vindex = cexpr.i
-        self.cg_version = _cg._cg_version
-        return self
-    cdef CExpression c(self):
-        return CExpression(self.cgp(), self.vindex)
-
-    def dim(self):
-        """Dimension of the expression
-
-        Returns a tuple (dims,batch_dim) where dims is the tuple of dimensions of each batch element
-        
-        Returns:
-            tuple: dimension
-        """
-        cdef CDim d;
-        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        d=self.c().dim()
-        return c_dim_as_dim(d)
-        # return (d.size(), d.rows(), d.cols(), d.batch_elems())
-
-    def __repr__(self):
-        return str(self)
-    def __str__(self):
-        """Returns a string representation of the expression
-        
-        The format is "expression [expression id]/[computation graph id]"
-        """
-        return "expression %s/%s" % (<int>self.vindex, self.cg_version)
-
-    # __getitem__ and __getslice__ in one for python 3 compatibility
-    def __getitem__(self, index):
-        """Access elements of the expression by rows
-        
-        This supports slices as well.
-        Example usage :
-
-            x = dy.inputTensor(np.arange(9).reshape(3,3))
-            # x = [[1, 2, 3],
-            #      [4, 5, 6],
-            #      [7, 8, 9]] 
-            y = x[1]
-            # y = [4, 5, 6]
-            z = x[0:1] 
-            # z = [[1, 2, 3],
-            #      [4, 5, 6]] 
-        
-        Args:
-            index(int,slice): Slice or index
-        
-        Returns:
-            Expression: Slice of the expression
-        
-        Raises:
-            IndexError: If the indices are too large
-            ValueError: In case of improper slice or if step is used
-        """
-        assert isinstance(index, (int, slice)), "Expression key must be int or slice: %s" % index
-        cdef int rows = self.c().dim().rows()
-        cdef int i, j
-        if isinstance(index, int):
-            i = index
-            if i > rows - 1:
-                raise IndexError("Index too large: %d > %d" % (i, rows - 1))
-            if i < -rows:
-                raise IndexError("Index too small: %d < %d" % (i, -rows))
-            if i < 0:
-                i += rows
-            return pick(self, i)
-        else:
-            i = 0
-            j = rows
-            if index.start is not None:
-                i = index.start
-                if i > rows - 1:
-                    raise IndexError("Start index too large: %d > %d" % (i, rows - 1))
-                if i < -rows:
-                    raise IndexError("Start index too small: %d < %d" % (i, -rows))
-                if i < 0:
-                    i += rows
-            if index.stop is not None:
-                j = index.stop
-                if j > rows:
-                    raise IndexError("Stop index too large: %d > %d" % (j, rows))
-                if j < -rows + 1:
-                    raise IndexError("Stop index too small: %d < %d" % (j, -rows + 1))
-                if j < 0:
-                    j += rows
-            if i >= j:
-                raise ValueError("Improper slice: start index must come strictly before stop index")
-            if index.step is not None:
-                raise ValueError("Step sizes not yet supported.")
-            return pick_range(self, i, j)
-
-    cpdef scalar_value(self, bool recalculate=False):
-        """Returns value of an expression as a scalar
-        
-        This only works if the expression is a scalar
-        
-        Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
-        
-        Returns:
-            float: Scalar value of the expression
-        """
-        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        if recalculate: self.cg().forward(self.vindex) # TODO: make recalculate run on the entire graph, not only up to here?
-        return c_as_scalar(self.cgp().get_value(self.vindex))
-
-    cpdef vec_value(self, bool recalculate=False):
-        """Returns the value of the expression as a vector
-        
-        In case of a multidimensional expression, the values are flattened according to a column major ordering
-        
-        Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
-        
-        Returns:
-            list: Array of values
-        """
-        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        if recalculate: self.cg().forward(self.vindex)
-        return c_as_vector(self.cgp().get_value(self.vindex))
-
-    cpdef npvalue(self, bool recalculate=False):
-        """Returns the value of the expression as a numpy array
-        
-        The last dimension is the batch size (if it's > 1)
-        
-        Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
-        
-        Returns:
-            np.ndarray: numpy array of values
-        """
-        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        cdef CTensor t
-        cdef CDim dim
-        if recalculate: self.cg().forward(self.vindex)
-        t = self.cgp().get_value(self.vindex)
-        dim = t.d
-        arr = np.array(c_tensor_as_np(t))
-        return arr
-
-    cpdef tensor_value(self, bool recalculate=False):
-        """Returns the value of the expression as a Tensor.
-
-        This is useful if you want to use the value for other on-device calculations
-        that are not part of the computation graph, i.e. using argmax.
-        
-        Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
-        
-        Returns:
-            Tensor: a dynet Tensor object.
-        """
-        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        cdef CTensor t
-        cdef CDim dim
-        if recalculate: self.cg().forward(self.vindex)
-        t = self.cgp().get_value(self.vindex)
-        return Tensor.wrap_ctensor(t)
-
-    cpdef value(self, bool recalculate=False):
-        """Gets the value of the expression in the most relevant format
-        
-        this returns the same thing as :code:`scalar_value`, :code:`vec_value`, :code:`npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
-        
-        Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
-        
-        Returns:
-            float, list, np.ndarray: Value of the expression
-        """
-        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        cdef CTensor t
-        if recalculate: self.cg().forward(self.vindex)
-        t = self.cgp().get_value(self.vindex)
-        if t.d.ndims() >= 2:
-            return self.npvalue()
-        vec = self.vec_value()
-        if len(vec) == 1: return vec[0]
-        return vec
-
-    cpdef gradient(self):
-        """Returns the value of the expression as a numpy array
-        
-        The last dimension is the batch size (if it's > 1).
-
-        Make sure to call :code:`backward` on a downstream expression before calling this.
-
-        If the Expression is a constant expression (meaning it's not a function of a parameter), dynet won't compute it's gradient for the sake of efficiency. You need to manually force the gradient computation by adding the agument :code:`full=True` to :code:`backward`
-        
-        Returns:
-            np.ndarray: numpy array of values
-        """
-        cdef CTensor t
-        cdef CDim dim
-        t = self.c().gradient()
-        dim = t.d
-        arr = c_tensor_as_np(t)
-        return arr
-
-    # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
-    cpdef forward(self, bool recalculate=False):
-        """This runs incremental forward on the entire graph
-        
-        May not be optimal in terms of efficiency.
-        Prefer :code:`values`
-        
-        Keyword Args:
-            recalculate(bool): Recalculate the computation graph (for static graphs with new inputs) (default: False)
-        """
-        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        if recalculate: self.cg().forward(self.vindex)
-        else: self.cg().inc_forward(self.vindex)
-
-    cpdef backward(self, bool full=False):
-        """Run the backward pass based on this expression
-        
-        The parameter :code:`full` specifies whether the gradients should be computed for all nodes (:code:`True`) or only non-constant nodes (:code:`False`).
-        
-        By default, a node is constant unless
-        
-        1. it is a parameter node
-        2. it depends on a non-constant node
-        
-        Thus, functions of constants and inputs are considered as constants.
-        
-        Turn :code:`full` on if you want to retrieve gradients w.r.t. inputs for instance. By default this is turned off, so that the backward pass ignores nodes which have no influence on gradients w.r.t. parameters for efficiency.
-
-        Args:
-            full (bool): Whether to compute all gradients (including with respect to constant nodes).
-
-        """
-        if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
-        self.cgp().backward(self.vindex, full)
-
-    def __add__(self, other):
-        if isinstance(self, Expression) and isinstance(other, Expression):
-            return _add(self,other)
-        elif isinstance(self, (int,float)):
-            return _cadd(other, self)
-        elif isinstance(other, (int,float)):
-            return _cadd(self, other)
-        else: raise NotImplementedError()
-    def __mul__(self, other):
-        if isinstance(self, Expression) and isinstance(other, Expression):
-            return _mul(self,other)
-        elif isinstance(self, (int,float)):
-            return _cmul(other, self)
-        elif isinstance(other, (int,float)):
-            return _cmul(self, other)
-        else: raise NotImplementedError()
-    def __div__(self, other):
-        if isinstance(self, Expression) and isinstance(other, (int,float)):
-            return _cdiv(self, other)
-        else: raise NotImplementedError()
-    def __truediv__(self, other):
-        if isinstance(self, Expression) and isinstance(other, (int,float)):
-            return _cdiv(self, other)
-        else: raise NotImplementedError()  
-    def __neg__(self):        return _neg(self)
-    def __sub__(self, other):
-        if isinstance(self,Expression) and isinstance(other,Expression):
-            return self+(-other)
-        elif isinstance(self,(int,float)) and isinstance(other,Expression):
-            return _scalarsub(self, other)
-        elif isinstance(self,Expression) and isinstance(other,(int, float)):
-            return _neg(_scalarsub(other, self))
-        else: raise NotImplementedError()
-#}}}
 
 cpdef forward(list exps, recalculate=False):
     cdef Expression maxe = exps[0]
