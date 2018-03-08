@@ -93,8 +93,8 @@ def create_doc_copy(in_file='../../python/_dynet.pyx', out_file='dynet.py'):
                     inherit = get_inherit(is_class.group(INHERIT))
                     # Print declaration
                     print(indent + "class "+is_class.group(NAME)+inherit+":", file=py)
-                # Handle comments
-                is_comment = '"""' in l
+                # Handle comments (better)
+                is_comment = re.match(r'(\s*)"""(.*)', l, re.I) or ('"""' in l and in_comment) # This last case is to account for end of line """ to end the comment
                 # If start or beginning of comment
                 if is_comment:
                     # If end of comment, print the """
