@@ -31,8 +31,6 @@ class RNNLanguageModel:
         dy.renew_cg()
         init_state = self.builder.initial_state()
 
-        R = dy.parameter(self.R)
-        bias = dy.parameter(self.bias)
         errs = [] # will hold expressions
         es=[]
         state = init_state
@@ -41,7 +39,7 @@ class RNNLanguageModel:
             x_t = dy.lookup(self.lookup, int(cw))
             state = state.add_input(x_t)
             y_t = state.output()
-            r_t = bias + (R * y_t)
+            r_t = self.bias + (self.R * y_t)
             err = dy.pickneglogsoftmax(r_t, int(nw))
             errs.append(err)
         nerr = dy.esum(errs)
@@ -50,15 +48,13 @@ class RNNLanguageModel:
     def predict_next_word(self, sentence):
         dy.renew_cg()
         init_state = self.builder.initial_state()
-        R = dy.parameter(self.R)
-        bias = dy.parameter(self.bias)
         state = init_state
         for cw in sentence:
             # assume word is already a word-id
-            x_t = dy.lookup(self.lookup, int(cw))
+            x_t = self.lookup[int(cw)]
             state = state.add_input(x_t)
         y_t = state.output()
-        r_t = bias + (R * y_t)
+        r_t = self.bias + (self.R * y_t)
         prob = dy.softmax(r_t)
         return prob
     
@@ -67,14 +63,12 @@ class RNNLanguageModel:
         dy.renew_cg()
         state = self.builder.initial_state()
 
-        R = dy.parameter(self.R)
-        bias = dy.parameter(self.bias)
         cw = first
         while True:
-            x_t = dy.lookup(self.lookup, cw)
+            x_t = self.lookup[cw]
             state = state.add_input(x_t)
             y_t = state.output()
-            r_t = bias + (R * y_t)
+            r_t = self.bias + (self.R * y_t)
             ydist = dy.softmax(r_t)
             dist = ydist.vec_value()
             rnd = random.random()

@@ -28,16 +28,13 @@ class RNNLanguageModel:
         dy.renew_cg()
         init_state = self.builder.initial_state()
 
-        R = dy.parameter(self.R)
-        bias = dy.parameter(self.bias)
         errs = [] # will hold expressions
         es=[]
         state = init_state
-        lookup = self.lookup
-        inputs = [lookup[int(cw)] for cw in sent[:-1]]
+        inputs = [self.lookup[int(cw)] for cw in sent[:-1]]
         expected_outputs = [int(nw) for nw in sent[1:]]
         outputs = state.transduce(inputs)
-        r_ts = ((bias + (R * y_t)) for y_t in outputs)
+        r_ts = ((self.bias + (self.R * y_t)) for y_t in outputs)
         errs = [dy.pickneglogsoftmax(r_t, eo) for r_t, eo in zip(r_ts, expected_outputs)]
         nerr = dy.esum(errs)
         return nerr
@@ -48,14 +45,12 @@ class RNNLanguageModel:
         dy.renew_cg()
         state = self.builder.initial_state()
 
-        R = dy.parameter(self.R)
-        bias = dy.parameter(self.bias)
         cw = first
         while True:
-            x_t = dy.lookup(self.lookup, cw)
+            x_t = self.lookup[cw]
             state = state.add_input(x_t)
             y_t = state.output()
-            r_t = bias + (R * y_t)
+            r_t = self.bias + (self.R * y_t)
             ydist = dy.softmax(r_t)
             dist = ydist.vec_value()
             rnd = random.random()
@@ -81,8 +76,9 @@ if __name__ == '__main__':
     model = dy.Model()
     trainer = dy.SimpleSGDTrainer(model)
 
-    #lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.SimpleRNNBuilder)
-    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=dy.LSTMBuilder)
+    builder = dy.SimpleRNNBuilder
+    # builder = dy.LSTMBuilder
+    lm = RNNLanguageModel(model, LAYERS, INPUT_DIM, HIDDEN_DIM, VOCAB_SIZE, builder=builder)
 
     train = list(train)
 
@@ -106,6 +102,5 @@ if __name__ == '__main__':
             loss += errs.scalar_value()
             errs.backward()
             trainer.update()
-            #print "TM:",(time.time() - _start)/len(sent)
         print("ITER",ITER,loss)
         trainer.status()

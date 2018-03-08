@@ -476,7 +476,7 @@ cdef class NormalInitializer(PyInitializer):
         mean (number): Mean of the distribution (default: 0)
         var (number): Variance of the distribution (default: 1)
     """
-    def __init__(self, float mean=0, var=1):
+    def __init__(self, float mean=0, float var=1):
         self.initializer = new CParameterInitNormal(mean, var)
 
 cdef class UniformInitializer(PyInitializer):
@@ -533,7 +533,7 @@ cdef class SaxeInitializer(PyInitializer):
         Keyword Arguments:
             scale (number): scale to apply to the orthonormal matrix
     """
-    def __init__(self,scale=1.0):
+    def __init__(self,float scale=1.0):
         self.initializer = new CParameterInitSaxe(scale)
 
 cdef class FromFileInitializer(PyInitializer):
@@ -566,7 +566,7 @@ cdef class NumpyInitializer(PyInitializer):
 # }}}
 
 # {{{ ParameterCollection / Parameters 
-cdef class Parameters: # {{{
+cdef class Parameters(Expression): # {{{
     """Parameters class
     
     Parameters are things that are optimized. in contrast to a system like Torch where computational modules may have their own parameters, in DyNet parameters are just parameters.
@@ -578,6 +578,8 @@ cdef class Parameters: # {{{
     cdef Expression _const_expr
     def __cinit__(self):
         self._version = -1
+
+    # All creations MUST go through wrap_ptr
     @staticmethod
     cdef wrap_ptr(CParameters ptr):
         self = Parameters()
@@ -713,13 +715,9 @@ cdef class Parameters: # {{{
         """
         return self.thisptr.get_fullname().decode("utf8")
 
-    cpdef Expression expr(self, bool update=True):
+    cdef Expression _iexpr(self, bool update=True):
         """Returns the parameter as an expression
 
-        This is the same as calling
-
-            dy.parameter(param)
-        
         Args:
             update(bool): If this is set to False, the parameter won't be updated during the backward pass
         Returns:
@@ -736,9 +734,40 @@ cdef class Parameters: # {{{
                 self._const_expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
             return self._const_expr
 
+    # for backward compatibility.
+    # deprecate.
+    cpdef expr(self): return self
+
+    # needed for Expression
+    cdef CExpression c(self):
+        if cg_version() != self._version:
+            self._version = cg_version()
+            self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+        return self._expr.c()
+
+    def dim(self):
+        return self._iexpr().dim()
+
+    def __repr__(self):
+        return str(self)
+    def __str__(self):
+        return "Parameter %s" % self.name()
+
+    def __getitem__(self, index):
+        return self._iexpr().__getitem__(index)
+
+    cpdef scalar_value(self, bool recalculate=False): return self._iexpr().scalar_value(recalculate)
+    cpdef vec_value(self, bool recalculate=False):    return self._iexpr().vec_value(recalculate)
+    cpdef npvalue(self, bool recalculate=False):      return self._iexpr().npvalue(recalculate)
+    cpdef tensor_value(self, bool recalculate=False): return self._iexpr().tensor_value(recalculate)
+    cpdef value(self, bool recalculate=False):        return self._iexpr().value(recalculate)
+    cpdef gradient(self):                             return self._iexpr().gradient()
+    cpdef forward(self, bool recalculate=False):      return self._iexpr().forward(recalculate)
+    cpdef backward(self, bool full=False):            return self._iexpr().backward(full)
+
 # Parameters }}}
 
-cdef class LookupParameters: # {{{
+cdef class LookupParameters(Expression): # {{{
     """LookupParameters represents a table of parameters.
 
     They are used to embed a set of discrete objects (e.g. word embeddings). These are sparsely updated.
@@ -857,7 +886,7 @@ cdef class LookupParameters: # {{{
         """
         self.thisptr.initialize(i, row)
 
-    cpdef row_as_array(self, row):
+    cpdef row_as_array(self, int row):
         """Return row as a numpy array.
         
         Args:
@@ -956,7 +985,7 @@ cdef class LookupParameters: # {{{
         """
         self.thisptr.scale_gradient(s)
         
-    cpdef Expression expr(self,bool update=True):
+    cdef Expression _iexpr(self,bool update=True):
         """Returns an expression for the whole parameter
 
         Same as :code:`dynet.parameter`
@@ -974,6 +1003,10 @@ cdef class LookupParameters: # {{{
                 self._expr = Expression.from_cexpr(_cg.version(), c_const_parameter(_cg.thisptr[0], self.thisptr))
         return self._expr
 
+    # for backward compatibility.
+    # deprecate.
+    cpdef expr(self): return self
+
     cpdef zero(self):
         """Set all values to zero
         """
@@ -987,6 +1020,30 @@ cdef class LookupParameters: # {{{
         Return the full name of this lookup parameter.
         """
         return self.thisptr.get_fullname().decode("utf8")
+
+    # needed for Expression
+    cdef CExpression c(self):
+        if cg_version() != self._version:
+            self._version = cg_version()
+            self._expr = Expression.from_cexpr(_cg.version(), c_parameter(_cg.thisptr[0], self.thisptr))
+        return self._expr.c()
+
+    def dim(self):
+        return self._iexpr().dim()
+
+    def __repr__(self):
+        return str(self)
+    def __str__(self):
+        return "LookupParameter %s" % self.name()
+
+    cpdef scalar_value(self, bool recalculate=False): raise Exception("scalar_value not applicable for LookupParameters.")
+    cpdef vec_value(self, bool recalculate=False):    return self._iexpr().vec_value(recalculate)
+    cpdef npvalue(self, bool recalculate=False):      return self._iexpr().npvalue(recalculate)
+    cpdef tensor_value(self, bool recalculate=False): return self._iexpr().tensor_value(recalculate)
+    cpdef value(self, bool recalculate=False):        return self._iexpr().value(recalculate)
+    cpdef gradient(self):                             return self._iexpr().gradient()
+    cpdef forward(self, bool recalculate=False):      return self._iexpr().forward(recalculate)
+    cpdef backward(self, bool full=False):            return self._iexpr().backward(full)
 # }}}
 
 cdef class ParameterCollection: # {{{
@@ -1075,7 +1132,7 @@ cdef class ParameterCollection: # {{{
         cdef string _fname = <string> fname.encode("utf8")
         cdef string _key = <string> key.encode("utf8")
         loader = new CTextFileLoader(_fname)
-        p = Parameters.wrap_ptr(loader.load_param(self.thisptr, _key))
+        cdef Parameters p = Parameters.wrap_ptr(loader.load_param(self.thisptr, _key))
         del loader
         return p
 
@@ -1456,7 +1513,7 @@ cdef class FloatVectorValue:
 cdef int SECRET = 923148
 cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
-def cg_version(): 
+cpdef int cg_version():
     """
     Varsion of the current computation graph
     """
@@ -1521,13 +1578,13 @@ cdef class ComputationGraph:
         self._cg_version += 1
         return self
 
-    cpdef version(self): 
+    cpdef int version(self): 
         """
         Same as :code:`dynet.cg_version()`
         """
         return self._cg_version
 
-    def parameters(self, Parameters params):
+    cdef parameters(self, Parameters params):
         """
         Same as :code:`dynet.parameters(params)`
         """
@@ -1719,7 +1776,11 @@ cdef class Tensor: #{{{
 
 #{{{ Expressions
 cdef ensure_freshness(Expression a):
-    if a.cg_version != _cg.version(): raise ValueError("Attempt to use a stale expression.")
+    if a.cg_version != _cg.version():
+        if type(a) is Parameters:
+            pass
+        else:
+            raise ValueError("Attempt to use a stale expression.")
 
 cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_add(a.c(), b.c()))
 cdef _mul(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_mul(a.c(), b.c()))
@@ -1750,11 +1811,11 @@ cdef class Expression: #{{{
         self.vindex = 0
     @staticmethod
     cdef Expression from_cexpr(int cgv, CExpression cexpr):
-        if cgv != _cg._cg_version: raise ValueError("Attempt to use a stale expression, from a previous Computation Graph.")
+        if cexpr.is_stale(): raise ValueError("Attempt to use a stale expression, from a previous Computation Graph.")
         self = Expression()
         #self.cg = cexpr.pg
         self.vindex = cexpr.i
-        self.cg_version = cgv
+        self.cg_version = _cg._cg_version
         return self
     cdef CExpression c(self):
         return CExpression(self.cgp(), self.vindex)
@@ -1846,7 +1907,7 @@ cdef class Expression: #{{{
                 raise ValueError("Step sizes not yet supported.")
             return pick_range(self, i, j)
 
-    cpdef scalar_value(self, recalculate=False):
+    cpdef scalar_value(self, bool recalculate=False):
         """Returns value of an expression as a scalar
         
         This only works if the expression is a scalar
@@ -1861,7 +1922,7 @@ cdef class Expression: #{{{
         if recalculate: self.cg().forward(self.vindex) # TODO: make recalculate run on the entire graph, not only up to here?
         return c_as_scalar(self.cgp().get_value(self.vindex))
 
-    cpdef vec_value(self, recalculate=False):
+    cpdef vec_value(self, bool recalculate=False):
         """Returns the value of the expression as a vector
         
         In case of a multidimensional expression, the values are flattened according to a column major ordering
@@ -1876,7 +1937,7 @@ cdef class Expression: #{{{
         if recalculate: self.cg().forward(self.vindex)
         return c_as_vector(self.cgp().get_value(self.vindex))
 
-    cpdef npvalue(self, recalculate=False):
+    cpdef npvalue(self, bool recalculate=False):
         """Returns the value of the expression as a numpy array
         
         The last dimension is the batch size (if it's > 1)
@@ -1896,7 +1957,7 @@ cdef class Expression: #{{{
         arr = np.array(c_tensor_as_np(t))
         return arr
 
-    cpdef tensor_value(self, recalculate=False):
+    cpdef tensor_value(self, bool recalculate=False):
         """Returns the value of the expression as a Tensor.
 
         This is useful if you want to use the value for other on-device calculations
@@ -1915,7 +1976,7 @@ cdef class Expression: #{{{
         t = self.cgp().get_value(self.vindex)
         return Tensor.wrap_ctensor(t)
 
-    cpdef value(self, recalculate=False):
+    cpdef value(self, bool recalculate=False):
         """Gets the value of the expression in the most relevant format
         
         this returns the same thing as :code:`scalar_value`, :code:`vec_value`, :code:`npvalue` depending on whether the number of dimensions of the expression is 0, 1 or 2+
@@ -1956,7 +2017,7 @@ cdef class Expression: #{{{
         return arr
 
     # TODO this runs incremental forward on the entire graph, may not be optimal in terms of efficiency.
-    cpdef forward(self, recalculate=False):
+    cpdef forward(self, bool recalculate=False):
         """This runs incremental forward on the entire graph
         
         May not be optimal in terms of efficiency.
@@ -2042,9 +2103,7 @@ cpdef values(list exps, recalculate=False):
     forward(exps, recalculate)
     return [e.value() for e in exps]
 
-#cdef Expression _parameter(ComputationGraph g, Parameters p):
-#    return Expression.from_cexpr(g.version(), c_parameter(g.thisptr[0], p.thisptr))
-
+__deprecation_shown=False
 def parameter(*args):
     """Add parameters to the computation graph.
 
@@ -2061,15 +2120,15 @@ def parameter(*args):
     Raises:
         NotImplementedError: Only works with Parameters and LookupParameters.
     """
-    for p in args:
-      if not (isinstance(p, Parameters) or isinstance(p, LookupParameters)):
-        raise NotImplementedError(
-            "Cannot call parameter() on anything other than Parameters or LookupParameters")
-    if len(args) == 1:
-      return args[0].expr(True)  # True=update parameter
-    else:
-      return tuple(p.expr(True) for p in args)
+    global __deprecation_shown
+    if not __deprecation_shown:
+        print("""The dy.parameter(...) call is now DEPRECATED.
+        There is no longer need to explicitly add parameters to the computation graph.
+        Any used parameter will be added automatically.""")
+    __deprecation_shown=True
 
+    if len(args) == 1: return args[0]
+    return args
 
 def const_parameter(*args):
     """Add constant parameters to the computation graph.
@@ -2089,15 +2148,10 @@ def const_parameter(*args):
     Raises:
         NotImplementedError: Only works with Parameters and LookupParameters.
     """
-    for p in args:
-      if not (isinstance(p, Parameters) or isinstance(p, LookupParameters)):
-        raise NotImplementedError(
-            "Cannot call const_parameter() on anything other than Parameters or LookupParameters")
     if len(args) == 1:
-      return args[0].expr(False)  # False=update parameter
+        return nobackprop(args[0])
     else:
-      return tuple(p.expr(False) for p in args)
-
+        return [nobackprop(a) for a in args]
 
 # {{{ Mutable Expressions
 #     These depend values that can be set by the caller

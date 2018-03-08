@@ -10,18 +10,13 @@ ITERATIONS = 2000
 m = dy.Model()
 trainer = dy.SimpleSGDTrainer(m)
 
-pW = m.add_parameters((HIDDEN_SIZE, 2))
-pb = m.add_parameters(HIDDEN_SIZE)
-pV = m.add_parameters((1, HIDDEN_SIZE))
-pa = m.add_parameters(1)
+W = m.add_parameters((HIDDEN_SIZE, 2))
+b = m.add_parameters(HIDDEN_SIZE)
+V = m.add_parameters((1, HIDDEN_SIZE))
+a = m.add_parameters(1)
 
 if len(sys.argv) == 2:
   m.populate_from_textfile(sys.argv[1])
-
-W = dy.parameter(pW)
-b = dy.parameter(pb)
-V = dy.parameter(pV)
-a = dy.parameter(pa)
 
 x = dy.vecInput(2)
 y = dy.scalarInput(0)
@@ -58,10 +53,6 @@ print(z.scalar_value())
 m.save("xor.pymodel")
 
 dy.renew_cg()
-W = dy.parameter(pW)
-b = dy.parameter(pb)
-V = dy.parameter(pV)
-a = dy.parameter(pa)
 
 x = dy.vecInput(2)
 y = dy.scalarInput(0)

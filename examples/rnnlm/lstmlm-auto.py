@@ -41,21 +41,19 @@ class LSTMLM:
                                      FLAGS_hidden_dim,
                                      model)
 
-    self.p_h2l = model.add_parameters((vocab_size, FLAGS_hidden_dim))
-    self.p_lb = model.add_parameters(vocab_size)
+    self.h2l = model.add_parameters((vocab_size, FLAGS_hidden_dim))
+    self.lb = model.add_parameters(vocab_size)
 
   # Compute the LM loss for a single sentence.
   def sent_lm_loss(self, sent):
-    h2l = dy.parameter(self.p_h2l)
-    lb = dy.parameter(self.p_lb)
     rnn_cur = self.rnn.initial_state()
     losses = []
     prev_word = self.start
     for word in sent:
       x_t = self.embeddings[prev_word]
       rnn_cur = rnn_cur.add_input(x_t)
-      logits = dy.affine_transform([lb,
-                                    h2l,
+      logits = dy.affine_transform([self.lb,
+                                    self.h2l,
                                     rnn_cur.output()])
       losses.append(dy.pickneglogsoftmax(logits, word))
       prev_word = word
@@ -68,7 +66,7 @@ class LSTMLM:
     total_words = sum(len(sent) for sent in sents)
     return minibatch_loss, total_words
 
-print("RUN WITH AND WITHOUT --dynet-autobatch 1")
+print("RUN WITH AND WITHOUT --dynet_autobatch=1")
 start = time.time()
 
 updates = 100000
