@@ -184,7 +184,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         const CTensor& incremental_forward(VariableIndex index) except +
         const CTensor& get_value(VariableIndex i) except +
         void invalidate()
-        void backward(VariableIndex i, bool full)
+        void backward(VariableIndex i, bool full) except +
 
         # checkpointing
         void checkpoint()
