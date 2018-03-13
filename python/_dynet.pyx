@@ -859,6 +859,12 @@ cdef class Expression: #{{{
         elif isinstance(self,Expression) and isinstance(other,(int, float)):
             return _neg(_scalarsub(other, self))
         else: raise NotImplementedError()
+    def __pow__(self, other, _):
+        if isinstance(self, Expression) and isinstance(other, Expression):
+            return pow(self, other)
+        elif isinstance(self, Expression) and isinstance(other, (int, float)):
+            return pow(self, scalarInput(other))
+        else: raise NotImplementedError()
 #}}}
 
 
