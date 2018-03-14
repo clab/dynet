@@ -4,7 +4,9 @@
 #include <unordered_map>
 #include <string>
 #include <exception>
+#if HAVE_CUDA
 #include <curand.h>
+#endif
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/cuda.h"
 #include "dynet/globals.h"
