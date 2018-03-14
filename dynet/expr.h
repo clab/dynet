@@ -1131,12 +1131,12 @@ Expression softsign(const Expression& x);
 /**
  * \ingroup arithmeticoperations
  * \brief Power function
- * \details Calculate an output where the ith element is equal to x_i^y_i
+ * \details Calculate an output where the ith element is equal to x_i^y
  *
  * \param x The input expression
- * \param y The exponent expression
+ * \param y The exponent expression(scalar expression)
  *
- * \return An expression where the ith element is equal to x_i^y_i
+ * \return An expression where the ith element is equal to x_i^y
  */
 Expression pow(const Expression& x, const Expression& y);
 

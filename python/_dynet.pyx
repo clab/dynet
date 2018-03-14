@@ -3606,14 +3606,14 @@ cpdef Expression constrained_softmax(Expression x, Expression y):
 cpdef Expression pow(Expression x, Expression y):
     """Power function
     
-    Calculate an output where the ith element is equal to :math:`x_i^{y_i}`
+    Calculate an output where the ith element is equal to :math:`x_i^{y}`
 
     Args:
         x (dynet.Expression): The first input expression
-        y (dynet.Expression): The second input expression
+        y (dynet.Expression): The second input expression(scalar expression)
     
     Returns:
-        dynet.Expression: :math:`x_i^{y_i}`
+        dynet.Expression: :math:`x_i^{y}`
     """
     ensure_freshness(y); 
     return Expression.from_cexpr(x.cg_version, c_pow(x.c(), y.c()))

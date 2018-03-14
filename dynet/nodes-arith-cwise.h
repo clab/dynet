@@ -55,6 +55,7 @@ struct CwiseQuotient : public Node {
 
 // y = pow(x_1, x_2)
 // x_2 raise every element in x_1 to the power of scalar x_2
+// TODO: coefficient-wise support from Eigen::TensorMap
 struct Pow : public Node {
   explicit Pow(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()

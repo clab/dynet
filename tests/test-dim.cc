@@ -36,5 +36,11 @@ BOOST_AUTO_TEST_CASE( test_dim_truncate_multiple_one ) {
     BOOST_CHECK_EQUAL(t1.nd, 1);
 }
 
+BOOST_AUTO_TEST_CASE( test_dim_truncate_a_one ) {
+    Dim d1({1});
+    Dim t1 = d1.truncate();
+    BOOST_CHECK_EQUAL(t1.nd, 1);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
