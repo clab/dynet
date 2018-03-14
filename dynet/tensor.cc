@@ -257,7 +257,7 @@ void TensorTools::randomize_bernoulli(Tensor& val, real p, real scale) {
 #if HAVE_CUDA
   } else if (val.device->type == DeviceType::GPU) {
     CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
-    CURAND_CHECK(curandGenerateUniform(curandeng, val.v, val.d.size()));
+    CURAND_CHECK(curandGenerateUniform(((Device_GPU*)val.device)->curandeng, val.v, val.d.size()));
     TensorTools::uniform_to_bernoulli_dev<Device_GPU>(*(Device_GPU*)val.device, val, p);
     if(scale != 1.0)
       TensorTools::scale_dev<Device_GPU>(*(Device_GPU*)val.device, val, scale, 0);
@@ -273,7 +273,7 @@ void TensorTools::randomize_normal(Tensor& val, real mean, real stddev) {
 #if HAVE_CUDA
   } else if (val.device->type == DeviceType::GPU) {
     CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
-    CURAND_CHECK(curandGenerateNormal(curandeng, val.v, val.d.size(), mean, stddev));
+    CURAND_CHECK(curandGenerateNormal(((Device_GPU*)val.device)->curandeng, val.v, val.d.size(), mean, stddev));
 #endif
   } else { throw std::runtime_error("Bad device type"); }
 }
@@ -286,7 +286,7 @@ void TensorTools::randomize_uniform(Tensor& val, real left, real right) {
 #if HAVE_CUDA
   } else if (val.device->type == DeviceType::GPU) {
     CUDA_CHECK(cudaSetDevice(((Device_GPU*)val.device)->cuda_device_id));
-    CURAND_CHECK(curandGenerateUniform(curandeng, val.v, val.d.size()));
+    CURAND_CHECK(curandGenerateUniform(((Device_GPU*)val.device)->curandeng, val.v, val.d.size()));
     if(left != 0 || right != 1)
       TensorTools::scale_dev<Device_GPU>(*(Device_GPU*)val.device, val, right-left, left);
 #endif

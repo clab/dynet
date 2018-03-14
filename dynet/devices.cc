@@ -88,13 +88,19 @@ void Device::allocate_tensor(DeviceMempool mp, Tensor & tens) {
 }
 
 #if HAVE_CUDA
-Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs, int device_id) :
+Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs,
+                       int device_id, unsigned seed) :
   Device(my_id, DeviceType::GPU, &gpu_mem), cuda_device_id(device_id), gpu_mem(device_id) {
   CUDA_CHECK(cudaSetDevice(device_id));
   CUBLAS_CHECK(cublasCreate(&cublas_handle));
   CUBLAS_CHECK(cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_DEVICE));
 #if HAVE_CUDNN
   CUDNN_CHECK(cudnnCreate(&cudnnHandle));
+  CURAND_CHECK(curandCreateGenerator(&curandeng,
+                                     CURAND_RNG_PSEUDO_PHILOX4_32_10));
+  CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curandeng,
+                                                  seed + 1));
+
 #endif
   kSCALAR_MINUSONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ONE = (float*)gpu_mem.malloc(sizeof(float));
