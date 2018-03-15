@@ -1,0 +1,4 @@
+Cython==0.28
+dyNET==2.0.3
+numpy==1.14.2
+Pillow==5.0.0
