@@ -94,7 +94,7 @@ void HuberDistance::forward_dev_impl(const MyDevice & dev, const vector<const Te
   Tensor diff(xs[0]->d, nullptr, xs[0]->device, xs[0]->mem_pool);
   diff.v = static_cast<float*>(scratch_allocator->allocate(diff.d.size() * sizeof(float)));
   tvec(diff).device(*dev.edevice) = tvec(*xs[0]) - tvec(*xs[1]);
-  t<0>(fx).device(*dev.edevice) = (tvec(diff).abs() < d).select(tvec(diff).square(), d * (2 * tvec(diff).abs() - d)).sum();
+  t<0>(fx).device(*dev.edevice) = (tvec(diff).abs() < d).select(0.5 * tvec(diff).square(), d * (tvec(diff).abs() - 0.5 * d)).sum();
   scratch_allocator->free();
 }
 

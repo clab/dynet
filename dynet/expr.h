@@ -1617,7 +1617,7 @@ Expression l1_distance(const Expression& x, const Expression& y);
  *    by ``c,`` \f$\sum_i L_c(x_i, y_i)\f$ where:
  *
  *    \f$
- *      L_c(x, y) = \begin{cases}{lr}
+ *      L_c(x, y) = \begin{cases}
  *        \frac{1}{2}(y - x)^2                   & \textrm{for } |y - f(x)| \le c, \\
  *        c\, |y - f(x)| - \frac{1}{2}c^2 & \textrm{otherwise.}
  *      \end{cases}
