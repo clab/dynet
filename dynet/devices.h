@@ -4,6 +4,9 @@
 #include <unordered_map>
 #include <string>
 #include <exception>
+#if HAVE_CUDA
+#include <curand.h>
+#endif
 #include "dynet/aligned-mem-pool.h"
 #include "dynet/cuda.h"
 #include "dynet/globals.h"
@@ -42,7 +45,7 @@ class Device {
 class Device_GPU : public Device {
  public:
   typedef Eigen::CudaStreamDevice EigenDevice;
-  explicit Device_GPU(int my_id, const DeviceMempoolSizes & mb, int device_id);
+  explicit Device_GPU(int my_id, const DeviceMempoolSizes & mb, int device_id, unsigned seed);
   ~Device_GPU();
   int cuda_device_id;
   cublasHandle_t cublas_handle;
@@ -52,6 +55,7 @@ class Device_GPU : public Device {
   Eigen::GpuDevice* edevice;
   Eigen::CudaStreamDevice* estream;
   GPUAllocator gpu_mem;
+  curandGenerator_t curandeng;
 };
 #endif
 

@@ -15,8 +15,4 @@ int autobatch_flag;
 int profiling_flag = 0;
 NamedTimer timer;
 
-#ifdef HAVE_CUDA
-curandGenerator_t curandeng;
-#endif
-
 }
