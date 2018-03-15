@@ -3926,7 +3926,7 @@ cpdef Expression huber_distance(Expression x, Expression y, float c=1.345):
 
     .. math::
 
-        L_c(x, y) = \\begin{cases}{lr}
+        L_c(x, y) = \\begin{cases}
         \\frac{1}{2}(y - x)^2                   & \\textrm{for } \\vert y - f(x)\\vert  \le c, \\\\
         c\, \\vert y - f(x)\\vert  - \\frac{1}{2}c^2 & \\textrm{otherwise.}
         \end{cases}
