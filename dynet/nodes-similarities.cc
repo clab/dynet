@@ -110,7 +110,7 @@ void HuberDistance::backward_dev_impl(const MyDevice & dev,
   Tensor diff(xs[i]->d, nullptr, xs[i]->device, xs[i]->mem_pool);
   diff.v = static_cast<float*>(scratch_allocator->allocate(diff.d.size() * sizeof(float)));
   tvec(diff).device(*dev.edevice) = tvec(*xs[i]) - tvec(*xs[1-i]);
-  float scale = 2 * as_scalar(dEdf);
+  float scale = as_scalar(dEdf);
   tvec(dEdxi).device(*dev.edevice) += scale * (tvec(diff).abs() < d).select(tvec(diff), d * ((tvec(diff) > 0.f).template cast<float>() - (tvec(diff) < 0.f).template cast<float>()));
   scratch_allocator->free();
 }
