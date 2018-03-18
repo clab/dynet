@@ -25,7 +25,7 @@ with codecs.open('../glove.840B.300d.txt') as fin:
         for line in fin:
             total += 1
             word = line.split(' ', 1)[0]
-            if word in vocab:
+            if word in vocab or word == '(' or word == ')':
                 cnt += 1
                 fout.write(line)
 print('total: {}, after filtering: {}'.format(total, cnt))
