@@ -1,6 +1,6 @@
 # Tree LSTM
 This is a re-implementation of [Improved Semantic Representations From Tree-Structured Long Short-Term Memory Networks](http://arxiv.org/abs/1503.00075) by Kai Sheng Tai, Richard Socher, and Christopher Manning. The model is used to handle a sentiment classification task on [Stanford Sentiment Treebank](http://nlp.stanford.edu/sentiment/index.html).
-A highest accuracy (root fine-grain accuracy) of 0.5213 on test set is achieved with parameters purely tuned on dev set, which is a competitive result to that claimed in the original paper. However, it should be admitted that the variance of the final result isn't small.
+A highest accuracy (root fine-grain accuracy) of 0.5213 on test set is achieved with parameters purely tuned on dev set, which is a competitive result to that claimed in the original paper(mean value 0.51). However, it should be admitted that the variance of the final result isn't small.
 
 ## Data
 [Stanford Sentiment Treebank](http://nlp.stanford.edu/sentiment/index.html) and [Glove word vectors](http://nlp.stanford.edu/projects/glove/) are used in this implementation. 
