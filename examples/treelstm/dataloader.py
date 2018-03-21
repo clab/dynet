@@ -20,22 +20,6 @@ def get_vocabs(trees):
     return w2i, words
 
 
-def get_embeds(vocab, embed_path):
-    total, hit = len(vocab), 0
-    shape = (total, 300)
-    word_embeds = np.random.randn(np.product(shape)).reshape(shape)
-    with codecs.open(embed_path) as f:
-        for line in f:
-            line = line.strip().split(' ')
-            word, embed = line[0], line[1:]
-            idx = vocab.get(word, -1)
-            if idx != -1:
-                hit += 1
-                word_embeds[idx]= np.array([np.float32(x) for x in embed])
-    print('{}/{} embeddings hit in glove'.format(hit, total))
-    return word_embeds
-
-
 def _tokenize_sexpr(s):
     tokker = re.compile(r" +|[()]|[^ ()]+")
     toks = [t for t in [match.group(0) for match in tokker.finditer(s)] if t[0] != " "]
@@ -94,12 +78,10 @@ class Tree(object):
 
 
 class DataLoader(object):
-    def __init__(self, datapath, statistics=False):
+    def __init__(self, datapath):
         self.data = read_dataset(datapath)
         self.n_samples = len(self.data)
         self.reset()
-        if statistics:
-            self.w2i, self.i2w = get_vocabs(self.data)
 
     def reset(self, shuffle=True):
         self.idx = 0

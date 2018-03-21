@@ -2,7 +2,11 @@ import codecs
 import re
 import os
 
+data_dir = 'data/trees'
 datasets = ['train', 'dev', 'test']
+glove_origin_path = 'glove.840B.300d.txt'
+glove_filtered_path = 'glove_filterer.txt'
+
 
 def get_vocab(file_path):
     vocab = set()
@@ -16,12 +20,12 @@ def get_vocab(file_path):
 
 vocab = set()
 for dataset in datasets:
-    tem_set = get_vocab(os.path.join('../data/trees', dataset + '.txt'))
+    tem_set = get_vocab(os.path.join(data_dir, dataset + '.txt'))
     vocab.update(tem_set)
 
 total = cnt = 0
-with codecs.open('../glove.840B.300d.txt') as fin:
-    with codecs.open('../glove_filtered.txt', 'w') as fout:
+with codecs.open(glove_origin_path) as fin:
+    with codecs.open(glove_filtered_path, 'w') as fout:
         for line in fin:
             total += 1
             word = line.split(' ', 1)[0]

@@ -9,6 +9,9 @@ from scheduler import Scheduler
 from dataloader import DataLoader
 from gridsearch import GridSearch
 
+data_dir = 'data/trees'
+glove_path = 'glove_filtered.txt'
+
 
 def establish_args():
     parser = argparse.ArgumentParser()
@@ -17,8 +20,8 @@ def establish_args():
     parser.add_argument("--dynet-mem", default=512, type=int)
     parser.add_argument("--dynet-gpus", default=0, type=int)
 
-    # control parameters, available modes: [train, search, test]
-    parser.add_argument('--mode', default='train')
+    # control parameters
+    parser.add_argument('--mode', default='train', help='available modes: [train, search, test]')
     parser.add_argument('--model_meta_file', default=None, type=str)
 
     # scheduler parameters
@@ -32,7 +35,7 @@ def establish_args():
     
     # model parameters
     parser.add_argument('--use_glove', default=False, action='store_true', help='Use glove vectors or not.')
-    parser.add_argument('--dropout_rate', default=0.5, type=float)
+    parser.add_argument('--dropout_rate', default=0.3, type=float)
     parser.add_argument('--wembed_size', default=300, type=int, help='embedding size')
     parser.add_argument('--hidden_size', default=150, type=int, help='hidden size')
 
@@ -42,7 +45,7 @@ def establish_args():
     if args.use_glove and args.wembed_size != 300:
         print('Warning: word embedding size must be 300 when using glove, auto adjusted.')
         args.wembed_size = 300
-    assert (args.mode in ['train', 'test', 'search']), 'Wrong mode, train, test and search available now'
+    assert (args.mode in ['train', 'test', 'search']), 'Wrong mode, [train, test, search] available now'
     if args.mode == 'test':
         assert(args.model_meta_file is not None), "Model meta not specified in evaluation mode."
     else:
@@ -76,11 +79,11 @@ model_params = {
 }
 
 
-train = DataLoader("../data/trees/train.txt", statistics=True)
-dev = DataLoader("../data/trees/dev.txt", statistics=False)
-test = DataLoader("../data/trees/test.txt", statistics=False)
+train = DataLoader(os.path.join(data_dir, 'train.txt'))
+dev = DataLoader(os.path.join(data_dir, 'dev.txt'))
+test = DataLoader(os.path.join(data_dir, 'test.txt'))
 
-word_embed, w2i = get_embeds('../glove_filtered.txt')
+word_embed, w2i = get_embeds(glove_path)
 if not args.use_glove: word_embed = None
 
 print("startup time: %r" % (time.time() - start))
@@ -89,7 +92,7 @@ print("startup time: %r" % (time.time() - start))
 def exec_train(model_params, scheduler_params):
     model = TreeLSTMClassifier(n_classes=5, w2i=w2i, word_embed=word_embed,
                                params=model_params)
-    scheduler = Scheduler(model, train, dev, test, scheduler_params)
+    scheduler = Scheduler(model, train, dev, scheduler_params)
     return scheduler.exec_train()
 
 
@@ -113,9 +116,13 @@ elif args.mode == 'search':
 else:
     model_meta_file = args.model_meta_file
 
-print('model_meta_file {}'.format(model_meta_file))
-model = TreeLSTMClassifier(n_classes=5, w2i=w2i, word_embed=word_embed,
-                           params=model_params, model_meta_file=model_meta_file)
-acc = acc_eval(test, model)
-print('test acc%.4f' % acc)
 
+def eval_model(model_meta_file):
+    print('model_meta_file {}'.format(model_meta_file))
+    model = TreeLSTMClassifier(n_classes=5, w2i=w2i, word_embed=word_embed,
+                               params=model_params, model_meta_file=model_meta_file)
+    acc = acc_eval(test, model)
+    print('test acc%.4f' % acc)
+
+
+eval_model(model_meta_file)

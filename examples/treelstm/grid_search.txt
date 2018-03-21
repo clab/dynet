@@ -1,3 +1,2 @@
-learning_rate float 1e-2,1e-3,1e-4
 dropout_rate float 0.25,0.5,0.75
 hidden_size int 100,150,200,250,300

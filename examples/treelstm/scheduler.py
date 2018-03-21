@@ -5,8 +5,8 @@ from utils import acc_eval
 
 
 class Scheduler:
-    def __init__(self, model, train, dev, test, params):
-        self.train, self.dev, self.test = train, dev, test
+    def __init__(self, model, train, dev, params):
+        self.train, self.dev = train, dev
         self.model = model
         self.params = params
         
