@@ -11,8 +11,6 @@
 
 The Dynamic Neural Network Toolkit
 
-**News!** The master branch is now DyNet version 2.0 (as of 6/28/2017), which contains a number of changes including a new model format, etc. If you're looking for the old version, check out the [v1.1 branch](https://github.com/clab/dynet/tree/v1.1).
-
 - [General](#general)
 - [Installation](#installation)
   - [C++](#c-installation)

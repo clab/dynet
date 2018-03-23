@@ -6,9 +6,7 @@
 DyNet documentation
 ===================
 
-**News!** The master branch is now DyNet version 2.0 (as of 6/28/2017), which contains a number of changes including a new model format, etc. If you're looking for the old version, check out the `v1.1 branch <https://github.com/clab/dynet/tree/v1.1>`_.
-
-`DyNet <http://github.com/clab/dynet>`_ (formerly known as `cnn <http://github.com/clab/cnn-v1>`_) is a neural network library developed by Carnegie Mellon University and many others. It is written in C++ (with bindings in Python) and is designed to be efficient when run on either CPU or GPU, and to work well with networks that have dynamic structures that change for every training instance. For example, these kinds of networks are particularly important in natural language processing tasks, and DyNet has been used to build state-of-the-art systems for `syntactic parsing <https://github.com/clab/lstm-parser>`_, `machine translation <https://github.com/neubig/lamtram>`_, `morphological inflection <https://github.com/mfaruqui/morph-trans>`_, and many other application areas.
+`DyNet <http://github.com/clab/dynet>`_ (formerly known as `cnn <http://github.com/clab/cnn-v1>`_) is a neural network library developed by Carnegie Mellon University and many others. It is written in C++ (with bindings in Python) and is designed to be efficient when run on either CPU or GPU, and to work well with networks that have dynamic structures that change for every training instance. For example, these kinds of networks are particularly important in natural language processing tasks, and DyNet has been used to build state-of-the-art systems for `syntactic parsing <https://github.com/clab/lstm-parser>`_, `machine translation <https://github.com/neulab/xnmt>`_, `morphological inflection <https://github.com/mfaruqui/morph-trans>`_, and many other application areas.
 
 Read the documentation below to get started. If you have any problems see :ref:`debugging` for how to debug and/or get in contact with the developers. We also greatly welcome contributions, so see :ref:`contributing` for details.
 
