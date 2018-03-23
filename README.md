@@ -79,8 +79,6 @@ You can install dynet for C++ with the following commands
     # Clone the github repository
     git clone https://github.com/clab/dynet.git
     cd dynet
-    # Checkout the latest release
-    git checkout tags/v2.0
     mkdir build
     cd build
     # Run CMake
@@ -114,8 +112,6 @@ If you use DyNet for research, please cite this report as follows:
     }
 
 
-## Releases and Contributing
-
-The current release of DyNet is [v2.0](https://github.com/clab/dynet/releases/tag/v2.0).
+## Contributing
 
 We welcome any contribution to DyNet! You can find the contributing guidelines [here](http://dynet.readthedocs.io/en/latest/contributing.html)
