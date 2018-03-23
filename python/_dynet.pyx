@@ -1818,7 +1818,7 @@ cdef ComputationGraph _cg = ComputationGraph(SECRET)
 
 cpdef int cg_version():
     """
-    Varsion of the current computation graph
+    Version of the current computation graph
     """
     return _cg._cg_version
 
