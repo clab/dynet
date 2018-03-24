@@ -595,6 +595,18 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
 
 /**
  * \ingroup arithmeticoperations
+ * \brief Matrix division
+ * \details Divide an expression component-wise by a expression.
+ *
+ * \param x The left-hand matrix
+ * \param y The right-hand matrix
+ *
+ * \return An expression where the ith element is x_i divided by y_i
+ */
+Expression operator/(const Expression& x, const Expression& y);
+
+/**
+ * \ingroup arithmeticoperations
  * \brief Affine transform
  * \details This performs an affine transform over an arbitrary (odd) number of expressions
  *          held in the input initializer list xs.
