@@ -5,8 +5,19 @@ A highest accuracy (root fine-grain accuracy) of 0.5213 on test set is achieved 
 ## Data
 [Stanford Sentiment Treebank](http://nlp.stanford.edu/sentiment/index.html) and [Glove word vectors](http://nlp.stanford.edu/projects/glove/) are used in this implementation. 
 
-Packed data and provided weights can be downloaded [here](https://drive.google.com/file/d/10N-zqlPEt1my1lVeG7U7G7uMdaDloyAx/view?usp=sharing).
+Pre-processed data and trained model (68M) can be accessed by
+```
+wget https://github.com/zhiyong1997/large-repo/raw/master/packed_data_and_model.zip
+unzip packed_data_and_model.zip
+```
 
+Alternatively, you can download original files(~2G) and process them by
+```
+wget https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip
+wget http://nlp.stanford.edu/data/glove.840B.300d.zip
+unzip glove.840B.300d.zip trainDevTestTrees_PTB.zip 
+python filter_glove.py
+```
 ## Usage
 There are three available modes:train, search and test. 
 

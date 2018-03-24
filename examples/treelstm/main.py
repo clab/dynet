@@ -9,7 +9,7 @@ from scheduler import Scheduler
 from dataloader import DataLoader
 from gridsearch import GridSearch
 
-data_dir = 'data/trees'
+data_dir = 'trees'
 glove_path = 'glove_filtered.txt'
 
 

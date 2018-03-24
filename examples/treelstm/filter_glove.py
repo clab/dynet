@@ -2,7 +2,7 @@ import codecs
 import re
 import os
 
-data_dir = 'data/trees'
+data_dir = 'trees'
 datasets = ['train', 'dev', 'test']
 glove_origin_path = 'glove.840B.300d.txt'
 glove_filtered_path = 'glove_filterer.txt'
