@@ -596,7 +596,7 @@ inline Expression operator/(const Expression& x, float y) { return x * (1.f / y)
 /**
  * \ingroup arithmeticoperations
  * \brief Matrix division
- * \details Divide an expression component-wise by a expression.
+ * \details Divide an expression by another.
  *
  * \param x The left-hand matrix
  * \param y The right-hand matrix
