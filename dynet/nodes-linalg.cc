@@ -30,6 +30,17 @@ Dim Transpose::dim_forward(const vector<Dim>& xs) const {
   return ret;
 }
 
+
+int Transpose::autobatch_sig(const ComputationGraph & cg, SigMap &sm) const {
+  Sig s(nt::transpose);
+  s.add_dim(cg.nodes[args[0]]->dim);
+  return sm.get_idx(s);
+}
+
+std::vector<int> Transpose::autobatch_concat(const ComputationGraph & cg) const {
+  return vector<int>(1,1);
+}
+
 #endif
 
 template<class MyDevice>

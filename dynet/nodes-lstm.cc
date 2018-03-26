@@ -70,10 +70,6 @@ namespace dynet {
       s.add_node(args[num_inputs+1]);
       s.add_node(args[num_inputs+2]);
       s.add_node(args[num_inputs+3]);
-      if(dropout) {
-        s.add_node(args[num_inputs+4]);
-        s.add_node(args[num_inputs+5]);
-      }
     } else {
       for(auto nid : args) {
         const Dim & d = cg.nodes[nid]->dim;
@@ -88,8 +84,11 @@ namespace dynet {
 
   std::vector<int> VanillaLSTMGates::autobatch_concat(const ComputationGraph & cg) const {
     vector<int> ret(args.size(), 0);
+    unsigned num_inputs = dropout?args.size()-6:args.size()-4;
     if(dim.bd == 1) {
       ret[0] = ret[1] = 1;
+      if(dropout)
+        ret[num_inputs+4] = ret[num_inputs+5] = 1;
     } else {
       for(size_t i = 0; i < ret.size(); ++i)
         ret[i] = (cg.nodes[args[i]]->dim.bd > 1);

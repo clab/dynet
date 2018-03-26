@@ -17,7 +17,7 @@ namespace dynet {
       sinh, cosh, asinh, acosh, atanh, sin, cos, tan, asin, acos, atan, plus_const, concat, cmult, csum, sum, squared_distance, softmax, pnls, pickrange, scalar_mult,
       input, scalar_input, lookup,
       COMPLEX,
-      affine, matmul,
+      affine, matmul, transpose,
       vanilla_lstm_gates, vanilla_lstm_h, vanilla_lstm_c,
       conv2d
     };
