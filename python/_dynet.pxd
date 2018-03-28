@@ -296,6 +296,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_op_add "dynet::operator+" (CExpression& x, CExpression& y) except + #
     CExpression c_op_scalar_add "dynet::operator+" (CExpression& x, float y) except + #
     CExpression c_op_mul "dynet::operator*" (CExpression& x, CExpression& y) except + #
+    CExpression c_op_div "dynet::operator/" (CExpression& x, CExpression& y) except + #
     CExpression c_op_scalar_mul "dynet::operator*" (CExpression& x, float y) except + #
     CExpression c_op_scalar_div "dynet::operator/" (CExpression& x, float y) except + #
     CExpression c_op_scalar_sub "dynet::operator-" (float y, CExpression& x) except + #
