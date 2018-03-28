@@ -1,4 +1,10 @@
 from __future__ import print_function
+import _dynet as dy
+dyparams = dy.DynetParams()
+dyparams.from_args()
+dyparams.set_autobatch(True)
+dyparams.init()
+
 import time
 import os
 import argparse
@@ -26,7 +32,7 @@ def establish_args():
 
     # scheduler parameters
     parser.add_argument('--trainer', default='AdagradTrainer', help='trainer name in dynet')
-    parser.add_argument('--sparse', default=0, type=int, help='sparse update 0/1')
+    parser.add_argument('--sparse', default=1, type=int, help='sparse update 0/1')
     parser.add_argument('--learning_rate_param', default=0.05, type=float)
     parser.add_argument('--learning_rate_embed', default=0.005, type=float)
     parser.add_argument('--save_dir', default='saved_models')
@@ -35,7 +41,7 @@ def establish_args():
     
     # model parameters
     parser.add_argument('--use_glove', default=False, action='store_true', help='Use glove vectors or not.')
-    parser.add_argument('--dropout_rate', default=0.3, type=float)
+    parser.add_argument('--dropout_rate', default=0.5, type=float)
     parser.add_argument('--wembed_size', default=300, type=int, help='embedding size')
     parser.add_argument('--hidden_size', default=150, type=int, help='hidden size')
 
@@ -63,7 +69,7 @@ args = establish_args()
 
 scheduler_params = {
     'trainer': args.trainer,
-    'sparse': args.sparse,
+    'sparse': args.sparse == 1,
     'learning_rate_param': args.learning_rate_param,
     'learning_rate_embed': args.learning_rate_embed,
     'learning_rate_decay': 0.99,

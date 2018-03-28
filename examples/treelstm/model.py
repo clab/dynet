@@ -62,27 +62,26 @@ class TreeLSTMClassifier(object):
 
     def predict_for_tree(self, tree, decorate=True, training=True):
         h, c = self.builder.expr_for_tree(tree, decorate, training)
-        W = dy.parameter(self.W_)
         if training:
             for node in tree.nonterms_iter():
                 e = dy.dropout(node._e, self.dropout_rate) if self.use_dropout else node._e
-                node._logits = W * e
+                node._logits = self.W_ * e
         else:
-            tree._logits = W * h
+            tree._logits = self.W_ * h
             return tree._logits.npvalue()
 
     def losses_for_tree(self, tree, sum=True):
         self.predict_for_tree(tree, decorate=True, training=True)
         nodes = tree.nonterms()
         losses = [dy.pickneglogsoftmax(nt._logits, nt.label) for nt in nodes]
-        return dy.esum(losses) / len(losses) if sum else losses, len(nodes)
+        return dy.esum(losses) if sum else losses, len(nodes)
 
     def losses_for_tree_batch(self, trees):
         batch_losses = []
         for tree in trees:
             losses, _ = self.losses_for_tree(tree, sum=False)
             batch_losses += losses
-        return dy.esum(batch_losses) / len(batch_losses)
+        return dy.esum(batch_losses)
 
     def regularization_loss(self, coef):
         losses = [dy.l2_norm(p) ** 2 for p in self.pc_param.parameters_list()]

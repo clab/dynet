@@ -42,6 +42,8 @@ To restore a model and evaluate its performance:
 ```
 python main.py --mode test --model_meta_file saved_models/meta/model_name
 ```
+The pre-trained model can be tested in this mode.
+
 ## Discussions 
 1. The most tricky thing is that about 700 words in dev and test set do not appear in the train set, which means the trained model hasn't even seen them, and has to classify them as <__UNK__>. However, by using glove vectors, the model will have a relatively precise understanding of these unseen words, which results in great progress in the experiments. The other two famous implementations of Tree LSTM in [Tensorflow Fold](https://github.com/tensorflow/fold/blob/master/tensorflow_fold/g3doc/sentiment.ipynb) and [Torch](https://github.com/stanfordnlp/treelstm) (Authoritative Implementation) both utilize this feature, so the environment is equal.
 2. We use a hidden size of 150 in our provided best model, contrast to that of 300 in Tensorflow Fold implementation. However, we do not observe any improvement but a quicker overfit when turn to 300, even with the more powerful dropout mechanism mentioned in that implementation. The dropout mechanism may require further investigation.

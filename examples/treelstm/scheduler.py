@@ -1,5 +1,6 @@
 import time
 import dynet as dy
+import numpy as np
 import sys
 from utils import acc_eval
 
@@ -17,15 +18,16 @@ class Scheduler:
         all_trainers = [self.trainer_param, self.trainer_embed]
         for trainer in all_trainers:
             trainer.set_clip_threshold(-1)
-            trainer.set_sparse_updates(False)
+            trainer.set_sparse_updates(params['sparse'])
 
     def exec_train(self, max_turns=1000):
-        start = time.time()
+        total_time = []
         best_acc = 0
         n_endure, endure_upper = 0, 10
         model_meta_file = None
         for i in range(max_turns):
             self.train.reset()
+            time_start = time.time()
             for j, trees in enumerate(self.train.batches(batch_size=self.params['batch_size']), 1):
                 dy.renew_cg()
                 loss = self.model.losses_for_tree_batch(trees)
@@ -38,6 +40,9 @@ class Scheduler:
                 if j % 50 == 0:
                     self.trainer_param.status()
                     print(loss_value, file=sys.stderr)
+            time_epoch = time.time() - time_start
+            total_time.append(time_epoch)
+            print('epoch {} time {}'.format(i, time_epoch))
             self.trainer_param.learning_rate *= self.params['learning_rate_decay']
             self.trainer_embed.learning_rate *= self.params['learning_rate_decay']
 
@@ -53,5 +58,8 @@ class Scheduler:
                 n_endure += 1
                 if n_endure > endure_upper:
                     break
-
+        self._print_time_statistics(total_time)
         return best_acc, model_meta_file
+
+    def _print_time_statistics(self, total_time):
+        print("N_EPOCH {}, MEAN {}, STD {}".format(len(total_time), np.mean(total_time), np.std(total_time)))
