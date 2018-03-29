@@ -56,7 +56,7 @@ def establish_args():
     if args.mode not in ['train', 'test', 'search']:
         raise ValueError('Wrong mode, [train, test, search] available now')
     if args.mode == 'test':
-        if args.model_meta_file is not None:
+        if args.model_meta_file is None:
             raise ValueError("Missing model meta file to load")
     else:
         meta_path = os.path.join(args.save_dir, 'meta')

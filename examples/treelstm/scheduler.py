@@ -21,6 +21,7 @@ class Scheduler:
             trainer.set_sparse_updates(params['sparse'])
 
     def exec_train(self, max_turns=1000):
+        time_stamp = time.time()
         total_time = []
         best_acc = 0
         n_endure, endure_upper = 0, 10
@@ -52,7 +53,7 @@ class Scheduler:
 
             if updated:
                 self.model.delete(model_meta_file)
-                model_meta_file = self.model.save(self.params['save_dir'], str(start) + '_' + str(i))
+                model_meta_file = self.model.save(self.params['save_dir'], str(time_stamp) + '_' + str(i))
                 n_endure = 0
             else:
                 n_endure += 1
@@ -62,5 +63,5 @@ class Scheduler:
         return best_acc, model_meta_file
 
     @staticmethod
-    def _print_time_statistics(self, total_time):
+    def _print_time_statistics(total_time):
         print("N_EPOCH {}, MEAN {}, STD {}".format(len(total_time), np.mean(total_time), np.std(total_time)))

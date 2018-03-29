@@ -51,7 +51,7 @@ class TreeLSTMClassifier(object):
         self.dropout_rate = self.params['dropout_rate']
         self.use_dropout = self.dropout_rate > 0
         if model_meta_file is not None:
-            saved_params = np.load(model_meta_file).items()
+            saved_params = np.load(model_meta_file).item()
             self.params.update(saved_params)
         self.pc_param = dy.ParameterCollection()
         self.pc_embed = dy.ParameterCollection()
@@ -95,17 +95,19 @@ class TreeLSTMClassifier(object):
         np.save(meta_path, self.params)
         self.pc_param.save(param_path)
         self.pc_embed.save(embed_path)
-        return meta_path
+        return meta_path + '.npy'
 
     def _load_param_embed(self, model_meta_file):
+        model_meta_file = model_meta_file.replace('.npy', '')
         param_path = model_meta_file.replace('meta', 'param')
         embed_path = model_meta_file.replace('meta', 'embed')
         self.pc_param.populate(param_path)
         self.pc_embed.populate(embed_path)
 
     @staticmethod
-    def delete(self, model_meta_file):
+    def delete(model_meta_file):
         if model_meta_file is None: return
         os.remove(model_meta_file)
+        model_meta_file = model_meta_file.replace('.npy', '')
         os.remove(model_meta_file.replace('meta', 'param'))
         os.remove(model_meta_file.replace('meta', 'embed'))
