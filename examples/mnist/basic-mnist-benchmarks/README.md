@@ -28,6 +28,10 @@ or
 python mnist_dynet_autobatch.py --dynet_gpus 1 --dynet_autobatch 1
 </pre>
 
+## Usage (PyTorch)
+
+The code of "mnist"
+
 ## Benchmark
 
 System | Speed | Test accuracy (after 20 epochs)
