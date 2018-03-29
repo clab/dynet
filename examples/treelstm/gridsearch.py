@@ -15,7 +15,8 @@ class GridSearch:
         self.reset()
 
     def _add(self, param_name, param_value):
-        assert not self.in_iteration
+        if self.in_iteration:
+            raise RuntimeError('Can not add search parameter in iteration.')
         self.param_names.append(param_name)
         self.param_values.append(param_value)
 

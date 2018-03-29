@@ -1,7 +1,6 @@
 import re
 import codecs
 import random
-import numpy as np
 from collections import Counter
 
 
@@ -36,7 +35,7 @@ def _within_bracket(toks):
             return Tree(label, children)
         else:
             children.append(Tree(tok, None))
-    assert (False), list(toks)
+    raise RuntimeError('Error Parsing sexpr string')
 
 
 class Tree(object):
@@ -47,7 +46,8 @@ class Tree(object):
     @staticmethod
     def from_sexpr(string):
         toks = iter(_tokenize_sexpr(string))
-        assert next(toks) == "("
+        if next(toks) != "(":
+            raise RuntimeError('Error Parsing sexpr string')
         return _within_bracket(toks)
 
     def __str__(self):

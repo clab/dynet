@@ -1,5 +1,6 @@
 from __future__ import print_function
 import _dynet as dy
+
 dyparams = dy.DynetParams()
 dyparams.from_args()
 dyparams.set_autobatch(True)
@@ -8,6 +9,7 @@ dyparams.init()
 import time
 import os
 import argparse
+import warnings
 
 from model import TreeLSTMClassifier
 from utils import get_embeds, acc_eval
@@ -38,7 +40,7 @@ def establish_args():
     parser.add_argument('--save_dir', default='saved_models')
     parser.add_argument('--batch_size', default=25, type=int)
     parser.add_argument('--regularization_strength', default=1e-4, type=float)
-    
+
     # model parameters
     parser.add_argument('--use_glove', default=False, action='store_true', help='Use glove vectors or not.')
     parser.add_argument('--dropout_rate', default=0.5, type=float)
@@ -49,11 +51,13 @@ def establish_args():
 
     # check and ensure feasibility
     if args.use_glove and args.wembed_size != 300:
-        print('Warning: word embedding size must be 300 when using glove, auto adjusted.')
+        warnings.warn('Warning: word embedding size must be 300 when using glove, auto adjusted.')
         args.wembed_size = 300
-    assert (args.mode in ['train', 'test', 'search']), 'Wrong mode, [train, test, search] available now'
+    if args.mode not in ['train', 'test', 'search']:
+        raise ValueError('Wrong mode, [train, test, search] available now')
     if args.mode == 'test':
-        assert(args.model_meta_file is not None), "Model meta not specified in evaluation mode."
+        if args.model_meta_file is not None:
+            raise ValueError("Missing model meta file to load")
     else:
         meta_path = os.path.join(args.save_dir, 'meta')
         param_path = os.path.join(args.save_dir, 'param')
@@ -84,7 +88,6 @@ model_params = {
     'dropout_rate': args.dropout_rate
 }
 
-
 train = DataLoader(os.path.join(data_dir, 'train.txt'))
 dev = DataLoader(os.path.join(data_dir, 'dev.txt'))
 test = DataLoader(os.path.join(data_dir, 'test.txt'))
@@ -110,7 +113,8 @@ elif args.mode == 'search':
     best_acc, model_meta_file = 0, None
     for params in search:
         sp, mp = scheduler_params.copy(), model_params.copy()
-        sp.update(params), mp.update(params)
+        sp.update(params)
+        mp.update(params)
         acc, model_meta_file_tmp = exec_train(mp, sp)
         f.write(str(params))
         f.write(str(acc))

@@ -1,5 +1,5 @@
 import dynet as dy
-import pickle
+import numpy as np
 import os
 
 
@@ -13,9 +13,10 @@ class TreeLSTMBuilder(object):
         self.w2i = word_vocab
 
     def expr_for_tree(self, tree, decorate=False, training=True):
-        assert (not tree.isleaf())
+        if tree.isleaf(): raise RuntimeError('Tree structure error: meet with leaves')
         if len(tree.children) == 1:
-            assert (tree.children[0].isleaf())
+            if not tree.children[0].isleaf(): raise RuntimeError(
+                'Tree structure error: tree nodes with one child should be a leaf')
             emb = self.E[self.w2i.get(tree.children[0].label, 0)]
             Wi, Wo, Wu = [dy.parameter(w) for w in self.WS]
             bi, bo, bu, _ = [dy.parameter(b) for b in self.BS]
@@ -26,7 +27,7 @@ class TreeLSTMBuilder(object):
             h = dy.cmult(o, dy.tanh(c))
             if decorate: tree._e = h
             return h, c
-        assert (len(tree.children) == 2), tree.children[0]
+        if len(tree.children) != 2: raise RuntimeError('Tree structure error: only binary trees are supported.')
         e1, c1 = self.expr_for_tree(tree.children[0], decorate)
         e2, c2 = self.expr_for_tree(tree.children[1], decorate)
         Ui, Uo, Uu = [dy.parameter(u) for u in self.US]
@@ -50,18 +51,18 @@ class TreeLSTMClassifier(object):
         self.dropout_rate = self.params['dropout_rate']
         self.use_dropout = self.dropout_rate > 0
         if model_meta_file is not None:
-            with open(model_meta_file, 'rb') as f:
-                saved_params = pickle.load(f)
+            saved_params = np.load(model_meta_file).items()
             self.params.update(saved_params)
         self.pc_param = dy.ParameterCollection()
         self.pc_embed = dy.ParameterCollection()
-        self.builder = TreeLSTMBuilder(self.pc_param, self.pc_embed, w2i, self.params['wembed_size'], self.params['hidden_size'], word_embed)
+        self.builder = TreeLSTMBuilder(self.pc_param, self.pc_embed, w2i, self.params['wembed_size'],
+                                       self.params['hidden_size'], word_embed)
         self.W_ = self.pc_param.add_parameters((n_classes, self.params['hidden_size']))
         if model_meta_file is not None:
             self._load_param_embed(model_meta_file)
 
     def predict_for_tree(self, tree, decorate=True, training=True):
-        h, c = self.builder.expr_for_tree(tree, decorate, training)
+        h, _ = self.builder.expr_for_tree(tree, decorate, training)
         if training:
             for node in tree.nonterms_iter():
                 e = dy.dropout(node._e, self.dropout_rate) if self.use_dropout else node._e
@@ -70,16 +71,16 @@ class TreeLSTMClassifier(object):
             tree._logits = self.W_ * h
             return tree._logits.npvalue()
 
-    def losses_for_tree(self, tree, sum=True):
+    def losses_for_tree(self, tree, summation=True):
         self.predict_for_tree(tree, decorate=True, training=True)
         nodes = tree.nonterms()
         losses = [dy.pickneglogsoftmax(nt._logits, nt.label) for nt in nodes]
-        return dy.esum(losses) if sum else losses, len(nodes)
+        return dy.esum(losses) if summation else losses, len(nodes)
 
     def losses_for_tree_batch(self, trees):
         batch_losses = []
         for tree in trees:
-            losses, _ = self.losses_for_tree(tree, sum=False)
+            losses, _ = self.losses_for_tree(tree, summation=False)
             batch_losses += losses
         return dy.esum(batch_losses)
 
@@ -91,18 +92,18 @@ class TreeLSTMClassifier(object):
         meta_path = os.path.join(save_dir, 'meta', model_name)
         param_path = os.path.join(save_dir, 'param', model_name)
         embed_path = os.path.join(save_dir, 'embed', model_name)
-        with open(meta_path, 'wb') as f:
-            pickle.dump(self.params, f)
+        np.save(meta_path, self.params)
         self.pc_param.save(param_path)
         self.pc_embed.save(embed_path)
         return meta_path
-    
+
     def _load_param_embed(self, model_meta_file):
         param_path = model_meta_file.replace('meta', 'param')
         embed_path = model_meta_file.replace('meta', 'embed')
         self.pc_param.populate(param_path)
         self.pc_embed.populate(embed_path)
 
+    @staticmethod
     def delete(self, model_meta_file):
         if model_meta_file is None: return
         os.remove(model_meta_file)

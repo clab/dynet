@@ -10,7 +10,7 @@ class Scheduler:
         self.train, self.dev = train, dev
         self.model = model
         self.params = params
-        
+
         self.trainer_param = getattr(dy, params['trainer'])(model.pc_param)
         self.trainer_embed = getattr(dy, params['trainer'])(model.pc_embed)
         self.trainer_param.learning_rate = params['learning_rate_param']
@@ -61,5 +61,6 @@ class Scheduler:
         self._print_time_statistics(total_time)
         return best_acc, model_meta_file
 
+    @staticmethod
     def _print_time_statistics(self, total_time):
         print("N_EPOCH {}, MEAN {}, STD {}".format(len(total_time), np.mean(total_time), np.std(total_time)))
