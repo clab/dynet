@@ -4,12 +4,19 @@ Here's a comparison between Dynet and Pytorch on the "Hello World" example of de
 
 ## Usage (Dynet)
 
-First, download the MNIST dataset from the [official website](http://yann.lecun.com/exdb/mnist/) and decompress it.
+Download the MNIST dataset from the [official website](http://yann.lecun.com/exdb/mnist/) and decompress it.
 
     wget -O - http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz | gunzip > train-images.idx3-ubyte
     wget -O - http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz | gunzip > train-labels.idx1-ubyte
     wget -O - http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz | gunzip > t10k-images.idx3-ubyte
     wget -O - http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz | gunzip > t10k-labels.idx1-ubyte
+
+Install the GPU version of Dynet according to the instructions on the [official website](http://dynet.readthedocs.io/en/latest/python.html#installing-a-cutting-edge-and-or-gpu-version).
+
+The architecture of the Convolutional Neural Network follows the architecture used in the [TensorFlow Tutorials](https://www.tensorflow.org/tutorials/).
+
+Here are two Python scripts for Dynet. One (mnist_dynet_minibatch.py) applies minibatch, and the other one (mnist_dynet_autobatch.py) applies autobatch.
+
 
 Then, run the training (here for a batch size of 128 and 20 epochs) :
 
