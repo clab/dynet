@@ -64,7 +64,8 @@ python mnist_pytorch.py
 
 Batch size: 64, learning rate: 0.01. 
 
-System | Speed | Test accuracy (after 20 epochs)
------------- | ------------- | -------------
-Intel® Core™ i5-4200H CPU @ 2.80GHz × 4 | ~7±0.5 s per epoch| 97.84 %
-
+| OS | Device | Framework | Speed | Accuracy (After 20 Epochs)|
+| --- | --- | --- | --- | --- |
+| Ubuntu 16.04 |  GeForce GTX 1080 Ti | PyTorch | ~ 4.23±0.01 s per epoch | 97.5330 |
+| Ubuntu 16.04 |  GeForce GTX 1080 Ti | DyNet (autobatch) | ~ 2.91±0.01 s per epoch | 97.6848 |
+| Ubuntu 16.04 |  GeForce GTX 1080 Ti | DyNet (minibatch) | ~ 2.91±0.01 s per epoch | 97.6848 |
