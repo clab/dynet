@@ -66,6 +66,6 @@ Batch size: 64, learning rate: 0.01.
 
 | OS | Device | Framework | Speed | Accuracy (After 20 Epochs)|
 | --- | --- | --- | --- | --- |
-| Ubuntu 16.04 |  GeForce GTX 1080 Ti | PyTorch | ~ 4.23±0.01 s per epoch | 97.5330 |
-| Ubuntu 16.04 |  GeForce GTX 1080 Ti | DyNet (autobatch) | ~ 2.91±0.01 s per epoch | 97.6848 |
-| Ubuntu 16.04 |  GeForce GTX 1080 Ti | DyNet (minibatch) | ~ 2.91±0.01 s per epoch | 97.6848 |
+| Ubuntu 16.04 |  GeForce GTX 1080 Ti | PyTorch | ~ 4.53±0.73 s per epoch | 98.95% |
+| Ubuntu 16.04 |  GeForce GTX 1080 Ti | DyNet (autobatch) | ~ 2.91±0.01 s per epoch | 98.95% |
+| Ubuntu 16.04 |  GeForce GTX 1080 Ti | DyNet (minibatch) | ~ 4.13±0.13 s per epoch | 99.16% |
