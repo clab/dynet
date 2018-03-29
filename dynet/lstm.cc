@@ -293,13 +293,13 @@ void CoupledLSTMBuilder::disable_dropout() {
 enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
 enum { LN_GH, LN_BH, LN_GX, LN_BX, LN_GC, LN_BC};
 
-VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false), forget_bias(1.f), dropout_masks_valid(false) { }
+VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false), forget_bias(1.f), dropout_masks_valid(false), dropconnect_masks_valid(false), dropconnect_rate(0) { }
 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                                        unsigned input_dim,
                                        unsigned hidden_dim,
                                        ParameterCollection& model,
-                                       bool ln_lstm, float forget_bias) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm), forget_bias(forget_bias), dropout_masks_valid(false) {
+                                       bool ln_lstm, float forget_bias) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm), forget_bias(forget_bias), dropout_masks_valid(false), dropconnect_masks_valid(false) {
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("vanilla-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -327,6 +327,7 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
   }  // layers
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
+  dropconnect_rate = 0.f;
 }
 
 void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
@@ -370,6 +371,7 @@ void VanillaLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit
   }
 
   dropout_masks_valid = false;
+  dropconnect_masks_valid = false;
 }
 
 void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
@@ -390,6 +392,19 @@ void VanillaLSTMBuilder::set_dropout_masks(unsigned batch_size) {
     }
   }
   dropout_masks_valid = true;
+}
+
+void VanillaLSTMBuilder::set_dropconnect_masks() {
+  dropconnect_masks.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    if (dropconnect_rate > 0.f) {
+      float retention_rate = 1.f - dropconnect_rate;
+      auto& p = params[i];
+      const auto& hidden2hidden_dim = p[_H2I].dim();
+      dropconnect_masks.push_back(random_bernoulli(*_cg, hidden2hidden_dim, retention_rate));
+    }
+  }
+  dropconnect_masks_valid = true;
 }
 
 ParameterCollection & VanillaLSTMBuilder::get_parameter_collection() {
@@ -440,6 +455,8 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
   vector<Expression>& ct = c.back();
   Expression in = x;
   if ((dropout_rate > 0.f || dropout_rate_h > 0.f) && !dropout_masks_valid) set_dropout_masks(x.dim().bd);
+  if (dropconnect_rate > 0.f && !dropconnect_masks_valid) set_dropconnect_masks();
+
   for (unsigned i = 0; i < layers; ++i) {
     const vector<Expression>& vars = param_vars[i];
 
@@ -462,6 +479,14 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     }
     if (has_prev_state && dropout_rate_h > 0.f)
       i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
+    
+    Expression h2h_weights;
+
+    h2h_weights = vars[_H2I];
+    if (dropconnect_rate > 0.f) {
+      h2h_weights = cmult(h2h_weights, dropconnect_masks[i]);
+    }
+
     // input
     Expression tmp;
     Expression i_ait;
@@ -476,7 +501,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
         tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]);
     }else{
       if (has_prev_state)
-        tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
+        tmp = affine_transform({vars[_BI], vars[_X2I], in, h2h_weights, i_h_tm1});
       else
         tmp = affine_transform({vars[_BI], vars[_X2I], in});
     }
@@ -534,6 +559,16 @@ void VanillaLSTMBuilder::set_dropout(float d, float d_h) {
 void VanillaLSTMBuilder::disable_dropout() {
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
+}
+
+void VanillaLSTMBuilder::set_dropconnect(float d) {
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
+                          "dropweight rate must be a probability (>=0 and <=1)");
+  dropconnect_rate = d;
+}
+
+void VanillaLSTMBuilder::disable_dropconnect() {
+  dropconnect_rate = 0.f;
 }
 
 

@@ -5288,7 +5288,6 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
             exprs.append(layer_exprs)
         return exprs
 
-
     cpdef void set_dropouts(self, float d, float d_r):
         """Set the dropout rates
         
@@ -5329,6 +5328,15 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
         """
         self.thisvanillaptr.set_dropout_masks(batch_size)
 
+    cpdef void set_dropconnect(self, float d):
+        self.thisvanillaptr.set_dropconnect(d)
+    
+    cpdef void disable_dropconnect(self):
+        self.thisvanillaptr.disable_dropconnect()
+    
+    cpdef set_dropconnect_masks(self):
+        self.thisvanillaptr.set_dropconnect_masks()
+        
     def whoami(self): return "VanillaLSTMBuilder"
 # VanillaLSTMBuilder }}}
 
