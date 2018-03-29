@@ -1,6 +1,6 @@
 # MNIST Benchmarks
 
-Here is the comparison between Dynet and Pytorch on the "Hello World" example of deep learning : MNIST digit classification.
+Here is the comparison between Dynet and PyTorch on the "Hello World" example of deep learning : MNIST digit classification.
 
 ## Usage (Dynet)
 
@@ -17,7 +17,7 @@ Install the GPU version of Dynet according to the instructions on the [official 
 
 The architecture of the Convolutional Neural Network follows the architecture used in the [TensorFlow Tutorials](https://www.tensorflow.org/tutorials/layers).
 
-Here are two Python scripts for Dynet. One (mnist_dynet_minibatch.py) applies minibatch, and the other one (mnist_dynet_autobatch.py) applies autobatch.
+Here are two Python scripts for Dynet. One (`mnist_dynet_minibatch.py`) applies minibatch, and the other one (`mnist_dynet_autobatch.py`) applies autobatch.
 
 Then, run the training:
 <pre>
@@ -57,10 +57,12 @@ Install CUDA version of PyTorch according to the instructions on the [official w
 Then, run the training:
 
 <pre>
-
+python mnist_pytorch.py
 </pre>
 
 ## Benchmark
+
+Batch size: 64, learning rate: 0.01. 
 
 System | Speed | Test accuracy (after 20 epochs)
 ------------ | ------------- | -------------
