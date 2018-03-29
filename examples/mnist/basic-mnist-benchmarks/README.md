@@ -30,7 +30,7 @@ python mnist_dynet_autobatch.py --dynet_gpus 1 --dynet_autobatch 1
 
 ## Usage (PyTorch)
 
-The code of "mnist"
+The code of 'mnist'
 
 ## Benchmark
 
