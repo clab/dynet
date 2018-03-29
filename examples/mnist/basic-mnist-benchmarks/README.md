@@ -52,6 +52,14 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=1)
 </pre>
 
+Install CUDA version of PyTorch according to the instructions on the [official website](http://pytorch.org/).
+
+Then, run the training:
+
+<pre>
+
+</pre>
+
 ## Benchmark
 
 System | Speed | Test accuracy (after 20 epochs)
