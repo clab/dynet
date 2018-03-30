@@ -27,7 +27,7 @@ parser.add_argument('--lr', type=float, default=0.01,
                     help='learning rate (default: 0.01)')
 parser.add_argument('--log-interval', type=int, default=10,
                     help='how many batches to wait before logging training status')
-parser.add_argument("--dynet_autobatch", type=int, default=0, 
+parser.add_argument("--dynet_autobatch", type=int, default=0,
                     help="Set to 1 to turn on autobatching.")
 parser.add_argument("--dynet_gpus", type=int, default=0,
                     help="Set to 1 to train on GPU.")
@@ -45,9 +45,9 @@ def read(dataset, path):
         fname_lbl = os.path.join(path, "t10k-labels.idx1-ubyte")
     else:
         raise ValueError("dataset must be 'training' or 'testing'")
-        
+
     with open(fname_lbl, 'rb') as flbl:
-        magic, num = struct.unpack(">II", flbl.read(8))
+        _, num = struct.unpack(">II", flbl.read(8))
         lbl = np.fromfile(flbl, dtype=np.int8)
 
     with open(fname_img, 'rb') as fimg:
@@ -57,7 +57,7 @@ def read(dataset, path):
     get_img = lambda idx: (lbl[idx], img[idx])
 
     for i in range(len(lbl)):
-        yield get_img(i)          
+        yield get_img(i)
     
 class mnist_network(object):
     
@@ -74,7 +74,7 @@ class mnist_network(object):
         x = dy.inputTensor(inputs, batched=True)
         batchsize = x.dim()[-1]
         conv1 = dy.parameter(self.pConv1)
-        b1 = dy.parameter(self.pB1)  
+        b1 = dy.parameter(self.pB1)
         x = dy.conv2d_bias(x, conv1, b1, [1, 1], is_valid=False)
         x = dy.rectify(dy.maxpooling2d(x, [2, 2], [2, 2]))
         conv2 = dy.parameter(self.pConv2)
@@ -88,15 +88,15 @@ class mnist_network(object):
         if dropout:
             h = dy.dropout(h, DROPOUT_RATE)
         w2 = dy.parameter(self.pW2)
-        output = w2*h       
+        output = w2*h
         # output = dy.softmax(w2*h)
         return output
     
     def create_network_return_loss(self, inputs, expected_output, dropout=False):
-        out = self(inputs, dropout)       
+        out = self(inputs, dropout)
         loss = dy.pickneglogsoftmax_batch(out, expected_output)
         # loss = -dy.log(dy.pick(out, expected_output))
-        return loss      
+        return loss
         
     def create_network_return_best(self, inputs, dropout=False):
         out = self(inputs, dropout)
@@ -124,11 +124,11 @@ def train(epoch):
             lbls.append(lbl)
             imgs.append(img)
         losses = network.create_network_return_loss(imgs, lbls, dropout=True)
-        loss = dy.mean_batches(losses)   
+        loss = dy.mean_batches(losses)
         if (int(i/args.batch_size)) % args.log_interval == 0:
                         print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                                 epoch, i, len(train_data),
-                                100. * i/len(train_data), loss.value()))        
+                                100. * i/len(train_data), loss.value()))
         loss.backward()
         trainer.update()
         i += args.batch_size
@@ -145,13 +145,13 @@ def test():
     losses = network.create_network_return_loss(imgs, lbls, dropout=False)
     loss = dy.mean_batches(losses)
     predicts = network.create_network_return_best(imgs, dropout=False)
-    correct = np.sum(lbls == predicts[0])    
+    correct = np.sum(lbls == predicts[0])
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
             loss.value(), correct, len(test_data),
-            100. * correct / len(test_data)))    
+            100. * correct / len(test_data)))
 
 for epoch in range(1, args.epochs + 1):
     train(epoch)
-    test() 
+    test()
     
-m.save("/tmp/tmp.model")
+# m.save("/tmp/tmp.model")
