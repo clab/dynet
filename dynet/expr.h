@@ -593,6 +593,28 @@ inline Expression operator*(float y, const Expression& x) { return x * y; }
  */
 inline Expression operator/(const Expression& x, float y) { return x * (1.f / y); }
 
+namespace detail {
+template <typename F, typename T>
+inline Expression f(const T& xs) {
+  DYNET_ARG_CHECK(xs.size() > 0, "Zero-size argument passed to function");
+  ComputationGraph *pg = xs.begin()->pg;
+  std::vector<VariableIndex> xis(xs.size());
+  int i = 0;
+  for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
+  return Expression(pg, pg->add_function<F>(xis));
+}
+template <typename F, typename T, typename T1>
+inline Expression f(const T& xs, const T1& arg1) {
+  DYNET_ARG_CHECK(xs.size() > 0, "Zero-size argument passed to function");
+  ComputationGraph *pg = xs.begin()->pg;
+  std::vector<VariableIndex> xis(xs.size());
+  int i = 0;
+  for (auto xi = xs.begin(); xi != xs.end(); ++xi) xis[i++] = xi->i;
+  return Expression(pg, pg->add_function<F>(xis, arg1));
+}
+} // namespace detail
+
+
 /**
  * \ingroup arithmeticoperations
  * \brief Matrix division
