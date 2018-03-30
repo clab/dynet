@@ -47,11 +47,11 @@ def read(dataset, path):
         raise ValueError("dataset must be 'training' or 'testing'")
 
     with open(fname_lbl, 'rb') as flbl:
-        _, num = struct.unpack(">II", flbl.read(8))
+        _, _ = struct.unpack(">II", flbl.read(8))
         lbl = np.fromfile(flbl, dtype=np.int8)
 
     with open(fname_img, 'rb') as fimg:
-        magic, num, rows, cols = struct.unpack(">IIII", fimg.read(16))
+        _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
         img = np.multiply(np.fromfile(fimg, dtype=np.uint8).reshape(len(lbl), rows, cols), 1.0/255.0)
 
     get_img = lambda idx: (lbl[idx], img[idx])
