@@ -51,7 +51,7 @@ test_loader = torch.utils.data.DataLoader(
 
 
 class Net(nn.Module):
-    
+
     def __init__(self):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(1, 32, kernel_size=5, padding=2)
