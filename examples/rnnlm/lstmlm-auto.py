@@ -104,9 +104,10 @@ for updates in xrange(1, updates):
       loss_exp, mb_words = lm.minibatch_lm_loss(valid_minibatch)
       dev_loss += loss_exp.scalar_value()
       dev_words += mb_words
+    dev_time = time.time() - dev_start
     print("nll=%.4f, ppl=%.4f, words=%r, time=%.4f, word_per_sec=%.4f" % (
         dev_loss / dev_words, math.exp(dev_loss / dev_words), dev_words,
-        train_time, all_words / train_time))
+        dev_time, dev_words / dev_time))
 
     # Compute loss for one training minibatch.
   minibatch = [next(random_training_instance)
@@ -124,4 +125,3 @@ for updates in xrange(1, updates):
   if cur_epoch != epoch:
     print("epoch %r finished" % cur_epoch)
     epoch = cur_epoch
-
