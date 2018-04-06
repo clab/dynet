@@ -30,7 +30,7 @@ size_t Dropout::aux_storage_size() const {
 
 template<class MyDevice>
 void Dropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Tensor m(fx.d, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   TensorTools::randomize_bernoulli(m, (1.f-p), 1.f / (1.f-p));
   tvec(fx).device(*dev.edevice) = tvec(*xs[0]) * tvec(m);
 }
@@ -42,7 +42,7 @@ void Dropout::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  Tensor m(dim, (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  Tensor m(fx.d, (float*)aux_mem, fx.device, DeviceMempool::FXS);
   tvec(dEdxi).device(*dev.edevice) += tvec(dEdf) * tvec(m);
 }
 DYNET_NODE_INST_DEV_IMPL(Dropout)

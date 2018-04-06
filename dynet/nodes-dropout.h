@@ -12,6 +12,8 @@ struct Dropout : public Node {
   DYNET_NODE_DEFINE_DEV_IMPL()
   size_t aux_storage_size() const override;
   virtual bool supports_multibatch() const override { return true; }
+  virtual int autobatch_sig(const ComputationGraph &cg, SigMap &sm) const override { Sig s(nt::dropout); s.add_float(p); return sm.get_idx(s); }
+  virtual std::vector<int> autobatch_concat(const ComputationGraph & cg) const override { return std::vector<int>(1, 1); }
   real p;
 };
 
