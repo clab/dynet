@@ -40,7 +40,7 @@ class Scheduler:
 
                 if j % 50 == 0:
                     self.trainer_param.status()
-                    print(loss_value, file=sys.stderr)
+                    print(loss_value)
             time_epoch = time.time() - time_start
             total_time.append(time_epoch)
             print('epoch {} time {}'.format(i, time_epoch))

@@ -1,5 +1,5 @@
 from __future__ import print_function
-import _dynet as dy
+import dynet as dy
 
 dyparams = dy.DynetParams()
 dyparams.from_args()
@@ -10,15 +10,37 @@ import time
 import os
 import argparse
 import warnings
+import zipfile
 
+from six.moves import urllib
 from model import TreeLSTMClassifier
 from utils import get_embeds, acc_eval
 from scheduler import Scheduler
 from dataloader import DataLoader
-from gridsearch import GridSearch
 
+DATA_URL='https://github.com/zhiyong1997/large-repo/raw/master/packed_data_and_model.zip'
 data_dir = 'trees'
 glove_path = 'glove_filtered.txt'
+
+def maybe_download_and_extract():
+  """Download and extract processed data and embeddings."""
+  dest_directory = '.' 
+  filename = DATA_URL.split('/')[-1]
+  filepath = os.path.join(dest_directory, filename)
+  if not os.path.exists(filepath):
+    def _progress(count, block_size, total_size):
+      sys.stdout.write('\r>> Downloading %s %.1f%%' % (filename,
+          float(count * block_size) / float(total_size) * 100.0))
+      sys.stdout.flush()
+    filepath, _ = urllib.request.urlretrieve(DATA_URL, filepath, _progress)
+    print()
+    statinfo = os.stat(filepath)
+    print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
+  extracted_dir_path = os.path.join(dest_directory, 'trees')
+  if not os.path.exists(extracted_dir_path):
+    zip_ref = zipfile.ZipFile(filepath, 'r')
+    zip_ref.extractall(dest_directory)
+    zip_ref.close()
 
 
 def establish_args():
@@ -29,7 +51,7 @@ def establish_args():
     parser.add_argument("--dynet-gpus", default=0, type=int)
 
     # control parameters
-    parser.add_argument('--mode', default='train', help='available modes: [train, search, test]')
+    parser.add_argument('--mode', default='train', help='available modes: [train, test]')
     parser.add_argument('--model_meta_file', default=None, type=str)
 
     # scheduler parameters
@@ -53,8 +75,8 @@ def establish_args():
     if args.use_glove and args.wembed_size != 300:
         warnings.warn('Warning: word embedding size must be 300 when using glove, auto adjusted.')
         args.wembed_size = 300
-    if args.mode not in ['train', 'test', 'search']:
-        raise ValueError('Wrong mode, [train, test, search] available now')
+    if args.mode not in ['train', 'test']:
+        raise ValueError('Wrong mode, [train, test] available now')
     if args.mode == 'test':
         if args.model_meta_file is None:
             raise ValueError("Missing model meta file to load")
@@ -67,6 +89,7 @@ def establish_args():
         if not os.path.exists(embed_path): os.makedirs(embed_path)
     return args
 
+maybe_download_and_extract()
 
 start = time.time()
 args = establish_args()
@@ -107,22 +130,6 @@ def exec_train(model_params, scheduler_params):
 
 if args.mode == 'train':
     acc, model_meta_file = exec_train(model_params, scheduler_params)
-elif args.mode == 'search':
-    search = GridSearch('grid_search.txt')
-    f = open('grid_search_result.txt', 'w')
-    best_acc, model_meta_file = 0, None
-    for params in search:
-        sp, mp = scheduler_params.copy(), model_params.copy()
-        sp.update(params)
-        mp.update(params)
-        acc, model_meta_file_tmp = exec_train(mp, sp)
-        f.write(str(params))
-        f.write(str(acc))
-        best_acc, updated = max(best_acc, acc), acc > best_acc
-        if updated:
-            model_meta_file = model_meta_file_tmp
-        print('params {} acc {} best_acc {}'.format(params, acc, best_acc))
-    f.close()
 else:
     model_meta_file = args.model_meta_file
 
@@ -132,7 +139,7 @@ def eval_model(model_meta_file):
     model = TreeLSTMClassifier(n_classes=5, w2i=w2i, word_embed=word_embed,
                                params=model_params, model_meta_file=model_meta_file)
     acc = acc_eval(test, model)
-    print('test acc%.4f' % acc)
+    print('test acc %.4f' % acc)
 
 
 eval_model(model_meta_file)
