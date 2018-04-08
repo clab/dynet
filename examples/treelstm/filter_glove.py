@@ -5,7 +5,7 @@ import os
 data_dir = 'trees'
 datasets = ['train', 'dev', 'test']
 glove_origin_path = 'glove.840B.300d.txt'
-glove_filtered_path = 'glove_filterer.txt'
+glove_filtered_path = 'glove_filtered.txt'
 
 
 def get_vocab(file_path):
