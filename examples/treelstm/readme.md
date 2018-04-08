@@ -5,11 +5,7 @@ A highest accuracy (root fine-grain accuracy) of 0.5213 on test set is achieved 
 ## Data
 [Stanford Sentiment Treebank](http://nlp.stanford.edu/sentiment/index.html) and [Glove word vectors](http://nlp.stanford.edu/projects/glove/) are used in this implementation. 
 
-Pre-processed data and trained model (68M) can be accessed by
-```
-wget https://github.com/zhiyong1997/large-repo/raw/master/packed_data_and_model.zip
-unzip packed_data_and_model.zip
-```
+Pre-processed data and trained model (68M) will be downloaded automatically if not detected.
 
 Alternatively, you can download original files(~2G) and process them by
 ```
@@ -19,7 +15,7 @@ unzip glove.840B.300d.zip trainDevTestTrees_PTB.zip
 python filter_glove.py
 ```
 ## Usage
-There are three available modes:train, search and test. 
+There are two available modes:train and test. 
 
 In the train mode, a group of parameters are used to train a model. The training process will stop automatically if the best accuracy on the dev set has not been improved for 10 turns, and the best model are then used for evaluation on the test set.
 
@@ -27,16 +23,8 @@ For example:
 ```
 python main.py --use_glove --dropout_rate 0.3
 ```
-In the search mode, parameters and their values can be added to 'grid_search.txt' in this format:
-```
-hidden_size int 100,150,200
-dropout_rate float 0.3,0.5,0.7
-```
-All combinations of these parameters will be used for training in the way described before. A model will be saved for each group of parameters, and the best one on dev set will be used for final evaluation.
-```
-python main.py --mode search --use_glove
-```
-The saving logic is a little complex, which includes the meta file: used to specify network structure, the parameter file: used to store parameters and the embed file: used to store the fine-tuned embeddings. They are supposed to be saved at saved_models/meta/, saved_models/param/ and saved_models/embed/.
+
+The save and load logic is a little complex, which includes the meta file: used to specify network structure, the parameter file: used to store parameters and the embed file: used to store the fine-tuned embeddings. They are supposed to be saved at saved_models/meta/, saved_models/param/ and saved_models/embed/, respectively.
 
 To restore a model and evaluate its performance:
 ```
