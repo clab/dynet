@@ -3,9 +3,8 @@ import dynet as dy
 
 dyparams = dy.DynetParams()
 dyparams.from_args()
-dyparams.set_autobatch(True)
-dyparams.init()
 
+import sys
 import time
 import os
 import argparse
@@ -24,7 +23,7 @@ glove_path = 'glove_filtered.txt'
 
 def maybe_download_and_extract():
   """Download and extract processed data and embeddings."""
-  dest_directory = '.' 
+  dest_directory = '.'
   filename = DATA_URL.split('/')[-1]
   filepath = os.path.join(dest_directory, filename)
   if not os.path.exists(filepath):
@@ -49,6 +48,7 @@ def establish_args():
     parser.add_argument("--dynet-seed", default=0, type=int)
     parser.add_argument("--dynet-mem", default=512, type=int)
     parser.add_argument("--dynet-gpus", default=0, type=int)
+    parser.add_argument("--dynet-autobatch", default=0, type=int)
 
     # control parameters
     parser.add_argument('--mode', default='train', help='available modes: [train, test]')
@@ -65,7 +65,7 @@ def establish_args():
 
     # model parameters
     parser.add_argument('--use_glove', default=False, action='store_true', help='Use glove vectors or not.')
-    parser.add_argument('--dropout_rate', default=0.5, type=float)
+    parser.add_argument('--dropout_rate', default=0.3, type=float)
     parser.add_argument('--wembed_size', default=300, type=int, help='embedding size')
     parser.add_argument('--hidden_size', default=150, type=int, help='hidden size')
 

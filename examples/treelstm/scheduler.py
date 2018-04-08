@@ -1,7 +1,6 @@
 import time
 import dynet as dy
 import numpy as np
-import sys
 from utils import acc_eval
 
 
@@ -64,4 +63,4 @@ class Scheduler:
 
     @staticmethod
     def _print_time_statistics(total_time):
-        print("N_EPOCH {}, MEAN {}, STD {}".format(len(total_time), np.mean(total_time), np.std(total_time)))
+        print("N_EPOCH {}, MEAN {} s, STD {} s".format(len(total_time) - 1, np.mean(total_time[1:]), np.std(total_time[1:])))
