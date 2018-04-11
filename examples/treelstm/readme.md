@@ -42,12 +42,14 @@ python main.py --mode test --model_meta_file saved_models/meta/model_name
 
 The following "TF Fold" refers to [this implementation](https://github.com/tensorflow/fold/blob/master/tensorflow_fold/g3doc/sentiment.ipynb).
 
+
 | Device | Framework | Speed (time per epoch) |
 | --- | --- | --- |
 | GeForce GTX 1080 Ti | DyNet | 11.77 (±0.06) s |
 | GeForce GTX 1080 Ti | TF Fold | 13.85 (±0.35) s |
-| 3.20 GHz Intel Core i7-6900K | DyNet | 18.47 (±0.22) s |
-| 3.20 GHz Intel Core i7-6900K | TF Fold | 18.09 (±0.18) s|
+| 3.20 GHz Intel Core i7-6900K | DyNet (single cpu)| 18.47 (±0.22) s |
+| 3.20 GHz Intel Core i7-6900K | TF Fold (single cpu)| 50.70 (±0.47) s|
+| 3.20 GHz Intel Core i7-6900K | TF Fold (multiple cpus: 16 available)| 18.09 (±0.18) s|
 
 
 ## Implementation Notes 
