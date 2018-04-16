@@ -843,7 +843,11 @@ cdef class Expression: #{{{
             return _cmul(self, other)
         else: raise NotImplementedError()
     def __div__(self, other):
-        if isinstance(self, Expression) and isinstance(other, (int,float)):
+        if isinstance(self, Expression) and isinstance(other, Expression):
+            return _div(self, other)
+        elif isinstance(self, (int,float)):
+            return _cdiv(self, other)
+        elif isinstance(other, (int,float)):
             return _cdiv(self, other)
         else: raise NotImplementedError()
     def __truediv__(self, other):
@@ -2089,6 +2093,7 @@ cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.fr
 cdef _mul(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_mul(a.c(), b.c()))
 cdef _neg(Expression a): return Expression.from_cexpr(a.cg_version, c_op_neg(a.c()))
 cdef _scalarsub(float a, Expression b): ensure_freshness(b); return Expression.from_cexpr(b.cg_version, c_op_scalar_sub(a, b.c()))
+cdef _div(Expression a, Expression b): return Expression.from_cexpr(a.cg_version, c_op_div(a.c(), b.c()))
 cdef _cadd(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_add(a.c(), b))
 cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_mul(a.c(), b))
 cdef _cdiv(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_div(a.c(), b))
