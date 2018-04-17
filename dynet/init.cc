@@ -240,6 +240,7 @@ void initialize(DynetParams& params) {
     params.random_seed = rd();
   }
   cerr << "[dynet] random seed: " << params.random_seed << endl;
+  reset_rng(params.random_seed);
   rndeng = new mt19937(params.random_seed);
 
   // Set weight decay rate
@@ -292,6 +293,20 @@ void cleanup() {
   delete rndeng;
   get_device_manager()->clear();
   default_device = nullptr;
+}
+
+void reset_rng(unsigned seed) {
+  rndeng = new mt19937(seed);
+#if HAVE_CUDA
+  DeviceManager* device_manager = get_device_manager();
+  for (unsigned device_id=0; device_id < device_manager->num_devices(); device_id++){
+      Device* dev = device_manager->get(device_id);
+      if (dev->type == DeviceType::GPU) {
+        Device_GPU* dev_gpu = (Device_GPU*)dev;
+        dev_gpu->reset_rng(seed);
+      }
+  }
+#endif
 }
 
 } // namespace dynet

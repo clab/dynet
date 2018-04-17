@@ -19,6 +19,8 @@ Initialization functions
 
 .. autofunction:: dynet.init_from_params
 
+.. autofunction:: dynet.reset_random_seed
+
 ParameterCollection and Parameters
 ----------------------------------
 

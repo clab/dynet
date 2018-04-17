@@ -28,6 +28,7 @@ class Device {
   Device& operator=(const Device&) = delete;
   virtual ~Device();
  public:
+  void reset_rng(unsigned seed) {};
   int device_id;
   DeviceType type;
   MemAllocator* mem;
@@ -47,6 +48,7 @@ class Device_GPU : public Device {
   typedef Eigen::CudaStreamDevice EigenDevice;
   explicit Device_GPU(int my_id, const DeviceMempoolSizes & mb, int device_id, unsigned seed);
   ~Device_GPU();
+  void reset_rng(unsigned seed);
   int cuda_device_id;
   cublasHandle_t cublas_handle;
 #if HAVE_CUDNN

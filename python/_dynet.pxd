@@ -21,6 +21,7 @@ cdef extern from "dynet/init.h" namespace "dynet":
     cdef CDynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters)
     cdef void initialize(CDynetParams params)
     cdef void initialize(int& argc, char **& argv, bool shared_parameters)
+    void c_reset_rng "dynet::reset_rng" (unsigned seed) except +
 
 cdef extern from "dynet/dim.h" namespace "dynet":
     cdef cppclass CDim "dynet::Dim":
