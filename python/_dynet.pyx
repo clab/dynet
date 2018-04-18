@@ -246,6 +246,15 @@ def init_from_params(DynetParams params):
         params(DynetParams): dynet parameters
     """
     params.init()
+
+cpdef reset_random_seed(seed):
+    """Resets the random seed and the random number generator
+    
+    Args:
+        seed(int): The new random seed
+    """
+    c_reset_rng(seed)
+
 # }}}
 
 # Dimensions {{{
