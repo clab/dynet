@@ -209,7 +209,7 @@ DynetParams extract_dynet_params(int& argc,
 #if HAVE_CUDA
   // Check for conflict between the two ways of requesting GPUs
   if (params.ids_requested && params.ngpus_requested)
-    throw std::invalid_argument("Use only --dynet_gpus or --dynet_gpu_ids, not both\n");
+    throw std::invalid_argument("Use only --dynet_gpus or --dynet_devices, not both\n");
 #endif
 
   return params;
