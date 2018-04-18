@@ -1052,7 +1052,17 @@ cdef class Parameters(Expression): # {{{
 
     # for backward compatibility.
     # deprecate.
-    cpdef expr(self): return self
+    cpdef expr(self, update=False):
+        """Returns the parameter as an expression.
+
+        This is useful if you want to return a constant version of the parameter by setting :code:`update=False`.
+        
+        Args:
+            update(bool): If this is set to False, the parameter won't be updated during the backward pass
+        Returns:
+            Expression: Expression of the parameter
+        """
+        return self._iexpr(update)
 
     # needed for Expression
     cdef CExpression c(self):
