@@ -1055,7 +1055,17 @@ cdef class Parameters(Expression): # {{{
     cpdef expr(self, update=False):
         """Returns the parameter as an expression.
 
-        This is useful if you want to return a constant version of the parameter by setting :code:`update=False`.
+        This is useful if you want to return a constant version of the parameter by setting :code:`update=False`. More precisely,
+
+        .. code-block:: python
+
+            W.expr(update)
+
+        Will return the same thing as
+        
+        .. code-block:: python
+
+            W if update else dy.const_parameter(W)
         
         Args:
             update(bool): If this is set to False, the parameter won't be updated during the backward pass
