@@ -54,7 +54,7 @@ object XorScala {
         ComputationGraph.backward(loss_expr)
         sgd.update()
       }
-      sgd.updateEpoch()
+      sgd.learningRate *= 0.998f
       loss /= 4
       println("iter = " + iter + ", loss = " + loss)
     }

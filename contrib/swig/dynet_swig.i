@@ -53,6 +53,7 @@
 #include <stdexcept>
 #include "param-init.h"
 #include "model.h"
+#include "nodes.h"
 #include "tensor.h"
 #include "dynet.h"
 #include "training.h"
@@ -618,7 +619,7 @@ inline Expression concatenate_cols(const std::vector<Expression>& xs) {
   return detail::f<Concatenate>(xs, 1);
 };
 
-inline Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0) {
+inline Expression concatenate(const std::vector<Expression>& xs, unsigned d) {
   return detail::f<Concatenate>(xs, d);
 };
 }

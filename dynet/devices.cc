@@ -94,13 +94,9 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs,
   CUDA_CHECK(cudaSetDevice(device_id));
   CUBLAS_CHECK(cublasCreate(&cublas_handle));
   CUBLAS_CHECK(cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_DEVICE));
+  reset_rng(seed);
 #if HAVE_CUDNN
   CUDNN_CHECK(cudnnCreate(&cudnnHandle));
-  CURAND_CHECK(curandCreateGenerator(&curandeng,
-                                     CURAND_RNG_PSEUDO_PHILOX4_32_10));
-  CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curandeng,
-                                                  seed + 1));
-
 #endif
   kSCALAR_MINUSONE = (float*)gpu_mem.malloc(sizeof(float));
   kSCALAR_ONE = (float*)gpu_mem.malloc(sizeof(float));
@@ -125,6 +121,13 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs,
 }
 
 Device_GPU::~Device_GPU() {}
+
+void Device_GPU::reset_rng(unsigned seed) {
+  CURAND_CHECK(curandCreateGenerator(&curandeng,
+                                     CURAND_RNG_PSEUDO_PHILOX4_32_10));
+  CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curandeng,
+                                                  seed + 1));
+}
 #endif
 
 Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :

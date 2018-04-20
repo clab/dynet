@@ -35,6 +35,12 @@ void initialize(DynetParams& params);
 void initialize(int& argc, char**& argv, bool shared_parameters = false);
 void cleanup();
 
+/**
+ * \brief Resets random number generators
+ *
+ */
+void reset_rng(unsigned seed);
+
 } // namespace dynet
 
 #endif

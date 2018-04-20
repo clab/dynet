@@ -2,6 +2,7 @@ from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp cimport bool
+from libcpp.pair cimport pair
 
 ctypedef float real
 
@@ -21,6 +22,7 @@ cdef extern from "dynet/init.h" namespace "dynet":
     cdef CDynetParams extract_dynet_params(int& argc, char**& argv, bool shared_parameters)
     cdef void initialize(CDynetParams params)
     cdef void initialize(int& argc, char **& argv, bool shared_parameters)
+    void c_reset_rng "dynet::reset_rng" (unsigned seed) except +
 
 cdef extern from "dynet/dim.h" namespace "dynet":
     cdef cppclass CDim "dynet::Dim":
@@ -58,6 +60,8 @@ cdef extern from "dynet/index-tensor.h" namespace "dynet":
         CIndexTensor argmax(CTensor& t, unsigned dim, unsigned num) 
         @staticmethod
         CIndexTensor categorical_sample_log_prob(CTensor& t, unsigned dim, unsigned num) 
+        @staticmethod
+        pair[CTensor, CIndexTensor] topk(CTensor& t, unsigned dim, unsigned num)
 
 cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterStorage "dynet::ParameterStorage":
@@ -296,6 +300,7 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_op_add "dynet::operator+" (CExpression& x, CExpression& y) except + #
     CExpression c_op_scalar_add "dynet::operator+" (CExpression& x, float y) except + #
     CExpression c_op_mul "dynet::operator*" (CExpression& x, CExpression& y) except + #
+    CExpression c_op_div "dynet::operator/" (CExpression& x, CExpression& y) except + #
     CExpression c_op_scalar_mul "dynet::operator*" (CExpression& x, float y) except + #
     CExpression c_op_scalar_div "dynet::operator/" (CExpression& x, float y) except + #
     CExpression c_op_scalar_sub "dynet::operator-" (float y, CExpression& x) except + #

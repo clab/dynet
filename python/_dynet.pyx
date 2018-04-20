@@ -246,6 +246,15 @@ def init_from_params(DynetParams params):
         params(DynetParams): dynet parameters
     """
     params.init()
+
+cpdef reset_random_seed(seed):
+    """Resets the random seed and the random number generator
+    
+    Args:
+        seed(int): The new random seed
+    """
+    c_reset_rng(seed)
+
 # }}}
 
 # Dimensions {{{
@@ -843,7 +852,11 @@ cdef class Expression: #{{{
             return _cmul(self, other)
         else: raise NotImplementedError()
     def __div__(self, other):
-        if isinstance(self, Expression) and isinstance(other, (int,float)):
+        if isinstance(self, Expression) and isinstance(other, Expression):
+            return _div(self, other)
+        elif isinstance(self, (int,float)):
+            return _cdiv(self, other)
+        elif isinstance(other, (int,float)):
             return _cdiv(self, other)
         else: raise NotImplementedError()
     def __truediv__(self, other):
@@ -1039,7 +1052,27 @@ cdef class Parameters(Expression): # {{{
 
     # for backward compatibility.
     # deprecate.
-    cpdef expr(self): return self
+    cpdef expr(self, update=False):
+        """Returns the parameter as an expression.
+
+        This is useful if you want to return a constant version of the parameter by setting :code:`update=False`. More precisely,
+
+        .. code-block:: python
+
+            W.expr(update)
+
+        Will return the same thing as
+        
+        .. code-block:: python
+
+            W if update else dy.const_parameter(W)
+        
+        Args:
+            update(bool): If this is set to False, the parameter won't be updated during the backward pass
+        Returns:
+            Expression: Expression of the parameter
+        """
+        return self._iexpr(update)
 
     # needed for Expression
     cdef CExpression c(self):
@@ -2075,6 +2108,19 @@ cdef class Tensor: #{{{
             dimension "dim" will be "num", consisting of the appropriate IDs.
         """
         return Tensor.wrap_cindextensor(CTensorTools.categorical_sample_log_prob(self.t, dim, num))
+
+    cpdef topk(self, unsigned dim=0, unsigned num=1):
+        """Calculate the index of the topk value.
+
+        Keyword Args:
+            dim(integer): which dimension to take the topk over
+            num(integer): the number of topk values
+        
+        Returns:
+            A pair of newly allocated Tensor/IndexTensor consisting of values/indexes.
+        """
+        cdef pair[CTensor, CIndexTensor] res = CTensorTools.topk(self.t, dim, num)
+        return (Tensor.wrap_ctensor(res.first), Tensor.wrap_cindextensor(res.second))
 # Tensor }}}
 
 #{{{ Expressions
@@ -2089,6 +2135,7 @@ cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.fr
 cdef _mul(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_mul(a.c(), b.c()))
 cdef _neg(Expression a): return Expression.from_cexpr(a.cg_version, c_op_neg(a.c()))
 cdef _scalarsub(float a, Expression b): ensure_freshness(b); return Expression.from_cexpr(b.cg_version, c_op_scalar_sub(a, b.c()))
+cdef _div(Expression a, Expression b): return Expression.from_cexpr(a.cg_version, c_op_div(a.c(), b.c()))
 cdef _cadd(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_add(a.c(), b))
 cdef _cmul(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_mul(a.c(), b))
 cdef _cdiv(Expression a, float b): return Expression.from_cexpr(a.cg_version, c_op_scalar_div(a.c(), b))
