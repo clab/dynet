@@ -2,6 +2,7 @@ from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp cimport bool
+from libcpp.pair cimport pair
 
 ctypedef float real
 
@@ -59,6 +60,8 @@ cdef extern from "dynet/index-tensor.h" namespace "dynet":
         CIndexTensor argmax(CTensor& t, unsigned dim, unsigned num) 
         @staticmethod
         CIndexTensor categorical_sample_log_prob(CTensor& t, unsigned dim, unsigned num) 
+        @staticmethod
+        pair[CTensor, CIndexTensor] topk(CTensor& t, unsigned dim, unsigned num)
 
 cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterStorage "dynet::ParameterStorage":

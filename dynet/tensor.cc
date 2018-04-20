@@ -15,6 +15,7 @@
 #include "dynet/gpu-ops.h"
 #include "dynet/cuda.h"
 #endif
+#include "third_party/topk.h"
 
 using namespace std;
 
@@ -577,6 +578,54 @@ IndexTensor TensorTools::categorical_sample_log_prob(const Tensor& d, unsigned d
 #else
 IndexTensor TensorTools::categorical_sample_log_prob(const Tensor& d, unsigned dim, unsigned num) {
   if (d.device->type == DeviceType::CPU) { return categorical_sample_log_prob_dev(*(const Device_CPU*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#endif
+#endif
+
+template <class MyDevice>
+std::pair<Tensor, IndexTensor> TensorTools::topk_dev(const MyDevice & dev, const Tensor& v, unsigned dim, unsigned num) {
+  DYNET_ARG_CHECK(v.mem_pool != DeviceMempool::NONE, "Input Tensor to TensorTools::topk must be associated with a memory pool.");
+  AlignedMemoryPool* pool = v.device->pools[(size_t)v.mem_pool];
+  // allocate memory for value
+  Dim val_dim = v.d; val_dim.d[dim] = num;
+  Tensor val(val_dim, nullptr, v.device, v.mem_pool);
+  val.v = static_cast<real*>(pool->allocate(val_dim.size() * sizeof(real)));
+  // allocate memory for index
+  Dim ids_dim = v.d; ids_dim.d[dim] = num;
+  IndexTensor ids(ids_dim, nullptr, v.device, v.mem_pool);
+  ids.v = static_cast<Eigen::DenseIndex*>(pool->allocate(ids_dim.size() * sizeof(Eigen::DenseIndex)));
+  // calculate
+  unsigned outer_size = 1, inner_size = 1, cur_size = 1;
+  unsigned accu_dim = 0;
+  for(; accu_dim < dim; accu_dim++) // stride dim
+    inner_size *= v.d[accu_dim];
+  cur_size = v.d[dim]; accu_dim++;  // target dim
+  for(; accu_dim < v.d.ndims(); accu_dim++)
+    outer_size *= v.d[accu_dim];
+  outer_size *= v.d.batch_elems();  // mostly outer dim
+#ifdef __CUDACC__
+  auto topk_err = topk_gpu::topk<real, Eigen::DenseIndex, true, topk_gpu::TopK_Gpu_Strategy::TOPK_AUTO>(v.v, val.v, ids.v, outer_size, inner_size, cur_size, num);
+  CUDA_CHECK(topk_err);
+#else
+  topk_cpu::topk<real, Eigen::DenseIndex, true>(v.v, val.v, ids.v, outer_size, inner_size, cur_size, num);
+#endif
+  return std::make_pair(val, ids);
+}
+#ifdef __CUDACC__
+template std::pair<Tensor, IndexTensor> TensorTools::topk_dev<Device_GPU>(const Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
+#else
+template std::pair<Tensor, IndexTensor> TensorTools::topk_dev<Device_CPU>(const Device_CPU & dev, const Tensor& d, unsigned dim, unsigned num);
+#ifdef HAVE_CUDA
+extern template std::pair<Tensor, IndexTensor> TensorTools::topk_dev<Device_GPU>(const Device_GPU & dev, const Tensor& d, unsigned dim, unsigned num);
+std::pair<Tensor, IndexTensor> TensorTools::topk(const Tensor& d, unsigned dim, unsigned num) {
+  if(d.device->type == DeviceType::CPU) { return topk_dev(*(const Device_CPU*)d.device, d, dim, num); }
+  else if(d.device->type == DeviceType::GPU) { return topk_dev(*(const Device_GPU*)d.device, d, dim, num); }
+  else { throw std::runtime_error("Bad device type"); }
+}
+#else
+std::pair<Tensor, IndexTensor> TensorTools::topk(const Tensor& d, unsigned dim, unsigned num) {
+  if(d.device->type == DeviceType::CPU) { return topk_dev(*(const Device_CPU*)d.device, d, dim, num); }
   else { throw std::runtime_error("Bad device type"); }
 }
 #endif

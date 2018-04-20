@@ -349,6 +349,18 @@ struct TensorTools {
    */
   static IndexTensor categorical_sample_log_prob(const Tensor& v, unsigned dim = 0, unsigned num = 1);
 
+  /**
+  * \brief Calculate the k-max values and their indexes
+  *
+  * \param v A tensor where each row represents a probability distribution
+  * \param dim Which dimension to take the kmax over
+  * \param num The number of kmax values
+  *
+  * \returns A newly allocated pair<Tensor, LongTensor> consisting of argmax Vals/IDs. The length of the
+  *          dimension "dim" will be "num", consisting of the appropriate Vals/IDs.
+  */
+  static std::pair<Tensor, IndexTensor> topk(const Tensor& v, unsigned dim = 0, unsigned num = 1);
+
   // Device functions that can be called directly if the device is already known
   template<class MyDevice>
   static void clip_dev(const MyDevice & dev, Tensor& d, float left, float right);
@@ -366,6 +378,8 @@ struct TensorTools {
   static IndexTensor categorical_sample_log_prob_dev(const MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
   template <class MyDevice>
   static void logsumexp_dev(const MyDevice & dev, const Tensor& x, Tensor &m, Tensor &z, unsigned d = 0);
+  template <class MyDevice>
+  static std::pair<Tensor, IndexTensor> topk_dev(const MyDevice & dev, const Tensor& v, unsigned dim = 0, unsigned num = 1);
 
 };
 

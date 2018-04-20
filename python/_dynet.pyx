@@ -2108,6 +2108,19 @@ cdef class Tensor: #{{{
             dimension "dim" will be "num", consisting of the appropriate IDs.
         """
         return Tensor.wrap_cindextensor(CTensorTools.categorical_sample_log_prob(self.t, dim, num))
+
+    cpdef topk(self, unsigned dim=0, unsigned num=1):
+        """Calculate the index of the topk value.
+
+        Keyword Args:
+            dim(integer): which dimension to take the topk over
+            num(integer): the number of topk values
+        
+        Returns:
+            A pair of newly allocated Tensor/IndexTensor consisting of values/indexes.
+        """
+        cdef pair[CTensor, CIndexTensor] res = CTensorTools.topk(self.t, dim, num)
+        return (Tensor.wrap_ctensor(res.first), Tensor.wrap_cindextensor(res.second))
 # Tensor }}}
 
 #{{{ Expressions
