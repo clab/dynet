@@ -27,14 +27,13 @@ inline void MatrixMultiply(const Device_GPU & dev, const Tensor& l, const Tensor
           acc_scalar, y.v, y.d.rows()));
   } else {
     // Otherwise, loop over the batches
-    for(unsigned b = 0; b < y.d.bd; ++b) {
-      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
-            y.d.rows(), y.d.cols(), l.d.cols(),
-            dev.kSCALAR_ONE,
-            l.batch_ptr(b), l.d.rows(),
-            r.batch_ptr(b), r.d.rows(),
-            acc_scalar, y.batch_ptr(b), y.d.rows()));
-    }
+    CUBLAS_CHECK(cublasSgemmStridedBatched(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
+          y.d.rows(), y.d.cols(), l.d.cols(),
+          dev.kSCALAR_ONE,
+          l.v, l.d.rows(), l.d.batch_size(),
+          r.v, r.d.rows(), r.d.batch_size(),
+          acc_scalar, y.v, y.d.rows(), y.d.batch_size(),
+          y.d.bd));
   }
 }
 
@@ -80,13 +79,13 @@ inline void MatrixTranspMultiplyAcc(const dynet::Device_GPU & dev, const dynet::
           r.v, r.d.rows(),
           dev.kSCALAR_ONE, y.v, y.d.rows()));
   } else {
-    for(int b = 0; b < max_b; ++b)
-      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
-            y.d.rows(), y.d.cols(), l.d.rows(),
-            dev.kSCALAR_ONE,
-            l.batch_ptr(b), l.d.rows(),
-            r.batch_ptr(b), r.d.rows(),
-            dev.kSCALAR_ONE, y.batch_ptr(b), y.d.rows()));
+    CUBLAS_CHECK(cublasSgemmStridedBatched(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
+          y.d.rows(), y.d.cols(), l.d.rows(),
+          dev.kSCALAR_ONE,
+          l.v, l.d.rows(), l.d.batch_size(),
+          r.v, r.d.rows(), r.d.batch_size(),
+          dev.kSCALAR_ONE, y.v, y.d.rows(), y.d.batch_size(),
+          max_b));
   }
 }
 
@@ -114,13 +113,14 @@ inline void MatrixMultiplyTranspAcc(const dynet::Device_GPU & dev, const dynet::
           r.v, r.d.rows(),
           dev.kSCALAR_ONE, y.v, y.d.rows()));
   } else {
-    for(int b = 0; b < max_b; ++b)
-      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
-            y.d.rows(), y.d.cols(), l.d.cols(),
-            dev.kSCALAR_ONE,
-            l.batch_ptr(b), l.d.rows(),
-            r.batch_ptr(b), r.d.rows(),
-            dev.kSCALAR_ONE, y.batch_ptr(b), y.d.rows()));
+    CUBLAS_CHECK(cublasSgemmStridedBatched(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+          y.d.rows(), y.d.cols(), l.d.cols(),
+          dev.kSCALAR_ONE,
+          l.v, l.d.rows(), l.d.batch_size(),
+          r.v, r.d.rows(), r.d.batch_size(),
+          dev.kSCALAR_ONE, y.v, y.d.rows(), y.d.batch_size(),
+          max_b));
+
   }
 }
 # else
