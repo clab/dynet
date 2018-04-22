@@ -26,12 +26,11 @@ inline void MatrixMultiply(const Device_GPU & dev, const Tensor& l, const Tensor
           r.v, r.d.rows(),
           acc_scalar, y.v, y.d.rows()));
   } else {
-    // Otherwise, loop over the batches
     CUBLAS_CHECK(cublasSgemmStridedBatched(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
           y.d.rows(), y.d.cols(), l.d.cols(),
           dev.kSCALAR_ONE,
-          l.v, l.d.rows(), l.d.batch_size(),
-          r.v, r.d.rows(), r.d.batch_size(),
+          l.v, l.d.rows(), (l.d.bd > 1 ? l.d.batch_size() : 0),
+          r.v, r.d.rows(), (r.d.bd > 1 ? r.d.batch_size() : 0),
           acc_scalar, y.v, y.d.rows(), y.d.batch_size(),
           y.d.bd));
   }
@@ -82,8 +81,8 @@ inline void MatrixTranspMultiplyAcc(const dynet::Device_GPU & dev, const dynet::
     CUBLAS_CHECK(cublasSgemmStridedBatched(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
           y.d.rows(), y.d.cols(), l.d.rows(),
           dev.kSCALAR_ONE,
-          l.v, l.d.rows(), l.d.batch_size(),
-          r.v, r.d.rows(), r.d.batch_size(),
+          l.v, l.d.rows(), (l.d.bd > 1 ? l.d.batch_size() : 0),
+          r.v, r.d.rows(), (r.d.bd > 1 ? r.d.batch_size() : 0),
           dev.kSCALAR_ONE, y.v, y.d.rows(), y.d.batch_size(),
           max_b));
   }
@@ -113,11 +112,12 @@ inline void MatrixMultiplyTranspAcc(const dynet::Device_GPU & dev, const dynet::
           r.v, r.d.rows(),
           dev.kSCALAR_ONE, y.v, y.d.rows()));
   } else {
+    DYNET_ARG_CHECK(false, "MatrixMultiplyTranspAcc");
     CUBLAS_CHECK(cublasSgemmStridedBatched(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
           y.d.rows(), y.d.cols(), l.d.cols(),
           dev.kSCALAR_ONE,
-          l.v, l.d.rows(), l.d.batch_size(),
-          r.v, r.d.rows(), r.d.batch_size(),
+          l.v, l.d.rows(), (l.d.bd > 1 ? l.d.batch_size() : 0),
+          r.v, r.d.rows(), (r.d.bd > 1 ? r.d.batch_size() : 0),
           dev.kSCALAR_ONE, y.v, y.d.rows(), y.d.batch_size(),
           max_b));
 
