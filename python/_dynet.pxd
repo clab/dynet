@@ -268,6 +268,10 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[float]* pdata, CDevice* device) except +
     CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[unsigned]& ids, vector[float]& data, float defdata) except +
     CExpression c_input "dynet::input" (CComputationGraph& g, CDim& d, vector[unsigned]& ids, vector[float]& data, float defdata, CDevice* device) except +
+    CExpression c_one_hot "dynet::one_hot" (CComputationGraph& g, unsigned d, unsigned idx, CDevice* device) except +
+    CExpression c_one_hot "dynet::one_hot" (CComputationGraph& g, unsigned d, vector[unsigned]& ids, CDevice* device) except +
+    CExpression c_one_hot "dynet::one_hot" (CComputationGraph& g, unsigned d, vector[unsigned]& ids) except +
+
     CExpression c_parameter "dynet::parameter" (CComputationGraph& g, CParameters p) except + #
     CExpression c_parameter "dynet::parameter" (CComputationGraph& g, CLookupParameters p) except + #
     CExpression c_const_parameter "dynet::const_parameter" (CComputationGraph& g, CParameters p) except + #
