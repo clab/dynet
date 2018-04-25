@@ -6061,10 +6061,10 @@ cdef class CyclicalSGDTrainer(Trainer):
         learning_rate_min (number): Lower learning rate (default: {0.01})
         learning_rate_max (number): Upper learning rate (default: {0.1})
         step_size (number): Period of the triangular function in number of iterations (__not__ epochs). According to the original paper, this should be set around (2-8) x (training iterations in epoch) (default: {2000})
-        gamma (number): Learning rate upper bound decay parameter (default: {0.0})
+        gamma (number): Learning rate upper bound decay parameter (1.0 = no decay) (default: {1.0})
     """
     cdef CCyclicalSGDTrainer *thischildptr
-    def __cinit__(self, ParameterCollection m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0):
+    def __cinit__(self, ParameterCollection m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 1.0):
         self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, learning_rate_min, learning_rate_max, step_size, gamma)
     cpdef update(self):
         self.thischildptr.update()

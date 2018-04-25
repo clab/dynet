@@ -234,7 +234,7 @@ struct CyclicalSGDTrainer : public Trainer {
    * \param gamma Learning rate upper bound decay parameter
    * \param edecay Learning rate decay parameter. Ideally you shouldn't use this with cyclical learning rate since decay is already handled by \f$\gamma\f$
    */
-  explicit CyclicalSGDTrainer(ParameterCollection& m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0, float edecay = 0.0) : Trainer(m, learning_rate_min), e_min(learning_rate_min), e_max(learning_rate_max), step_size(step_size), gamma(gamma), it(0) {}
+  explicit CyclicalSGDTrainer(ParameterCollection& m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 1.0, float edecay = 0.0) : Trainer(m, learning_rate_min), e_min(learning_rate_min), e_max(learning_rate_max), step_size(step_size), gamma(gamma), it(0) {}
   void restart() override {};
   using Trainer::restart;
   void update() override {
