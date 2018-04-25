@@ -2514,6 +2514,29 @@ def sparse_inputTensor(idxs, values, shape, batched=False, defval=0,device=""):
     idxs = np.ravel_multi_index(idxs, shape, order='F')
     return _cg.inputSparseTensor(idxs, values, dim, batch_size=batch_size, defval=defval, device=device)
 
+cpdef one_hot(d, idx, device=""):
+    """Inputs a one hot vector into the graph.
+    A one hot vecotr is a vector where one coordinate is 1 and everything else is 0
+    If ``idx`` is a list, returns a batch of one hot vectors where batch element ``b`` is one hot in ``idx[b]``
+
+    Args:
+        d (int): dimension of the vector(s)
+        idx (int,list): One hot index
+        device(string): Optional, device on which to create the expression.
+    
+    Returns:
+        Expression: One hot vector(s) expression
+    """
+    if isinstance(idx, int):
+        idx = [idx]
+    idxs = np.asarray(idx, dtype=int)
+    cdef CDevice* dev
+    if str(device) != "":
+        dev = c_str2dev(str(device))
+        return Expression.from_cexpr(_cg.version(), c_one_hot(_cg.thisptr[0], <unsigned> d, <vector[unsigned]> idxs, <CDevice*> dev))
+    else:
+        return Expression.from_cexpr(_cg.version(), c_one_hot(_cg.thisptr[0], <unsigned> d, <vector[unsigned]> idxs))
+
 cdef class _lookupExpression(Expression):
     """Expression corresponding to a lookup from lookup parameter
     

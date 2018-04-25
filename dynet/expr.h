@@ -187,6 +187,38 @@ Expression input(ComputationGraph& g, const Dim& d,
 
 /**
  * \ingroup inputoperations
+ * \brief One hot vector
+ * \details This operation creates a one hot vector.
+ *
+ * \param g Computation graph
+ * \param d Dimension of the input vector
+ * \param idx The index we want to set to 1
+ * \param device The place device for the input value, default_device by default
+ *
+ * \return An expression representing data
+ */
+Expression one_hot(ComputationGraph& g, unsigned int d, unsigned int idx,
+                   Device *device = dynet::default_device);
+
+/**
+ * \ingroup inputoperations
+ * \brief Batched one hot vectors
+ * \details This operation creates a batch of one hot vectors.
+ * The length of `ids` determines the batch size
+ *
+ * \param g Computation graph
+ * \param d Dimension of the input vector
+ * \param ids The indices we want to set to 1, one per batch element
+ * \param device The place device for the input value, default_device by default
+ *
+ * \return An expression representing data
+ */
+Expression one_hot(ComputationGraph& g, unsigned int d,
+                   const std::vector<unsigned int>& ids,
+                   Device *device = dynet::default_device);
+
+/**
+ * \ingroup inputoperations
  * \brief Load parameter
  * \details Load parameters into the computation graph.
  *
