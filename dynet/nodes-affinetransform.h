@@ -6,7 +6,7 @@
 
 namespace dynet {
 
-// y = x_1 \sum_{i=2, 4 ...} A_i * x_{i+1}
+// fx = xs[0] + \sum_{i=1, 3 ...} xs[i] * xs[i+1]
 struct AffineTransform : public Node {
   template <typename T> explicit AffineTransform(const T& a) : Node(a) {}
   virtual bool supports_multibatch() const override { return true; }
