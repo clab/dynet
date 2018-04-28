@@ -179,7 +179,7 @@ Expression strided_select(const Expression& x, const std::vector<int>& strides, 
   for(unsigned d=0;d<strides.size();d++){ if(strides[d]!=1) inplaced = false; }
   for(unsigned d=0;d<range_from.size();d++){ if(range_from[d]!=0) inplaced = false; }
   for(unsigned d=0;d<range_to.size() && d<x.dim().nd;d++){ if(range_to[d]!=x.dim()[d]) inplaced = false; }
-  return Expression(x.pg, x.pg->add_function<StridedSelect>({x.i}, strides, range_from, range_to));
+  return Expression(x.pg, x.pg->add_function<StridedSelect>({x.i}, strides, range_from, range_to, inplaced));
 }
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
