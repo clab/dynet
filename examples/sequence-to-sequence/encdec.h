@@ -233,11 +233,11 @@ public:
         vector<Expression> oein;
         // Add input cell states
         for (unsigned i = 0; i < LAYERS; ++i) {
-            oein.push_back(pickrange(i_nc, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM ));
+            oein.push_back(pick_range(i_nc, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM ));
         }
         // Add input output states
         for (unsigned i = 0; i < LAYERS; ++i) {
-            oein.push_back(pickrange(i_nc, HIDDEN_DIM * LAYERS + i * HIDDEN_DIM,
+            oein.push_back(pick_range(i_nc, HIDDEN_DIM * LAYERS + i * HIDDEN_DIM,
                                      HIDDEN_DIM * LAYERS + (i + 1) * HIDDEN_DIM));
         }
 
@@ -330,7 +330,7 @@ public:
 
         vector<Expression> oein1, oein2, oein;
         for (unsigned i = 0; i < LAYERS; ++i) {
-            oein1.push_back(pickrange(i_nc, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM));
+            oein1.push_back(pick_range(i_nc, i * HIDDEN_DIM, (i + 1) * HIDDEN_DIM));
             oein2.push_back(tanh(oein1[i]));
         }
         for (unsigned i = 0; i < LAYERS; ++i) oein.push_back(oein1[i]);
