@@ -687,7 +687,7 @@ cdef class Expression: #{{{
             stops = []
             for i, slice_i in enumerate(index):
               if slice_i.stop is None:
-                if i == len(self.dim()):
+                if i == len(self.dim()[0]):
                   stops.append(self.dim()[1])
                 else:
                   stops.append(self.dim()[0][i])

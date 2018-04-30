@@ -459,6 +459,20 @@ class TestOperations(unittest.TestCase):
         self.assertTrue(np.allclose(y.npvalue(), y_np_value))
 
 
+class TestSlicing(unittest.TestCase):
+
+    def test_layer_norm(self):
+        dy.renew_cg()
+        data = np.random.random((10,10,10))
+        self.assertTrue(np.allclose(dy.inputTensor(data)[:1,:2,:3].npvalue(), data[:1,:2,:3]))
+        self.assertTrue(np.allclose(dy.inputTensor(data, batched=True)[:1,:2,:3].npvalue(), data[:1,:2,:3]))
+        self.assertTrue(np.allclose(dy.inputTensor(data)[:,:,:3].npvalue(), data[:,:,:3]))
+        self.assertTrue(np.allclose(dy.inputTensor(data)[3:,:,:].npvalue(), data[3:,:,:]))
+        self.assertTrue(np.allclose(dy.inputTensor(data)[:,:,::1].npvalue(), data[:,:,::1]))
+        self.assertTrue(np.allclose(dy.inputTensor(data)[:,:,::3].npvalue(), data[:,:,::3]))
+        self.assertTrue(np.allclose(dy.inputTensor(data)[3:5,1:3,1:].npvalue(), data[3:5,1:3,1:]))
+
+
 class TestSimpleRNN(unittest.TestCase):
 
     def setUp(self):
