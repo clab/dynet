@@ -3,7 +3,7 @@ This is a dynet implementation of two reinforcement learning algorithms, [DeepQN
 
 # Results
 ## Openai Gym classical control (Discrete action space with DeepQNetwork):
-<img src="https://github.com/zhiyong1997/resources/blob/master/gifs/Cartpole.gif" width="200"> <img src="https://github.com/zhiyong1997/resources/blob/master/gifs/MountainCar.gif" width="200"> <img src="https://github.com/zhiyong1997/resources/blob/master/gifs/Acrobot.gif" width="200">
+<img src="https://github.com/zhiyong1997/resources/blob/master/gifs/Cartpole.gif" width="200"> <img src="https://github.com/zhiyong1997/resources/blob/master/gifs/MountainCar.gif" width="200"> <img src="https://github.com/zhiyong1997/resources/blob/master/gifs/Acrobot.gif" width="200" height="150">
 
 
 ## Openai Gym mujoco (Continous control with DDPG):
