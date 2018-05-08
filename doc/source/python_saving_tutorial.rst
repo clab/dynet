@@ -8,7 +8,7 @@ DyNet provides the ability to save and restore model parameters. The user has se
 Saving an entire model
 ======================
 
-In the first option, complete ``ParameterCollection`` object is saved. At loading time, the user should define and allocate the same parameter objects that were present in the model when it was saved, and in the same order (this usually amounts to having the same parameter creation called by both code paths), and then call ``populate`` on the ``ParameterCollection`` object containing the parameters that should be loaded.
+The first option is to save the complete ``ParameterCollection`` object. At loading time, the user should define and allocate the same parameter objects that were present in the model when it was saved, and in the same order (this usually amounts to having the same parameter creation called by both code paths), and then call ``populate`` on the ``ParameterCollection`` object containing the parameters that should be loaded.
 
 .. code:: python
 
@@ -25,7 +25,7 @@ In the first option, complete ``ParameterCollection`` object is saved. At loadin
     x = m2.add_parameters(100);
     y = m2.add_lookup_parameters((10, 100))
     z = m2.add_parameters(1000)
-    m.populate("/tmp/tmp.model")
+    m2.populate("/tmp/tmp.model")
 
 
 Partial Saving And Loading (Low-level API)
