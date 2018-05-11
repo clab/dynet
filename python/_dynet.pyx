@@ -3095,7 +3095,7 @@ cpdef Expression l1_distance(Expression x, Expression y):
 cpdef Expression binary_log_loss(Expression x, Expression y):
     """Binary log loss
     
-    The log loss of a binary decision according to the sigmoid sigmoid function :math:`- \sum_i (y_i  \ln(x_i) + (1-y_i)  \ln(1-x_i))`
+    The log loss of a binary decision according to the sigmoid function :math:`- \sum_i (y_i  \ln(x_i) + (1-y_i)  \ln(1-x_i))`
     
     Args:
         x (dynet.Expression): The first input expression
