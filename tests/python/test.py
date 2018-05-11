@@ -461,7 +461,7 @@ class TestOperations(unittest.TestCase):
 
 class TestSlicing(unittest.TestCase):
 
-    def test_layer_norm(self):
+    def test_slicing(self):
         dy.renew_cg()
         data = np.random.random((10,10,10))
         self.assertTrue(np.allclose(dy.inputTensor(data)[:1,:2,:3].npvalue(), data[:1,:2,:3]))
