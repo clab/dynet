@@ -5,3 +5,5 @@ Here is a Dynet version of the [PyTorch tutorial example "Translation with a Seq
 ## Data Preparation
 
 Download the data from [here](https://download.pytorch.org/tutorial/data.zip) and extract it to the current directory.
+
+We will use a helper class called `Lang` which has word → index (word2index) and index → word (index2word) dictionaries, as well as a count of each word word2count to use to later replace rare words.
