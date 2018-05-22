@@ -116,7 +116,7 @@ def indexesFromPair(pair):
     return (input_indexes, target_indexes)
 </pre>
 
-### Training the Model (without attention mechanism)\
+### Training the Model (without attention mechanism)
 
 <pre>
 teacher_forcing_ratio = 0.5
@@ -154,6 +154,59 @@ def train(inputs, targets, encoder, decoder, trainer):
     else:
         for i in range(target_length):
             decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
+            losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
+            probs = decoder_output.vec_value()
+            decoder_input = probs.index(max(probs))
+            if decoder_input == EOS_token:
+                break
+
+    loss = dy.esum(losses)/len(losses)
+    loss.backward()
+    trainer.update()
+
+    return loss.value()
+</pre>
+
+### Training the Model (with attention mechanism)
+
+<pre>
+teacher_forcing_ratio = 0.5
+
+def train(inputs, targets, encoder, decoder, trainer, max_length=MAX_LENGTH):
+
+    dy.renew_cg()
+
+    encoder_hidden = encoder.initHidden()
+
+    input_length = len(inputs)
+    target_length = len(targets)
+
+    encoder_outputs = [dy.zeros(hidden_dim) for _ in range(max_length)]
+
+    losses = []
+
+    for i in range(input_length):
+        encoder_output, encoder_hidden = encoder(inputs[i], encoder_hidden)
+        encoder_outputs[i] = encoder_output
+
+    encoder_outputs = dy.concatenate(encoder_outputs, 1)
+
+    decoder_input = SOS_token
+    decoder_hidden = encoder_hidden
+
+    if random.random() < teacher_forcing_ratio:
+        use_teacher_forcing = True
+    else:
+        use_teacher_forcing = False
+
+    if use_teacher_forcing:
+        for i in range(target_length):
+            decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
+            losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
+            decoder_input = targets[i]
+    else:
+        for i in range(target_length):
+            decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
             losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
             probs = decoder_output.vec_value()
             decoder_input = probs.index(max(probs))
