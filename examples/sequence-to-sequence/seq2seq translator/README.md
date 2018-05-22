@@ -99,3 +99,70 @@ class AttnDecoderRNN(object):
     def initHidden(self):
         return [dy.zeros(hidden_dim)]
 </pre>
+
+## Training
+
+### Preparing Training Data
+
+<pre>
+def indexesFromSentence(lang, sentence):
+
+    return [lang.word2index[word] for word in sentence.split(" ")]
+
+def indexesFromPair(pair):
+
+    input_indexes = indexesFromSentence(input_lang, pair[0])
+    target_indexes = indexesFromSentence(output_lang, pair[1])
+    return (input_indexes, target_indexes)
+</pre>
+
+### Training the Model (without attention mechanism)\
+
+<pre>
+teacher_forcing_ratio = 0.5
+
+def train(inputs, targets, encoder, decoder, trainer):
+
+    dy.renew_cg()
+
+    encoder_hidden = encoder.initHidden()
+
+    input_length = len(inputs)
+    target_length = len(targets)
+
+    encoder_outputs = []
+
+    losses = []
+
+    for i in range(input_length):
+        encoder_output, encoder_hidden = encoder(inputs[i], encoder_hidden)
+        encoder_outputs.append(encoder_output)
+
+    decoder_input = SOS_token
+    decoder_hidden = encoder_hidden
+
+    if random.random() < teacher_forcing_ratio:
+        use_teacher_forcing = True
+    else:
+        use_teacher_forcing = False
+
+    if use_teacher_forcing:
+        for i in range(target_length):
+            decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
+            losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
+            decoder_input = targets[i]
+    else:
+        for i in range(target_length):
+            decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
+            losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
+            probs = decoder_output.vec_value()
+            decoder_input = probs.index(max(probs))
+            if decoder_input == EOS_token:
+                break
+
+    loss = dy.esum(losses)/len(losses)
+    loss.backward()
+    trainer.update()
+
+    return loss.value()
+</pre>
