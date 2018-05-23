@@ -10,14 +10,18 @@ The data for this project is a set of many thousands of English to French transl
 
 A Sequence to Sequence network, or seq2seq network, or Encoder Decoder network, is a model consisting of two RNNs called the encoder and decoder. The encoder reads an input sequence and outputs a single vector, and the decoder reads that vector to produce an output sequence.
 
+The structure of the Seq2Seq Model follows the same line of the PyTorch Example.
+
 ### The Encoder
 
 <pre>
 class EncoderRNN(object):
 
     def __init__(self, in_vocab, hidden_dim, model):
-        self.embedding_enc = model.add_lookup_parameters((in_vocab, hidden_dim))
-        self.rnn_enc = dy.GRUBuilder(1, hidden_dim, hidden_dim, model)
+        self.in_vocab = in_vocab
+        self.hidden_dim = hidden_dim
+        self.embedding_enc = model.add_lookup_parameters((self.in_vocab, self.hidden_dim))
+        self.rnn_enc = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim, model)
 
     def __call__(self, input, hidden):
         input_embed = dy.lookup(self.embedding_enc, input)
@@ -26,7 +30,7 @@ class EncoderRNN(object):
         return state_enc.output(), state_enc.h()
 
     def initHidden(self):
-        return [dy.zeros(hidden_dim)]
+        return [dy.zeros(self.hidden_dim)]
 </pre>
 
 ### The Decoder (without attention mechanism)
@@ -35,10 +39,12 @@ class EncoderRNN(object):
 class DecoderRNN(object):
 
     def __init__(self, hidden_dim, out_vocab, model):
-        self.embedding_dec = model.add_lookup_parameters((out_vocab, hidden_dim))
-        self.rnn_dec = dy.GRUBuilder(1, hidden_dim, hidden_dim, model)
-        self.w_dec = model.add_parameters((out_vocab, hidden_dim))
-        self.b_dec = model.add_parameters((out_vocab,))
+        self.hidden_dim = hidden_dim
+        self.out_vocab = out_vocab
+        self.embedding_dec = model.add_lookup_parameters((self.out_vocab, self.hidden_dim))
+        self.rnn_dec = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim, model)
+        self.w_dec = model.add_parameters((self.out_vocab, self.hidden_dim))
+        self.b_dec = model.add_parameters((self.out_vocab,))
 
     def __call__(self, input, hidden):
         input_embed = dy.lookup(self.embedding_dec, input)
@@ -53,7 +59,7 @@ class DecoderRNN(object):
         return output, state_dec.h()
 
     def initHidden(self):
-        return [dy.zeros(hidden_dim)]
+        return [dy.zeros(self.hidden_dim)]
 </pre>
 
 ### The Decoder (with attention mechanism)
@@ -62,17 +68,18 @@ class DecoderRNN(object):
 class AttnDecoderRNN(object):
 
     def __init__(self, hidden_dim, out_vocab, model, dropout_p=0.1, max_length=MAX_LENGTH):
+        self.hidden_dim = hidden_dim
+        self.out_vocab = out_vocab
         self.dropout_p = dropout_p
         self.max_length = max_length
-
-        self.embedding_dec = model.add_lookup_parameters((out_vocab, hidden_dim))
-        self.w_attn = model.add_parameters((self.max_length, hidden_dim * 2))
+        self.embedding_dec = model.add_lookup_parameters((self.out_vocab, self.hidden_dim))
+        self.w_attn = model.add_parameters((self.max_length, self.hidden_dim * 2))
         self.b_attn = model.add_parameters((self.max_length,))
-        self.w_attn_combine = model.add_parameters((hidden_dim, hidden_dim * 2))
-        self.b_attn_combine = model.add_parameters((hidden_dim,))
-        self.rnn_dec = dy.GRUBuilder(1, hidden_dim, hidden_dim, model)
-        self.w_dec = model.add_parameters((out_vocab, hidden_dim))
-        self.b_dec = model.add_parameters((out_vocab,))
+        self.w_attn_combine = model.add_parameters((self.hidden_dim, self.hidden_dim * 2))
+        self.b_attn_combine = model.add_parameters((self.hidden_dim,))
+        self.rnn_dec = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim, model)
+        self.w_dec = model.add_parameters((self.out_vocab, self.hidden_dim))
+        self.b_dec = model.add_parameters((self.out_vocab,))
 
     def __call__(self, input, hidden, encoder_outptus):
         input_embed = dy.lookup(self.embedding_dec, input)
@@ -97,125 +104,8 @@ class AttnDecoderRNN(object):
         return output, hidden, attn_weights
 
     def initHidden(self):
-        return [dy.zeros(hidden_dim)]
+        return [dy.zeros(self.hidden_dim)]
 </pre>
 
 ## Training
 
-### Preparing Training Data
-
-<pre>
-def indexesFromSentence(lang, sentence):
-
-    return [lang.word2index[word] for word in sentence.split(" ")]
-
-def indexesFromPair(pair):
-
-    input_indexes = indexesFromSentence(input_lang, pair[0])
-    target_indexes = indexesFromSentence(output_lang, pair[1])
-    return (input_indexes, target_indexes)
-</pre>
-
-### Training the Model (without attention mechanism)
-
-<pre>
-teacher_forcing_ratio = 0.5
-
-def train(inputs, targets, encoder, decoder, trainer):
-
-    dy.renew_cg()
-
-    encoder_hidden = encoder.initHidden()
-
-    input_length = len(inputs)
-    target_length = len(targets)
-
-    encoder_outputs = []
-
-    losses = []
-
-    for i in range(input_length):
-        encoder_output, encoder_hidden = encoder(inputs[i], encoder_hidden)
-        encoder_outputs.append(encoder_output)
-
-    decoder_input = SOS_token
-    decoder_hidden = encoder_hidden
-
-    if random.random() < teacher_forcing_ratio:
-        use_teacher_forcing = True
-    else:
-        use_teacher_forcing = False
-
-    if use_teacher_forcing:
-        for i in range(target_length):
-            decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
-            losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
-            decoder_input = targets[i]
-    else:
-        for i in range(target_length):
-            decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
-            losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
-            probs = decoder_output.vec_value()
-            decoder_input = probs.index(max(probs))
-            if decoder_input == EOS_token:
-                break
-
-    loss = dy.esum(losses)/len(losses)
-    loss.backward()
-    trainer.update()
-
-    return loss.value()
-</pre>
-
-### Training the Model (with attention mechanism)
-
-<pre>
-teacher_forcing_ratio = 0.5
-
-def train(inputs, targets, encoder, decoder, trainer, max_length=MAX_LENGTH):
-
-    dy.renew_cg()
-
-    encoder_hidden = encoder.initHidden()
-
-    input_length = len(inputs)
-    target_length = len(targets)
-
-    encoder_outputs = [dy.zeros(hidden_dim) for _ in range(max_length)]
-
-    losses = []
-
-    for i in range(input_length):
-        encoder_output, encoder_hidden = encoder(inputs[i], encoder_hidden)
-        encoder_outputs[i] = encoder_output
-
-    encoder_outputs = dy.concatenate(encoder_outputs, 1)
-
-    decoder_input = SOS_token
-    decoder_hidden = encoder_hidden
-
-    if random.random() < teacher_forcing_ratio:
-        use_teacher_forcing = True
-    else:
-        use_teacher_forcing = False
-
-    if use_teacher_forcing:
-        for i in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
-            losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
-            decoder_input = targets[i]
-    else:
-        for i in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
-            losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
-            probs = decoder_output.vec_value()
-            decoder_input = probs.index(max(probs))
-            if decoder_input == EOS_token:
-                break
-
-    loss = dy.esum(losses)/len(losses)
-    loss.backward()
-    trainer.update()
-
-    return loss.value()
-</pre>
