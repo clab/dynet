@@ -189,7 +189,13 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u) {
   return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u, 0));
 }
 
-Expression strided_select(const Expression& x, const std::vector<int>& strides, const std::vector<int>& range_from, const std::vector<int>& range_to) { return Expression(x.pg, x.pg->add_function<StridedSelect>({x.i}, strides, range_from, range_to)); }
+Expression strided_select(const Expression& x, const std::vector<int>& strides, const std::vector<int>& range_from, const std::vector<int>& range_to) {
+  bool inplaced = true;
+  for(unsigned d=0;d<strides.size();d++){ if(strides[d]!=1) inplaced = false; }
+  for(unsigned d=0;d<range_from.size();d++){ if(range_from[d]!=0) inplaced = false; }
+  for(unsigned d=0;d<range_to.size() && d<x.dim().nd;d++){ if(range_to[d]!=x.dim()[d]) inplaced = false; }
+  return Expression(x.pg, x.pg->add_function<StridedSelect>({x.i}, strides, range_from, range_to, inplaced));
+}
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
 Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }

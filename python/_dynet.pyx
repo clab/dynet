@@ -654,7 +654,7 @@ cdef class Expression: #{{{
             IndexError: If the indices are too large
             ValueError: In case of improper slice or if step is used
         """
-        assert isinstance(index, (int, slice)), "Expression key must be int or slice: %s" % index
+        assert isinstance(index, (int, slice, tuple)), "Expression key must be int or slice or tuple of slices: %s" % index
         cdef int rows = self.c().dim().rows()
         cdef int i, j
         if isinstance(index, int):
@@ -666,30 +666,34 @@ cdef class Expression: #{{{
             if i < 0:
                 i += rows
             return pick(self, i)
-        else:
-            i = 0
-            j = rows
-            if index.start is not None:
-                i = index.start
-                if i > rows - 1:
-                    raise IndexError("Start index too large: %d > %d" % (i, rows - 1))
-                if i < -rows:
-                    raise IndexError("Start index too small: %d < %d" % (i, -rows))
-                if i < 0:
-                    i += rows
-            if index.stop is not None:
-                j = index.stop
-                if j > rows:
-                    raise IndexError("Stop index too large: %d > %d" % (j, rows))
-                if j < -rows + 1:
-                    raise IndexError("Stop index too small: %d < %d" % (j, -rows + 1))
-                if j < 0:
-                    j += rows
-            if i >= j:
-                raise ValueError("Improper slice: start index must come strictly before stop index")
-            if index.step is not None:
-                raise ValueError("Step sizes not yet supported.")
-            return pick_range(self, i, j)
+        elif isinstance(index, slice):
+            return strided_select(self, [index.step] if index.step is not None else [], 
+                                        [index.start] if index.start is not None else [],
+                                        [index.stop] if index.stop is not None else [])
+        elif isinstance(index, tuple):
+            steps = []
+            for slice_i in index:
+              if slice_i.step is None:
+                steps.append(1)
+              else:
+                if slice_i.step <= 0: raise IndexError("steps must be positive, got:", slice_i.step)
+                steps.append(slice_i.step)
+            starts = []
+            for slice_i in index:
+              if slice_i.start is None:
+                starts.append(0)
+              else:
+                starts.append(slice_i.start)
+            stops = []
+            for i, slice_i in enumerate(index):
+              if slice_i.stop is None:
+                if i == len(self.dim()[0]):
+                  stops.append(self.dim()[1])
+                else:
+                  stops.append(self.dim()[0][i])
+              else:
+                stops.append(slice_i.stop)
+            return strided_select(self, steps, starts, stops)
 
     cpdef scalar_value(self, bool recalculate=False):
         """Returns value of an expression as a scalar
