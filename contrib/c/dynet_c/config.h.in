@@ -1,0 +1,6 @@
+#ifndef DYNET_C_CONFIG_H_
+#define DYNET_C_CONFIG_H_
+
+#cmakedefine DYNET_C_USE_CUDA
+
+#endif  // DYNET_C_CONFIG_H_
