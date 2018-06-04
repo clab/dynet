@@ -174,7 +174,7 @@ Format:
 <pre>
 > input 
 = target 
-< output]
+< output
 </pre>
 
 ### Dynet
