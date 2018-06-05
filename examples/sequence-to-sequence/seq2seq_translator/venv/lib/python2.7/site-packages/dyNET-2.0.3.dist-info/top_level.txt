@@ -1,4 +1,0 @@
-_dynet
-dynet
-dynet_config
-dynet_viz
