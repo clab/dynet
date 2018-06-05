@@ -2,7 +2,7 @@
 
 Here is the comparison between Dynet and PyTorch on the [seq2seq translator example](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html).
 
-We have already preprocessed and prepared the eng-fra language dataset in `data` folder according to the steps used in the [PyTorch example](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html).
+The data we used is a set of many thousands of English to French translation pairs. Download the data from [here](https://download.pytorch.org/tutorial/data.zip) and extract it to the current directory.
 
 ## Usage (Dynet)
 
