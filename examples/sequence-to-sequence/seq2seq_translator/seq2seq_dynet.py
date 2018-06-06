@@ -151,7 +151,7 @@ class AttnDecoderRNN(object):
         output = state_dec.output()
         output = dy.softmax(w_dec * output + b_dec)
 
-        return output, hidden, attn_weights
+        return output, state_dec.h(), attn_weights
 
     def initHidden(self):
         return [dy.zeros(self.hidden_dim)]

@@ -65,7 +65,7 @@ class AttnDecoderRNN(object):
         b_dec = dy.parameter(self.b_dec)
         output = state_dec.output()
         output = dy.softmax(w_dec * output + b_dec)
-        return output, hidden, attn_weights
+        return output, state_dec.h(), attn_weights
 
     def initHidden(self):
         return [dy.zeros(self.hidden_dim)]
@@ -148,26 +148,26 @@ We run our codes on a desktop with NVIDIA TITAN X. We here have D stands for Dyn
 
 | Time (D) | Iteration (D) | Loss (D) | Time (P) | Iteration (P) | Loss (P)|
 | --- | --- | --- | --- | --- | --- |
-| 0m 26s | 5000 5% | 3.3565 | 1m 30s | 5000 5% | 2.8794 |
-| 0m 53s | 10000 10% | 2.7376 | 2m 55s | 10000 10% | 2.3103 |
-| 1m 21s | 15000 15% | 2.4912 | 4m 5s | 15000 15% | 1.9939 |
-| 1m 48s | 20000 20% | 2.2536 | 5m 16s | 20000 20% | 1.7537 |
-| 2m 16s | 25000 25% | 2.0537 | 6m 27s | 25000 25% | 1.5796 |
-| 2m 44s | 30000 30% | 1.8832 | 7m 39s | 30000 30% | 1.3795 |
-| 3m 12s | 35000 35% | 1.7232 | 9m 13s | 35000 35% | 1.2712 |
-| 3m 40s | 40000 40% | 1.5833 | 10m 31s | 40000 40% | 1.1374 |
-| 4m 8s | 45000 45% | 1.4360 | 11m 41s | 45000 45% | 1.0215 |
-| 4m 36s | 50000 50% | 1.2916 | 12m 53s | 50000 50% | 0.9307 |
-| 5m 4s | 55000 55% | 1.2023 | 14m 5s | 55000 55% | 0.8312 |
-| 5m 33s | 60000 60% | 1.1186 | 15m 17s | 60000 60% | 0.7879 |
-| 6m 1s | 65000 65% | 1.0435 | 16m 48s | 65000 65% | 0.7188 |
-| 6m 30s | 70000 70% | 0.9348 | 18m 6s | 70000 70% | 0.6532 |
-| 6m 58s | 75000 75% | 0.8634 | 19m 18s | 75000 75% | 0.6273 |
-| 7m 26s | 80000 80% | 0.8323 | 20m 34s | 80000 80% | 0.6021 |
-| 7m 55s | 85000 85% | 0.7610 | 21m 44s | 85000 85% | 0.5210 |
-| 8m 23s | 90000 90% | 0.7377 | 22m 55s | 90000 90% | 0.5054 |
-| 8m 52s | 95000 95% | 0.6666 | 24m 9s | 95000 95% | 0.4417 |
-| 9m 21s | 100000 100% | 0.6237 | 25m 24s | 100000 100% | 0.4297 |
+| 0m 28s | 5000 5% | 3.2687 | 1m 30s | 5000 5% | 2.8794 |
+| 0m 56s | 10000 10% | 2.6397 | 2m 55s | 10000 10% | 2.3103 |
+| 1m 25s | 15000 15% | 2.3537 | 4m 5s | 15000 15% | 1.9939 |
+| 1m 54s | 20000 20% | 2.1538 | 5m 16s | 20000 20% | 1.7537 |
+| 2m 22s | 25000 25% | 1.9636 | 6m 27s | 25000 25% | 1.5796 |
+| 2m 51s | 30000 30% | 1.8166 | 7m 39s | 30000 30% | 1.3795 |
+| 3m 20s | 35000 35% | 1.6305 | 9m 13s | 35000 35% | 1.2712 |
+| 3m 49s | 40000 40% | 1.5026 | 10m 31s | 40000 40% | 1.1374 |
+| 4m 18s | 45000 45% | 1.4049 | 11m 41s | 45000 45% | 1.0215 |
+| 4m 47s | 50000 50% | 1.2827 | 12m 53s | 50000 50% | 0.9307 |
+| 5m 17s | 55000 55% | 1.2299 | 14m 5s | 55000 55% | 0.8312 |
+| 5m 46s | 60000 60% | 1.1067 | 15m 17s | 60000 60% | 0.7879 |
+| 6m 15s | 65000 65% | 1.0442 | 16m 48s | 65000 65% | 0.7188 |
+| 6m 44s | 70000 70% | 0.9789 | 18m 6s | 70000 70% | 0.6532 |
+| 7m 13s | 75000 75% | 0.8694 | 19m 18s | 75000 75% | 0.6273 |
+| 7m 43s | 80000 80% | 0.8219 | 20m 34s | 80000 80% | 0.6021 |
+| 8m 12s | 85000 85% | 0.7621 | 21m 44s | 85000 85% | 0.5210 |
+| 8m 41s | 90000 90% | 0.7453 | 22m 55s | 90000 90% | 0.5054 |
+| 9m 10s | 95000 95% | 0.6795 | 24m 9s | 95000 95% | 0.4417 |
+| 9m 39s | 100000 100% | 0.6442 | 25m 24s | 100000 100% | 0.4297 |
 
 We then show some evaluation results as follows.
 
@@ -182,45 +182,45 @@ Format:
 ### Dynet
 
 ```
-> elle est infirmiere .
-= she is a nurse .
-< she is a nurse . <EOS>
+> elle est convaincue de mon innocence .
+= she is convinced of my innocence .
+< she is convinced of my innocence . <EOS>
 
-> tu n es pas contrariee si ?
-= you re not upset are you ?
-< you re not upset are you re not upset are
+> je ne suis pas folle .
+= i m not crazy .
+< i m not mad . <EOS>
 
-> j en ai termine avec mon travail .
-= i am through with my work .
-< i am through with my work . <EOS>
+> je suis ruinee .
+= i m ruined .
+< i m ruined . <EOS>
 
-> je ne l invente pas .
-= i m not making that up .
-< i m not making up . <EOS>
+> je ne suis certainement pas ton ami .
+= i m certainly not your friend .
+< i m not your best your friend . <EOS>
 
-> elles ont peur de moi .
-= they re afraid of me .
-< they re afraid of me . <EOS>
+> c est un pleurnichard comme toujours .
+= he s a crybaby just like always .
+< he s a little nothing . <EOS>
 
-> on va jouer au tennis .
-= we re going to play tennis .
-< we are going tennis . <EOS>
+> je suis sure qu elle partira tot .
+= i m sure she ll leave early .
+< i m sure she ll leave early . <EOS>
 
-> j ai une assuetude .
-= i m addicted .
-< i m addicted . <EOS>
+> vous etes toujours vivantes .
+= you re still alive .
+< you re still alive . <EOS>
 
-> elles sont en train de vous chercher .
-= they re looking for you .
-< they re looking for you . <EOS>
+> nous n avons pas encore tres faim .
+= we aren t very hungry yet .
+< we re not not desperate . <EOS>
 
-> elle semble riche .
-= she seems rich .
-< she seems rich . <EOS>
+> vous n etes pas encore morts .
+= you re not dead yet .
+< you re not dead yet . <EOS>
 
-> vous etes bizarre .
-= you re weird .
-< you re weird . <EOS>
+> nous sommes coinces .
+= we re stuck .
+< we re stuck . <EOS>
 ```
 
 ### PyTorch
