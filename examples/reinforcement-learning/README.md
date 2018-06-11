@@ -24,7 +24,7 @@ python main_dqn.py --env_id 0 --double --dueling --prioritized
 ### Demo results
 <img src="./results/Cartpole.gif" width="200"> <img src="./results/MountainCar.gif" width="200"> <img src="./results/Acrobot.gif" width="200" height="150">
 
-## Mujoco (Continous Control) using DDPG:
+## Mujoco (Continuous Control) using DDPG:
 ### Run training
 ```
 python main_ddpg.py
@@ -32,4 +32,4 @@ python main_ddpg.py
 ### Demo results
 <img src="./results/stand_still.gif" width="200"> <img src="./results/move.gif" width="200"> <img src="./results/hopforward.gif" width="200">
 
-In the Mujoco game, the two-leg robot is supposed to be trained not to fall down and to move forward as fast as possible. The above three different strategies learned by the bot are *standing still*, *moving slowly* and *hopping forward*. The corresponding rewards of these strategies in the 'Walker2d-v2' environment is around 1050, 1200 and 1600, respectively, compared to random policies which get 1.7 in average.
+In the Mujoco game, the action space is **continuous**. The two-leg robot is supposed to be trained not to fall down and to move forward as fast as possible. The above three different strategies learned by the bot are *standing still*, *moving slowly* and *hopping forward*. The corresponding rewards of these strategies in the 'Walker2d-v2' environment is around 1050, 1200 and 1600, respectively, compared to random policies which get 1.7 in average.
