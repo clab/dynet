@@ -1,5 +1,8 @@
 # Reinforcement Learning using DyNet
-We provide DyNet example implementations of two commonly-adopted reinforcement learning (RL) algorithms: [Deep Q-Network (DQN)](https://arxiv.org/abs/1312.5602) and [Deep Deterministic Policy Gradient (DDPG)](https://arxiv.org/abs/1509.02971).
+We provide DyNet example implementations of two commonly-adopted reinforcement learning (RL) algorithms 
+* [Deep Q-Network (DQN)](https://arxiv.org/abs/1312.5602)
+* [Deep Deterministic Policy Gradient (DDPG)](https://arxiv.org/abs/1509.02971)
+
 In order to obtain good training performance, we also (optionally) incorporate some de facto techniques for RL, including [Double Q-Learning](https://arxiv.org/abs/1509.06461), [Prioritized Replay](https://arxiv.org/abs/1511.05952) and [Dueling Network Architectures](https://arxiv.org/abs/1511.06581).
 
 ## Requirements
