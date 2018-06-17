@@ -19,12 +19,12 @@ public:
 
   inline unsigned size() const { return (unsigned)words_.size(); }
 
-  inline bool contains(const std::string& words) {
+  inline bool contains(const std::string& words) const {
     return !(d_.find(words) == d_.end());
   }
 
   void freeze() { frozen = true; }
-  bool is_frozen() { return frozen; }
+  bool is_frozen() const { return frozen; }
 
   inline int convert(const std::string& word) {
     auto i = d_.find(word);
