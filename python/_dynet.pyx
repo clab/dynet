@@ -2130,10 +2130,10 @@ cdef class Tensor: #{{{
 #{{{ Expressions
 cdef ensure_freshness(Expression a):
     if a.cg_version != _cg.version():
-        if type(a) is Parameters:
+        if type(a) is Parameters or type(a) is LookupParameters:
             pass
         else:
-            raise ValueError("Attempt to use a stale expression.")
+            raise ValueError("Attempt to use a stale expression of type {}".format(type(a)))
 
 cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_add(a.c(), b.c()))
 cdef _mul(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_mul(a.c(), b.c()))
