@@ -4,6 +4,7 @@ from math import log, ceil
 from reduce_tree import ReduceTree, SumTree
 
 
+# A simple memory to store and sample experiences.
 class Memory(object):
     def __init__(self, size):
         self.size = size
@@ -19,6 +20,7 @@ class Memory(object):
         return self.memory[indices]
 
 
+# Prioritized Replay: https://arxiv.org/abs/1511.05952
 class PrioritizedMemory(object):
     def __init__(self, size, alpha=0.6):
         self.size = int(2 ** ceil(log(size, 2)))

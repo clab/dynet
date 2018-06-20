@@ -5,6 +5,8 @@ from memory import Memory
 from network import MLP
 
 
+# Deep Deterministic Policy Gradient: https://arxiv.org/abs/1509.02971
+# An reinforcement learning agent to learn in environments which have continuous action spaces.
 class DDPG:
     def __init__(self, obs_dim, action_dim, hiddens_actor, hiddens_critic, layer_norm=False, memory_size=50000):
         self.obs_dim = obs_dim
@@ -46,8 +48,6 @@ class DDPG:
         self.memory.store(exp)
 
     def learn(self, batch_size):
-        if not self.learnable(batch_size): return
-
         exps = self.memory.sample(batch_size)
         obss, actions, rewards, obs_nexts, dones = self._process(exps)
 
@@ -80,8 +80,10 @@ class DDPG:
         self.actor_target.update(self.actor, soft=True)
         self.critic_target.update(self.critic, soft=True)
 
-        return loss_value_actor, loss_value_critic
+        return loss_value_actor + loss_value_critic
 
+    # data in memory: [memory_size, exp], exp: [obs, action, reward, obs_next, done]
+    # output: [obss, actions, rewards, obs_nexts, dones], 'X's: [x, batch_size]
     @staticmethod
     def _process(exps):
         n = len(exps)
@@ -94,5 +96,6 @@ class DDPG:
         ret = [np.transpose(arr) for arr in ret]
         return ret
 
-    def learnable(self, batch_size):
-        return self.memory.idx > batch_size
+    @property
+    def epsilon(self):
+        return self.noise_stddev

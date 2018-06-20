@@ -1,9 +1,7 @@
 import numpy as np
-import time
-from math import ceil
 
 
-def train_pipeline_1(env, player, score_threshold, batch_size, n_episode, learn_start=100):
+def train_pipeline_progressive(env, player, score_threshold, batch_size, n_episode, learn_start=100, print_every=10):
     rewards, losses = [], []
     for i_episode in range(n_episode):
         obs = env.reset()
@@ -19,7 +17,7 @@ def train_pipeline_1(env, player, score_threshold, batch_size, n_episode, learn_
             if done: break
             obs = obs_next
         rewards.append(reward)
-        if i_episode % 10 == 0:
+        if i_episode % print_every == 0:
             score = np.mean(rewards[-100:])
             print("================================")
             print("i_episode: {}".format(i_episode))
@@ -31,11 +29,11 @@ def train_pipeline_1(env, player, score_threshold, batch_size, n_episode, learn_
             if score > score_threshold: break
 
 
-def train_pipeline_2(env, player, score_threshold, batch_size, n_epoch, n_rollout, n_train, learn_start=0,
-                     early_stop=True):
+def train_pipeline_conservative(env, player, score_threshold, batch_size, n_epoch, n_rollout, n_train, learn_start=0,
+                                early_stop=True):
     for i_epoch in range(n_epoch):
         rewards, losses = [], []
-        for i_rollout in range(n_rollout):
+        for _ in range(n_rollout):
             reward = 0
             obs = env.reset()
             for t in range(env._max_episode_steps):
@@ -48,7 +46,7 @@ def train_pipeline_2(env, player, score_threshold, batch_size, n_epoch, n_rollou
             rewards.append(reward)
 
         if i_epoch > learn_start:
-            for i_train in range(n_train):
+            for _ in range(n_train):
                 loss = player.learn(batch_size)
                 if loss is not None: losses.append(loss)
 
@@ -57,7 +55,7 @@ def train_pipeline_2(env, player, score_threshold, batch_size, n_epoch, n_rollou
             print("===========================")
             print("i_epoch: {}".format(i_epoch))
             print("epsilon: {}".format(player.epsilon))
-            print("Average rollout score: {}".format(mean_reward))
+            print("Average score of {} rollout games: {}".format(n_rollout, mean_reward))
             if i_epoch > learn_start:
                 print("Average training loss: {}".format(np.mean(losses)))
             print("===========================")
@@ -66,16 +64,17 @@ def train_pipeline_2(env, player, score_threshold, batch_size, n_epoch, n_rollou
 
 
 def test(env, player, n_turns, render=False):
-    print('testing')
-    for i in range(n_turns):
+    input("Ready to test., Press any key to coninue...")
+    for _ in range(n_turns):
         score = 0
         obs = env.reset()
-        for t in range(env._max_episode_steps):
+        for _ in range(env._max_episode_steps):
             if render: env.render()
             action = player.act(obs)
             obs, reward, done, _ = env.step(action)
             if render: env.render()
             score += reward
             if done:
-                print('Your score is {}'.format(score))
+                print('The score is {}'.format(score))
                 break
+            if render: env.render()

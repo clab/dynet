@@ -48,38 +48,6 @@ class MLP(Network):
         return out
 
 
-'''
-class Conv(Network):
-    def __init__(self, inpt_shape, channels, hiddens, kernel_size=3, pc=None):
-        super().__init__(pc)
-        self.inpt_shape = inpt_shape
-        self.n_layers = len(channels)
-
-        self.fs = []
-        self.bs = []
-        H, W, C = inpt_shape
-        for channel in channels:
-            self.fs.append(self.pc.add_parameters((kernel_size, kernel_size, C, channel)))
-            self.bs.append(self.pc.add_parameters(channel))
-            H = ceil(H / 2)
-            W = ceil(W / 2)
-            C = channel
-        self.mlp = MLP([H * W * C], hiddens, self.pc)
-
-    def __call__(self, obs, batched=False):
-        out = dy.inputTensor(obs, batched=batched)
-        for i in range(self.n_layers):
-            f, b = dy.parameter(self.fs[i]), dy.parameter(self.bs[i])
-            out = dy.conv2d_bias(out, f, b, stride=[1, 1], is_valid=False)
-            out = dy.maxpooling2d(out, ksize=[2, 2], stride=[2, 2], is_valid=False)
-            out = dy.rectify(out)
-        dim = out.dim()
-        out = dy.reshape(out, (np.product(dim[0]),), batch_size=dim[1])
-        out = self.mlp(out)
-        return out
-'''
-
-
 class Header(Network):
     def __init__(self, opt_size, network, dueling=False, **kwargs):
         super().__init__(None)

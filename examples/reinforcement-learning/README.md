@@ -17,7 +17,7 @@ python main_dqn.py --env_id 0
 ```
 where `env_id` chooses one of the classic control environment from OpenAI Gym, which includes [CartPole](https://gym.openai.com/envs/CartPole-v1/), [MountainCar](https://gym.openai.com/envs/MountainCar-v0/), and [Acrobot](https://gym.openai.com/envs/Acrobot-v1/), all with **discrete action space**.
 
-To enable Double Q-Learning, Prioritized Replay and Dueling Network Arhictecture, we can add the following tags, respectively:
+To enable Double Q-Learning, Prioritized Replay and Dueling Network Architecture, we can add the following tags, respectively:
 ```
 python main_dqn.py --env_id 0 --double --dueling --prioritized
 ```

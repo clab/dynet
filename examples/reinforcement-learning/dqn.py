@@ -4,6 +4,11 @@ import numpy as np
 from memory import Memory, PrioritizedMemory
 
 
+# DeepQNetwork: https://arxiv.org/abs/1312.5602
+# An reinforcement learning agent to learn in environments which have discrete action spaces.
+# Double Q-Learning: https://arxiv.org/abs/1509.06461
+# Prioritized Replay: https://arxiv.org/abs/1511.05952
+# Dueling Network Architectures: https://arxiv.org/abs/1511.06581
 class DeepQNetwork(object):
     def __init__(self, network, memory_size, use_double_dqn=False, target_network=None, n_replace_target=500,
                  dueling=True, prioritized=True):
@@ -50,6 +55,7 @@ class DeepQNetwork(object):
 
     def learn(self, batch_size):
         if self.prioritized:
+            if not self.memory.is_full(): return -np.inf
             indices, exps, weights = self.memory.sample(batch_size, self.beta)
         else:
             exps = self.memory.sample(batch_size)
@@ -83,26 +89,19 @@ class DeepQNetwork(object):
         loss.backward()
         self.trainer.update()
 
-        if self.epsilon > self.epsilon_lower:
-            self.epsilon -= self.epsilon_decrease
-        else:
-            self.epsilon = self.epsilon_lower
-
+        self.epsilon = max(self.epsilon - self.epsilon_decrease, self.epsilon_lower)
         if self.prioritized:
-            if self.beta < 1:
-                self.beta += self.beta_increase
-            else:
-                self.beta = 1.
+            self.beta = min(self.beta + self.beta_increase, 1.)
 
         self.learn_step += 1
         if self.use_double_dqn and self.learn_step % self.n_replace_target == 0:
             self.target_network.update(self.network)
         return loss_value
 
-    def save(self, model_name):
-        pass
-
-    def _process(self, exps):
+    # data in memory: [N, exp], exp: [obs, action, reward, obs_next, done]
+    # output: [obss, actions, rewards, obs_nexts, dones], 'X's: [x, batch_size]
+    @staticmethod
+    def _process(exps):
         n = len(exps)
         ret = []
         for i in range(5):
@@ -110,13 +109,5 @@ class DeepQNetwork(object):
             for j in range(n):
                 ret[i].append(exps[j][i])
 
-        transpose_shape = [1, 2, 3, 0] if len(ret[0][0].shape) > 1 else [1, 0]
-
-        def transpose(i, arr):
-            if i == 0 or i == 3:
-                return np.transpose(arr, transpose_shape)
-            else:
-                return np.transpose(arr)
-
-        ret = [transpose(i, arr) for i, arr in enumerate(ret)]
+        ret = [np.transpose(arr) for arr in ret]
         return ret

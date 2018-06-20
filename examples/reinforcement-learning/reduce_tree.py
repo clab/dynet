@@ -1,8 +1,8 @@
 import operator
-
 import numpy as np
 
 
+# A simple binary tree structure to calculate some statistics from leaves.
 class ReduceTree(object):
     def __init__(self, size, op):
         if size & (size - 1) != 0:
