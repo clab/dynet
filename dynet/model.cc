@@ -516,8 +516,14 @@ void save_dynet_model(std::string filename, ParameterCollection* model) {
 };
 
 void load_dynet_model(std::string filename, ParameterCollection* model) {
-  TextFileLoader loader(filename);
-  loader.populate(*model, "/model");
+  if (filename.substr(filename.size()-3) == ".gz") {
+    gzFileLoader loader(filename);
+    loader.populate(*model, "/model");
+  }
+  else {
+    TextFileLoader loader(filename);
+    loader.populate(*model, "/model");
+  }
 };
 
 Model::Model() : ParameterCollection() {

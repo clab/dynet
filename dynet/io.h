@@ -173,6 +173,22 @@ class TextFileLoader : public Loader {
   std::string dataname;
 }; // class TextFileLoader
 
+class gzFileLoader : public Loader {
+ public:
+  gzFileLoader(const std::string & filename);
+  ~gzFileLoader() override;
+  void populate(ParameterCollection & model, const std::string & key = "") override;
+  void populate(Parameter & param, const std::string & key = "") override;
+  void populate(LookupParameter & lookup_param,
+                const std::string & key = "") override;
+  Parameter load_param(ParameterCollection & model, const std::string & key) override;
+  LookupParameter load_lookup_param(ParameterCollection & model, const std::string & key) override;
+
+ private:
+  std::string dataname;
+}; // class gzFileLoader
+
+
 } // namespace dynet
 
 #endif
