@@ -385,7 +385,7 @@ void gzFileLoader::populate(ParameterCollection & model, const std::string & key
   if (key_.size() != 0 && key_.back() != '/') key_ += "/";
   while(std::getline(datastream, line)) {
     // skip non-relevant parameter lines
-    while (not relevant_header_line(line, "#", key_, type, name, dim, byte_count, zero_grad))
+    while (! relevant_header_line(line, "#", key_, type, name, dim, byte_count, zero_grad))
       std::getline(datastream, line);
     
     // We found a relevant parameter line, load it
@@ -457,14 +457,14 @@ void gzFileLoader::populate(Parameter & param,
   // skip non-relevant parameter lines
   bool found = false;
   std::getline(datastream, line);
-  while (not datastream.eof() and not found) {
+  while (!datastream.eof() && !found) {
     if (relevant_header_line(line, "#Parameter#", key, type, name, dim, byte_count, zero_grad))
       found = true;
     else
       std::getline(datastream, line);
   }
   // search parameter was not found
-  if (not found) DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
+  if (!found) DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
 
   // parameter was found, load it
   if(param.p->dim != dim)
@@ -504,14 +504,14 @@ void gzFileLoader::populate(LookupParameter & lookup_param,
   // skip non-relevant parameter lines
   bool found = false;
   std::getline(datastream, line);
-  while (not datastream.eof() and not found) {
+  while (!datastream.eof() && !found) {
     if (relevant_header_line(line, "#LookupParameter#", key, type, name, dim, byte_count, zero_grad))
       found = true;
     else
       std::getline(datastream, line);
   }
   // search parameter was not found
-  if (not found) DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
+  if (!found) DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
   
   // parameter was found, load it
   if(lookup_param.p->all_dim != dim)
@@ -550,14 +550,14 @@ Parameter gzFileLoader::load_param(ParameterCollection & model,
   // skip non-relevant parameter lines
   bool found = false;
   std::getline(datastream, line);
-  while (not datastream.eof() and not found) {
+  while (!datastream.eof() && !found) {
     if (relevant_header_line(line, "#Parameter#", key, type, name, dim, byte_count, zero_grad))
       found = true;
     else
       std::getline(datastream, line);
   }
   // search parameter was not found
-  if (not found) DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
+  if (!found) DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
 
   // parameter was found, add and load it
   Parameter param = model.add_parameters(dim);
@@ -595,14 +595,14 @@ LookupParameter gzFileLoader::load_lookup_param(ParameterCollection & model,
   // skip non-relevant parameter lines
   bool found = false;
   std::getline(datastream, line);
-  while (not datastream.eof() and not found) {
+  while (!datastream.eof() && !found) {
     if (relevant_header_line(line, "#LookupParameter#", key, type, name, dim, byte_count, zero_grad))
       found = true;
     else
       std::getline(datastream, line);
   }
   // search parameter was not found
-  if (not found) DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
+  if (!found) DYNET_RUNTIME_ERR("Could not find key " << key << " in the model file");
   
   // parameter was found, load it
   std::vector<float> values(dim.size());
