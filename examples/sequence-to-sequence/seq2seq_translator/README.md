@@ -4,7 +4,7 @@ Here is the comparison between Dynet and PyTorch on the [seq2seq translator exam
 
 The data we used is a set of many thousands of English to French translation pairs. Download the data from [here](https://download.pytorch.org/tutorial/data.zip) and extract it to the current directory.
 
-## Usage (Dynet)
+## Usage (DyNet)
 
 The architecture of the Dynet model `seq2seq_dynet.py` is the same as that in [PyTorch Example](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html). We here implement the attention mechanism in the model.
 
