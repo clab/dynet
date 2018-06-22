@@ -6,141 +6,23 @@ The data we used is a set of many thousands of English to French translation pai
 
 ## Usage (Dynet)
 
-The architecture of the dynet model `seq2seq_dynet.py` is the same as that in [PyTorch Example](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html). We here implement the attention mechanism in the model.
-
-The architecture of the dynet model is shown as follows. 
-
-```python
-class EncoderRNN(object):
-
-    def __init__(self, in_vocab, hidden_dim, model):
-        self.in_vocab = in_vocab
-        self.hidden_dim = hidden_dim
-        self.embedding_enc = model.add_lookup_parameters((self.in_vocab, self.hidden_dim))
-        self.rnn_enc = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim, model)
-
-    def __call__(self, input, hidden):
-        input_embed = dy.lookup(self.embedding_enc, input)
-        state_enc = self.rnn_enc.initial_state(vecs=hidden)
-        state_enc = state_enc.add_input(input_embed)
-        return state_enc.output(), state_enc.h()
-
-    def initHidden(self):
-        return [dy.zeros(self.hidden_dim)] 
-   
-DROPOUT_RATE = 0.1
-
-class AttnDecoderRNN(object):
-
-    def __init__(self, hidden_dim, out_vocab, model, max_length=MAX_LENGTH):
-        self.hidden_dim = hidden_dim
-        self.out_vocab = out_vocab
-        self.max_length = max_length
-        self.embedding_dec = model.add_lookup_parameters((self.out_vocab, self.hidden_dim))
-        self.w_attn = model.add_parameters((self.max_length, self.hidden_dim * 2))
-        self.b_attn = model.add_parameters((self.max_length,))
-        self.w_attn_combine = model.add_parameters((self.hidden_dim, self.hidden_dim * 2))
-        self.b_attn_combine = model.add_parameters((self.hidden_dim,))
-        self.rnn_dec = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim, model)
-        self.w_dec = model.add_parameters((self.out_vocab, self.hidden_dim))
-        self.b_dec = model.add_parameters((self.out_vocab,))
-
-    def __call__(self, input, hidden, encoder_outptus, dropout=False):
-        input_embed = dy.lookup(self.embedding_dec, input)
-        if dropout:
-            input_embed = dy.dropout(input_embed, DROPOUT_RATE)
-        input_cat = dy.concatenate([input_embed, hidden[0]])
-        w_attn = dy.parameter(self.w_attn)
-        b_attn = dy.parameter(self.b_attn)
-        attn_weights = dy.softmax(w_attn * input_cat + b_attn)
-        attn_applied = encoder_outptus * attn_weights
-        output = dy.concatenate([input_embed, attn_applied])
-        w_attn_combine = dy.parameter(self.w_attn_combine)
-        b_attn_combine = dy.parameter(self.b_attn_combine)
-        output = w_attn_combine * output + b_attn_combine
-        output = dy.rectify(output)
-        state_dec = self.rnn_dec.initial_state(vecs=hidden)
-        state_dec = state_dec.add_input(output)
-        w_dec = dy.parameter(self.w_dec)
-        b_dec = dy.parameter(self.b_dec)
-        output = state_dec.output()
-        output = dy.softmax(w_dec * output + b_dec)
-        return output, state_dec.h(), attn_weights
-
-    def initHidden(self):
-        return [dy.zeros(self.hidden_dim)]
-```
+The architecture of the Dynet model `seq2seq_dynet.py` is the same as that in [PyTorch Example](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html). We here implement the attention mechanism in the model.
 
 Install the GPU version of Dynet according to the instructions on the [official website](http://dynet.readthedocs.io/en/latest/python.html#installing-a-cutting-edge-and-or-gpu-version).
 
 Then, run the training:
 
-<pre>
-python seq2seq_dynet.py --dynet_gpus 1
-</pre>
+    python seq2seq_dynet.py --dynet_gpus 1
 
 ## Usage (PyTorch)
 
 The code of `seq2seq_pytorch.py` follows the same line in [PyTorch Example](https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html). 
 
-The architecture of the pytorch model is shown as follows.
-
-```python
-class EncoderRNN(nn.Module):
-
-    def __init__(self, input_size, hidden_size):
-        super(EncoderRNN, self).__init__()
-        self.hidden_size = hidden_size
-        self.embedding = nn.Embedding(input_size, hidden_size)
-        self.gru = nn.GRU(hidden_size, hidden_size)
-
-    def forward(self, input, hidden):
-        embedded = self.embedding(input).view(1, 1, -1)
-        output = embedded
-        output, hidden = self.gru(output, hidden)
-        return output, hidden
-
-    def initHidden(self):
-        return torch.zeros(1, 1, self.hidden_size, device=device)
-
-class AttnDecoderRNN(nn.Module):
-
-    def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=MAX_LENGTH):
-        super(AttnDecoderRNN, self).__init__()
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.dropout_p = dropout_p
-        self.max_length = max_length
-        self.embedding = nn.Embedding(self.output_size, self.hidden_size)
-        self.attn = nn.Linear(self.hidden_size * 2, self.max_length)
-        self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
-        self.dropout = nn.Dropout(self.dropout_p)
-        self.gru = nn.GRU(self.hidden_size, self.hidden_size)
-        self.out = nn.Linear(self.hidden_size, self.output_size)
-
-    def forward(self, input, hidden, encoder_outputs):
-        embedded = self.embedding(input).view(1, 1, -1)
-        embedded = self.dropout(embedded)
-        attn_weights = F.softmax(self.attn(torch.cat((embedded[0], hidden[0]), 1)), dim=1)
-        attn_applied = torch.bmm(attn_weights.unsqueeze(0), encoder_outputs.unsqueeze(0))
-        output = torch.cat((embedded[0], attn_applied[0]), 1)
-        output = self.attn_combine(output).unsqueeze(0)
-        output = F.relu(output)
-        output, hidden = self.gru(output, hidden)
-        output = F.log_softmax(self.out(output[0]), dim=1)
-        return output, hidden, attn_weights
-
-    def initHidden(self):
-        return torch.zeros(1, 1, self.hidden_size, device=device)
-```
-
 Install CUDA version of PyTorch according to the instructions on the [official website](http://pytorch.org/).
 
 Then, run the training:
 
-<pre>
-python seq2seq_pytorch.py
-</pre>
+    python seq2seq_pytorch.py
 
 ## Performance
 
@@ -148,6 +30,7 @@ We run our codes on a desktop with NVIDIA TITAN X. We here have D stands for Dyn
 
 | Time (D) | Iteration (D) | Loss (D) | Time (P) | Iteration (P) | Loss (P)|
 | --- | --- | --- | --- | --- | --- |
+| 0m 0s | 0% | 7.9808 | 0m 0s | 0% | 7.9615 |
 | 0m 28s | 5000 5% | 3.2687 | 1m 30s | 5000 5% | 2.8794 |
 | 0m 56s | 10000 10% | 2.6397 | 2m 55s | 10000 10% | 2.3103 |
 | 1m 25s | 15000 15% | 2.3537 | 4m 5s | 15000 15% | 1.9939 |
