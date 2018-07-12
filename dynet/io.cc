@@ -4,8 +4,11 @@
 #include "dynet/str-util.h"
 
 #include <algorithm>
+
+#ifdef HAVE_BOOST
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+#endif
 
 // Normally DyNet style permits using namespace std, but to make compatibility
 // possible with some external code, it is simpler if types are fully
@@ -356,7 +359,8 @@ LookupParameter TextFileLoader::load_lookup_param(ParameterCollection & model,
 
 
 // =========== gzFileLoader ====================
-
+#ifdef HAVE_BOOST
+  
 gzFileLoader::gzFileLoader(const std::string & filename) :
         dataname(filename) { }
 
@@ -620,6 +624,6 @@ LookupParameter gzFileLoader::load_lookup_param(ParameterCollection & model,
   fmod.close();
   return lookup_param;
 }
-
+#endif // ifdef HAVE_BOOST
   
 } // namespace dynet

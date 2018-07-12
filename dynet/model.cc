@@ -517,8 +517,12 @@ void save_dynet_model(std::string filename, ParameterCollection* model) {
 
 void load_dynet_model(std::string filename, ParameterCollection* model) {
   if (filename.substr(filename.size()-3) == ".gz") {
+    #ifdef HAVE_BOOST
     gzFileLoader loader(filename);
     loader.populate(*model, "/model");
+    #else
+    DYNET_RUNTIME_ERR("gzipped model support was not built. Compile with cmake option -DENABLE_BOOST=ON to enable it.");
+    #endif
   }
   else {
     TextFileLoader loader(filename);

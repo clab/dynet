@@ -173,6 +173,8 @@ class TextFileLoader : public Loader {
   std::string dataname;
 }; // class TextFileLoader
 
+
+#ifdef HAVE_BOOST
 class gzFileLoader : public Loader {
  public:
   gzFileLoader(const std::string & filename);
@@ -187,7 +189,8 @@ class gzFileLoader : public Loader {
  private:
   std::string dataname;
 }; // class gzFileLoader
-
+#endif
+ 
 
 } // namespace dynet
 
