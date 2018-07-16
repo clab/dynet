@@ -369,7 +369,7 @@ namespace dynet {
             break;
           }
 
-          S dev_loss;
+          S dev_loss = S();
           for (auto it = dev_indices.begin(); it != dev_indices.end(); ++it) {
             unsigned i = *it;
             DYNET_ASSERT(i < dev_data.size(), "Out-of-bounds ID in dev set for multiprocessing");
