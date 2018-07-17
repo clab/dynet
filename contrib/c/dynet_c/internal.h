@@ -8,13 +8,14 @@
 #include <utility>
 #include <vector>
 
+#include <dynet/init.h>
+#include <dynet/dim.h>
 // #include <dynet/device.h>
 // #include <dynet/error.h>
 // #include <dynet/graph.h>
 // #include <dynet/initializer.h>
 // #include <dynet/model.h>
 // #include <dynet/parameter.h>
-#include <dynet/dim.h>
 // #include <dynet/tensor.h>
 // #include <dynet/optimizer.h>
 
@@ -56,13 +57,14 @@ if (!var) { \
   throw dynet_c::internal::Error(__FILE__, __LINE__, ss.str()); \
 }
 
+struct dynetDynetParams;
+struct dynetDim;
 // struct dynetDevice;
 // struct dynetNode;
 // struct dynetGraph;
 // struct dynetInitializer;
 // struct dynetModel;
 // struct dynetParameter;
-struct dynetDim;
 // struct dynetTensor;
 // struct dynetOptimizer;
 
@@ -134,6 +136,10 @@ class ErrorHandler {
   std::string message_;
 };
 
+DYNET_C_PTR_TO_PTR(DynetParams, dynetDynetParams);
+DYNET_C_VAL_TO_PTR(DynetParams, dynetDynetParams);
+DYNET_C_PTR_TO_PTR(Dim, dynetDim);
+DYNET_C_VAL_TO_PTR(Dim, dynetDim);
 // DYNET_C_PTR_TO_PTR(Device, dynetDevice);
 // DYNET_C_PTR_TO_PTR(Node, dynetNode);
 // DYNET_C_VAL_TO_PTR(Node, dynetNode);
@@ -143,8 +149,6 @@ class ErrorHandler {
 // DYNET_C_PTR_TO_PTR(Parameter, dynetParameter);
 // DYNET_C_PTR_TO_PTR(Shape, dynetShape);
 // DYNET_C_VAL_TO_PTR(Shape, dynetShape);
-DYNET_C_PTR_TO_PTR(Dim, dynetDim);
-DYNET_C_VAL_TO_PTR(Dim, dynetDim);
 // DYNET_C_PTR_TO_PTR(Tensor, dynetTensor);
 // DYNET_C_VAL_TO_PTR(Tensor, dynetTensor);
 // DYNET_C_PTR_TO_PTR(Optimizer, dynetOptimizer);
