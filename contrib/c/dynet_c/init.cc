@@ -4,14 +4,13 @@
 #include <dynet_c/init.h>
 #include <dynet_c/internal.h>
 
-using dynet::DynetParams;
 using dynet_c::internal::to_c_ptr;
 using dynet_c::internal::to_cpp_ptr;
 using dynet_c::internal::to_c_ptr_from_value;
 
 DYNET_C_STATUS dynetCreateDynetParams(dynetDynetParams_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(newobj);
-  *newobj = to_c_ptr(new DynetParams());
+  *newobj = to_c_ptr(new dynet::DynetParams());
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 

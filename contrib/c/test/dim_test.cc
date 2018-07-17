@@ -2,7 +2,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <dynet_c/dim.h>
-#include <test_utils.h>
+#include "test_utils.h"
 
 struct CDimTest {
     CDimTest() {}
