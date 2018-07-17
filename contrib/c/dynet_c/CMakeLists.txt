@@ -15,12 +15,14 @@ set(dynet_c_HDRS
   graph.h
   init.h
   internal.h
+  tensor.h
 )
 set(
   dynet_c_SRCS
   dim.cc
   init.cc
   internal.cc
+  tensor.cc
 )
 
 set(BUILD_SHARED_LIBS ON)
