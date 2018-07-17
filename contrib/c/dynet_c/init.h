@@ -108,6 +108,6 @@ DYNET_C_API DYNET_C_STATUS dynetInitialize(dynetDynetParams_t *params);
  * @param seed Random seed.
  * @return Status code.
  */
-DYNET_C_API DYNET_C_STATUS dynetResetRng(unsigned seed);
+DYNET_C_API DYNET_C_STATUS dynetResetRng(uint32_t seed);
 
 #endif  // DYNET_C_INIT_H_
