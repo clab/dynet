@@ -16,6 +16,8 @@ set(dynet_c_HDRS
   init.h
   internal.h
   model.h
+  param-init.h
+  status.h
   tensor.h
 )
 set(
@@ -24,6 +26,8 @@ set(
   init.cc
   internal.cc
   model.cc
+  param-init.cc
+  status.cc
   tensor.cc
 )
 

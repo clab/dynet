@@ -4,6 +4,7 @@
 #include <dynet_c/define.h>
 #include <dynet_c/dim.h>
 #include <dynet_c/model.h>
+#include <dynet_c/param-init.h>
 #include <dynet_c/tensor.h>
 
 /**
@@ -150,5 +151,93 @@ DYNET_C_API DYNET_C_STATUS dynetSetLookupParameterUpdated(
  */
 DYNET_C_API DYNET_C_STATUS dynetIsLookupParameterUpdated(
     const dynetLookupParameter_t *param, DYNET_C_BOOL *retval);
+
+/**
+ * Creates a new ParameterCollection object.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCreateParameterCollection(
+    dynetParameterCollection_t **newobj);
+
+/**
+ * Deletes the ParameterCollection object.
+ * @param pc Pointer of a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetDeleteParameterCollection(
+    dynetParameterCollection_t *pc);
+
+/**
+ * Gets the L2 norm of the gradient in the ParameterCollection.
+ * @param pc Pointer of a handler.
+ * @param retval Pointer to receive the L2 norm value.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetGetParameterCollectionGradientL2Norm(
+    const dynetParameterCollection_t *pc, float *retval);
+
+/**
+ * Sets weight decay coefficient for parameters in the ParameterCollection.
+ * @param pc Pointer of a handler.
+ * @param lambda Weight decay coefficient.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetSetParameterCollectionWeightDecayLambda(
+    dynetParameterCollection_t *pc, float lambda);
+
+/**
+ * Gets weight decay coefficient for parameters in the ParameterCollection.
+ * @param pc Pointer of a handler.
+ * @param retval Pointer to receive the weight decay coefficient.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetGetParameterCollectionWeightDecayLambda(
+    const dynetParameterCollection_t *pc, float *retval);
+
+/**
+ * Adds a parameter to the ParameterCollection.
+ * @param pc Pointer of a handler.
+ * @param d Pointer of a dim.
+ * @param init Pointer of an initializer.
+ * @param newobj Pointer to receive a Parameter object.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetAddParametersToParameterCollection(
+    dynetParameterCollection_t *pc, const dynetDim_t *d,
+    const dynetParameterInit_t *init, dynetParameter_t **newobj);
+
+/**
+ * Adds a lookup parameter to the ParameterCollection.
+ * @param pc Pointer of a handler.
+ * @param n Dimension of each embedding.
+ * @param d Pointer of a dim.
+ * @param init Pointer of an initializer.
+ * @param newobj Pointer to receive a LookupParameter object.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetAddLookupParametersToParameterCollection(
+    dynetParameterCollection_t *pc, uint32_t n, const dynetDim_t *d,
+    const dynetParameterInit_t *init, dynetLookupParameter_t **newobj);
+
+/**
+ * Adds a subcollection to the ParameterCollection.
+ * @param pc Pointer of a handler.
+ * @param name Name of a subcollection.
+ * @param newobj Pointer to receive a ParameterCollection object.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetAddSubcollectionToParameterCollection(
+    dynetParameterCollection *pc, const char *name,
+    dynetParameterCollection **newobj);
+
+/**
+ * Gets the total number of tunable parameters in the ParameterCollection.
+ * @param pc Pointer of a handler.
+ * @param retval Pointer to receive the total number of tunable parameters.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetGetParameterCollectionParameterCount(
+    const dynetLookupParameter_t *param, size_t *retval);
 
 #endif  // DYNET_C_MODEL_H_

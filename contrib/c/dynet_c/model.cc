@@ -108,3 +108,92 @@ DYNET_C_STATUS dynetIsLookupParameterUpdated(
   *retval = to_cpp_ptr(param)->is_updated();
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetCreateParameterCollection(
+    dynetParameterCollection_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::ParameterCollection());
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetDeleteParameterCollection(dynetParameterCollection_t *pc) try {
+  DYNET_C_CHECK_NOT_NULL(pc);
+  delete to_cpp_ptr(pc);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetGetParameterCollectionGradientL2Norm(
+    const dynetParameterCollection_t *pc, float *retval) try {
+  DYNET_C_CHECK_NOT_NULL(pc);
+  DYNET_C_CHECK_NOT_NULL(retval);
+  *retval = to_cpp_ptr(pc)->gradient_l2_norm();
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetSetParameterCollectionWeightDecayLambda(
+    dynetParameterCollection_t *pc, float lambda) try {
+  DYNET_C_CHECK_NOT_NULL(pc);
+  to_cpp_ptr(pc)->set_weight_decay_lambda(lambda);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetGetParameterCollectionWeightDecayLambda(
+    const dynetParameterCollection_t *pc, float *retval) try {
+  DYNET_C_CHECK_NOT_NULL(pc);
+  DYNET_C_CHECK_NOT_NULL(retval);
+  *retval = to_cpp_ptr(pc)->get_weight_decay_lambda();
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetAddParametersToParameterCollection(
+    dynetParameterCollection_t *pc, const dynetDim_t *d,
+    const dynetParameterInit_t *init, dynetParameter_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(pc);
+  DYNET_C_CHECK_NOT_NULL(d);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  if (init) {
+    *newobj = to_c_ptr_from_value(
+        to_cpp_ptr(pc)->add_parameters(*to_cpp_ptr(d), *to_cpp_ptr(init)));
+  } else {
+    *newobj = to_c_ptr_from_value(
+        to_cpp_ptr(pc)->add_parameters(*to_cpp_ptr(d)));
+  }
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetAddLookupParametersToParameterCollection(
+    dynetParameterCollection_t *pc, uint32_t n, const dynetDim_t *d,
+    const dynetParameterInit_t *init, dynetLookupParameter_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(pc);
+  DYNET_C_CHECK_NOT_NULL(d);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  if (init) {
+    *newobj = to_c_ptr_from_value(
+        to_cpp_ptr(pc)->add_lookup_parameters(n, *to_cpp_ptr(d), *to_cpp_ptr(init)));
+  } else {
+    *newobj = to_c_ptr_from_value(
+        to_cpp_ptr(pc)->add_lookup_parameters(n, *to_cpp_ptr(d)));
+  }
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetAddSubcollectionToParameterCollection(
+    dynetParameterCollection_t *pc, const char *name,
+    dynetParameterCollection_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(pc);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  if (name) {
+    *newobj = to_c_ptr_from_value(to_cpp_ptr(pc)->add_subcollection(name));
+  } else {
+    *newobj = to_c_ptr_from_value(to_cpp_ptr(pc)->add_subcollection());
+  }
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetGetParameterCollectionParameterCount(
+    const dynetParameterCollection_t *pc, size_t *retval) try {
+  DYNET_C_CHECK_NOT_NULL(pc);
+  DYNET_C_CHECK_NOT_NULL(retval);
+  *retval = to_cpp_ptr(pc)->parameter_count();
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS

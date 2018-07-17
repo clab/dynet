@@ -12,10 +12,10 @@
 #include <dynet/dim.h>
 #include <dynet/tensor.h>
 #include <dynet/model.h>
+#include <dynet/param-init.h>
 // #include <dynet/device.h>
 // #include <dynet/error.h>
 // #include <dynet/graph.h>
-// #include <dynet/initializer.h>
 // #include <dynet/optimizer.h>
 
 #include <dynet_c/define.h>
@@ -62,10 +62,10 @@ struct dynetTensor;
 struct dynetParameter;
 struct dynetLookupParameter;
 struct dynetParameterCollection;
+struct dynetParameterInit;
 // struct dynetDevice;
 // struct dynetNode;
 // struct dynetGraph;
-// struct dynetInitializer;
 // struct dynetModel;
 // struct dynetOptimizer;
 
@@ -144,13 +144,16 @@ DYNET_C_VAL_TO_PTR(Dim, dynetDim);
 DYNET_C_PTR_TO_PTR(Tensor, dynetTensor);
 DYNET_C_VAL_TO_PTR(Tensor, dynetTensor);
 DYNET_C_PTR_TO_PTR(Parameter, dynetParameter);
+DYNET_C_VAL_TO_PTR(Parameter, dynetParameter);
 DYNET_C_PTR_TO_PTR(LookupParameter, dynetLookupParameter);
+DYNET_C_VAL_TO_PTR(LookupParameter, dynetLookupParameter);
 DYNET_C_PTR_TO_PTR(ParameterCollection, dynetParameterCollection);
+DYNET_C_VAL_TO_PTR(ParameterCollection, dynetParameterCollection);
+DYNET_C_PTR_TO_PTR(ParameterInit, dynetParameterInit);
 // DYNET_C_PTR_TO_PTR(Device, dynetDevice);
 // DYNET_C_PTR_TO_PTR(Node, dynetNode);
 // DYNET_C_VAL_TO_PTR(Node, dynetNode);
 // DYNET_C_PTR_TO_PTR(Graph, dynetGraph);
-// DYNET_C_PTR_TO_PTR(Initializer, dynetInitializer);
 // DYNET_C_PTR_TO_PTR(Model, dynetModel);
 // DYNET_C_PTR_TO_PTR(Optimizer, dynetOptimizer);
 
