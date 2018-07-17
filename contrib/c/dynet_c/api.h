@@ -3,6 +3,7 @@
 
 #include <dynet_c/config.h>
 
+#include <dynet_c/status.h>
 #include <dynet_c/init.h>
 #include <dynet_c/dim.h>
 #include <dynet_c/tensor.h>
