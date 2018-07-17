@@ -144,6 +144,7 @@ class ErrorHandler {
 // DYNET_C_PTR_TO_PTR(Shape, dynetShape);
 // DYNET_C_VAL_TO_PTR(Shape, dynetShape);
 DYNET_C_PTR_TO_PTR(Dim, dynetDim);
+DYNET_C_VAL_TO_PTR(Dim, dynetDim);
 // DYNET_C_PTR_TO_PTR(Tensor, dynetTensor);
 // DYNET_C_VAL_TO_PTR(Tensor, dynetTensor);
 // DYNET_C_PTR_TO_PTR(Optimizer, dynetOptimizer);
