@@ -142,6 +142,7 @@ DYNET_C_VAL_TO_PTR(DynetParams, dynetDynetParams);
 DYNET_C_PTR_TO_PTR(Dim, dynetDim);
 DYNET_C_VAL_TO_PTR(Dim, dynetDim);
 DYNET_C_PTR_TO_PTR(Tensor, dynetTensor);
+DYNET_C_VAL_TO_PTR(Tensor, dynetTensor);
 DYNET_C_PTR_TO_PTR(Parameter, dynetParameter);
 DYNET_C_PTR_TO_PTR(LookupParameter, dynetLookupParameter);
 DYNET_C_PTR_TO_PTR(ParameterCollection, dynetParameterCollection);

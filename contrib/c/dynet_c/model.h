@@ -58,7 +58,7 @@ DYNET_C_API DYNET_C_STATUS dynetGetParameterDim(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetGetParameterValues(
-    dynetParameter_t *param, dynetTensor_t *tensor);
+    dynetParameter_t *param, dynetTensor_t **tensor);
 
 /**
  * Sets update status of the parameter.
@@ -126,11 +126,12 @@ DYNET_C_API DYNET_C_STATUS dynetGetLookupParameterDim(
 /**
  * Retrieves internal values in the parameter as a tensor.
  * @param param Pointer of a handler.
- * @param tensor Pointer to receive a tensor of the internal values.
+ * @param tensor Pointer to receive a list of the internal values.
+ * @param size Pointer to receive the length of the array.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetGetLookupParameterValues(
-    dynetLookupParameter_t *param, dynetTensor_t *tensor);
+    dynetLookupParameter_t *param, dynetTensor_t **tensors, size_t *size);
 
 /**
  * Sets update status of the parameter.
