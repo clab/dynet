@@ -15,6 +15,7 @@ set(dynet_c_HDRS
   graph.h
   init.h
   internal.h
+  model.h
   tensor.h
 )
 set(
@@ -22,6 +23,7 @@ set(
   dim.cc
   init.cc
   internal.cc
+  model.cc
   tensor.cc
 )
 

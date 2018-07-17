@@ -216,7 +216,7 @@ void Parameter::set_updated(bool b) {
   get_storage().updated = b;
 }
 
-bool Parameter::is_updated() {
+bool Parameter::is_updated() const {
   return get_storage().updated;
 }
 
@@ -249,7 +249,7 @@ string LookupParameter::get_fullname() const {
 void LookupParameter::set_updated(bool b) {
   get_storage().updated = b;
 }
-bool LookupParameter::is_updated() {
+bool LookupParameter::is_updated() const {
   return get_storage().updated;
 }
 

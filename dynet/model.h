@@ -366,7 +366,7 @@ struct Parameter {
    * @brief Check the update status
    * @return Update status
    */
-  bool is_updated();
+  bool is_updated() const;
 
   /**
    * @brief Clip the values of the parameter to the range [left, right] (in place)
@@ -456,7 +456,7 @@ struct LookupParameter {
    * @brief Check the update status
    * @return Update status
    */
-  bool is_updated();
+  bool is_updated() const;
 }; // struct LookupParameter
 
 // This is an internal class to store parameters in the collection
