@@ -12,6 +12,7 @@ set(dynet_c_HDRS
   api.h
   define.h
   dim.h
+  expr.h
   graph.h
   init.h
   internal.h
@@ -23,6 +24,8 @@ set(dynet_c_HDRS
 set(
   dynet_c_SRCS
   dim.cc
+  expr.cc
+  graph.cc
   init.cc
   internal.cc
   model.cc
