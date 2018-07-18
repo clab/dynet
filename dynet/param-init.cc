@@ -25,8 +25,17 @@ void ParameterInitIdentity::initialize_params(Tensor & values) const {
 
 void ParameterInitGlorot::initialize_params(Tensor & values) const {
   int dims = 0, dim_len = values.d.nd - (lookup ? 1 : 0);
-  for (int i = 0; i < dim_len; ++i) dims += values.d[i];
-  float my_scale = gain * sqrt(3 * dim_len) / sqrt(dims);
+  float my_scale = 0.0;
+  if (dim_len == 4) {
+    // When doing a Conv the parameters is (H, W, In, Out)
+    int receptive_field = values.d[0] * values.d[1];
+    // Other framework m + n are calculated by multiplying by the kernel size.
+    dims = values.d[2] * receptive_field + values.d[3] * receptive_field;
+    my_scale = gain * sqrt(6) / sqrt(dims);
+  } else {
+    for (int i = 0; i < dim_len; ++i) dims += values.d[i];
+    my_scale = gain * sqrt(3 * dim_len) / sqrt(dims);
+  }
   TensorTools::randomize_uniform(values, -my_scale, my_scale);
 }
 
