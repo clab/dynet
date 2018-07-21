@@ -239,8 +239,9 @@ struct Parameter {
 
   Dim dim();
   Tensor* values();
-
+  Tensor* gradients();
   void set_updated(bool b);
+  void set_value(const std::vector<float>& val);
   bool is_updated();
 
 };
@@ -253,6 +254,7 @@ struct LookupParameter {
   std::vector<Tensor>* values();
   void set_updated(bool b);
   bool is_updated();
+  void set_value(const std::vector<float>& val);
 };
 
 struct ParameterInit {
@@ -341,6 +343,9 @@ struct ParameterStorage : public ParameterStorageBase {
   void accumulate_grad(const Tensor& g);
   void clear();
 
+  void set_value(const std::vector<float>& val);
+  Tensor* value();
+  Tensor* gradients();
   Dim dim;
   Tensor values;
   Tensor g;
@@ -359,6 +364,10 @@ struct LookupParameterStorage : public ParameterStorageBase {
   void accumulate_grad(unsigned index, const Tensor& g);
   void accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
   void clear();
+
+  void set_value(const std::vector<float>& val);
+  Tensor* get_all_values();
+  Tensor* get_all_grads();
 
   // Initialize each individual lookup from the overall tensors
   void initialize_lookups();
@@ -411,6 +420,7 @@ std::vector<real> as_vector(const Tensor& v);
 
 struct TensorTools {
   static float access_element(const Tensor& v, const Dim& index);
+  static void zero(Tensor& d);
 };
 
 /////////////////////////////////////
@@ -435,6 +445,7 @@ struct Expression {
   VariableIndex i;
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { };
   const Tensor& value();
+  const Tensor& gradient();
   const Dim& dim() const { return pg->get_dimension(i); }
 };
 

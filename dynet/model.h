@@ -137,6 +137,14 @@ struct ParameterStorage : public ParameterStorageBase {
    */
   void clip(float left, float right);
   void set_value(const std::vector<float>& val);
+
+  /**
+   * \brief gradients of the parameter
+   *
+   * \return gradients as a `Tensor` object
+   */
+  Tensor* gradients() { return &g; }
+  Tensor* value() { return &values; }
   
 
   Dim dim; /**< Dimensions of the parameter tensor*/
@@ -238,7 +246,10 @@ struct LookupParameterStorage : public ParameterStorageBase {
    */
   void accumulate_grads(unsigned n, const unsigned* ids_host, const unsigned* ids_dev, float* g);
   void clear();
+  void set_value(const std::vector<float>& val);
 
+  Tensor* get_all_grads() { return &all_grads; }
+  Tensor* get_all_values() { return &all_values; }
   // Initialize each individual lookup from the overall tensors
   void initialize_lookups();
 
@@ -457,6 +468,8 @@ struct LookupParameter {
    * @return Update status
    */
   bool is_updated();
+
+  void set_value(const std::vector<float>& val);
 }; // struct LookupParameter
 
 // This is an internal class to store parameters in the collection

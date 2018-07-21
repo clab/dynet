@@ -1,3 +1,4 @@
+javaOptions in Test  ++= Seq("-Xms1G","-XX:+CMSClassUnloadingEnabled","-XX:+UseConcMarkSweepGC")
 lazy val root = (project in file("."))
     .settings(
       name         := "dynet_scala_helpers",
