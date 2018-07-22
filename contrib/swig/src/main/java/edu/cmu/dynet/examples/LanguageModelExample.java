@@ -75,7 +75,7 @@ public class LanguageModelExample {
 		this.initializeModel();
 	}
 	
-	static Dim makeDim(int[] dims) {
+	private Dim makeDim(int[] dims) {
 	    LongVector dimInts = new LongVector();
 	    for (int i = 0; i < dims.length; i++) {
 	      dimInts.add(dims[i]);
