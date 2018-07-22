@@ -1,3 +1,5 @@
+package edu.cmu.dynet.examples;
+
 import static edu.cmu.dynet.internal.dynet_swig.as_scalar;
 import static edu.cmu.dynet.internal.dynet_swig.as_vector;
 import static edu.cmu.dynet.internal.dynet_swig.exprPlus;
