@@ -16,6 +16,7 @@ set(dynet_c_HDRS
   graph.h
   init.h
   internal.h
+  io.h
   model.h
   param-init.h
   status.h
@@ -29,6 +30,7 @@ set(
   graph.cc
   init.cc
   internal.cc
+  io.cc
   model.cc
   param-init.cc
   status.cc

@@ -8,6 +8,7 @@
 #include <dynet_c/dim.h>
 #include <dynet_c/tensor.h>
 #include <dynet_c/model.h>
+#include <dynet_c/io.h>
 #include <dynet_c/param-init.h>
 #include <dynet_c/graph.h>
 #include <dynet_c/training.h>

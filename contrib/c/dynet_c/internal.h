@@ -12,11 +12,11 @@
 #include <dynet/dim.h>
 #include <dynet/tensor.h>
 #include <dynet/model.h>
+#include <dynet/io.h>
 #include <dynet/param-init.h>
 #include <dynet/dynet.h>
-#include <dynet/expr.h>
 #include <dynet/training.h>
-// #include <dynet/device.h>
+#include <dynet/expr.h>
 
 #include <dynet_c/define.h>
 
@@ -62,11 +62,12 @@ struct dynetTensor;
 struct dynetParameter;
 struct dynetLookupParameter;
 struct dynetParameterCollection;
+struct dynetTextFileSaver;
+struct dynetTextFileLoader;
 struct dynetParameterInit;
 struct dynetComputationGraph;
-struct dynetExpression;
 struct dynetTrainer;
-// struct dynetDevice;
+struct dynetExpression;
 
 namespace dynet_c {
 
@@ -148,11 +149,12 @@ DYNET_C_PTR_TO_PTR(LookupParameter, dynetLookupParameter);
 DYNET_C_VAL_TO_PTR(LookupParameter, dynetLookupParameter);
 DYNET_C_PTR_TO_PTR(ParameterCollection, dynetParameterCollection);
 DYNET_C_VAL_TO_PTR(ParameterCollection, dynetParameterCollection);
+DYNET_C_PTR_TO_PTR(TextFileSaver, dynetTextFileSaver);
+DYNET_C_PTR_TO_PTR(TextFileLoader, dynetTextFileLoader);
 DYNET_C_PTR_TO_PTR(ParameterInit, dynetParameterInit);
 DYNET_C_PTR_TO_PTR(ComputationGraph, dynetComputationGraph);
-DYNET_C_PTR_TO_PTR(Expression, dynetExpression);
 DYNET_C_PTR_TO_PTR(Trainer, dynetTrainer);
-// DYNET_C_PTR_TO_PTR(Device, dynetDevice);
+DYNET_C_PTR_TO_PTR(Expression, dynetExpression);
 
 template<typename T, typename U>
 inline void move_vector_to_array_of_c_ptrs(
