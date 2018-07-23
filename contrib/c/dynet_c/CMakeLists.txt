@@ -20,6 +20,7 @@ set(dynet_c_HDRS
   param-init.h
   status.h
   tensor.h
+  training.h
 )
 set(
   dynet_c_SRCS
@@ -32,6 +33,7 @@ set(
   param-init.cc
   status.cc
   tensor.cc
+  training.cc
 )
 
 set(BUILD_SHARED_LIBS ON)
