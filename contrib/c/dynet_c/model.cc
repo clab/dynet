@@ -1,5 +1,8 @@
 #include <dynet_c/config.h>
 
+#include <string>
+
+#include <dynet/devices.h>
 #include <dynet/model.h>
 #include <dynet_c/internal.h>
 #include <dynet_c/model.h>
@@ -39,6 +42,14 @@ DYNET_C_STATUS dynetGetParameterValues(
   DYNET_C_CHECK_NOT_NULL(param);
   DYNET_C_CHECK_NOT_NULL(tensor);
   *tensor = to_c_ptr(to_cpp_ptr(param)->values());
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetGetParameterGradients(
+    dynetParameter_t *param, dynetTensor_t **tensor) try {
+  DYNET_C_CHECK_NOT_NULL(param);
+  DYNET_C_CHECK_NOT_NULL(tensor);
+  *tensor = to_c_ptr(to_cpp_ptr(param)->gradients());
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -116,7 +127,8 @@ DYNET_C_STATUS dynetCreateParameterCollection(
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
-DYNET_C_STATUS dynetDeleteParameterCollection(dynetParameterCollection_t *pc) try {
+DYNET_C_STATUS dynetDeleteParameterCollection(
+    dynetParameterCollection_t *pc) try {
   DYNET_C_CHECK_NOT_NULL(pc);
   delete to_cpp_ptr(pc);
   return DYNET_C_OK;
@@ -147,32 +159,40 @@ DYNET_C_STATUS dynetGetParameterCollectionWeightDecayLambda(
 
 DYNET_C_STATUS dynetAddParametersToParameterCollection(
     dynetParameterCollection_t *pc, const dynetDim_t *d,
-    const dynetParameterInit_t *init, dynetParameter_t **newobj) try {
+    const dynetParameterInit_t *init, const char *name, dynetDevice_t *device,
+    dynetParameter_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(pc);
   DYNET_C_CHECK_NOT_NULL(d);
   DYNET_C_CHECK_NOT_NULL(newobj);
+  const std::string name_str = name ? name : "";
+  dynet::Device *device_ptr = device ?
+      to_cpp_ptr(device) : dynet::default_device;
   if (init) {
-    *newobj = to_c_ptr_from_value(
-        to_cpp_ptr(pc)->add_parameters(*to_cpp_ptr(d), *to_cpp_ptr(init)));
+    *newobj = to_c_ptr_from_value(to_cpp_ptr(pc)->add_parameters(
+        *to_cpp_ptr(d), *to_cpp_ptr(init), name_str, device_ptr));
   } else {
-    *newobj = to_c_ptr_from_value(
-        to_cpp_ptr(pc)->add_parameters(*to_cpp_ptr(d)));
+    *newobj = to_c_ptr_from_value(to_cpp_ptr(pc)->add_parameters(
+        *to_cpp_ptr(d), name_str, device_ptr));
   }
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetAddLookupParametersToParameterCollection(
     dynetParameterCollection_t *pc, uint32_t n, const dynetDim_t *d,
-    const dynetParameterInit_t *init, dynetLookupParameter_t **newobj) try {
+    const dynetParameterInit_t *init, const char *name, dynetDevice_t *device,
+    dynetLookupParameter_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(pc);
   DYNET_C_CHECK_NOT_NULL(d);
   DYNET_C_CHECK_NOT_NULL(newobj);
+  const std::string name_str = name ? name : "";
+  dynet::Device *device_ptr = device ?
+      to_cpp_ptr(device) : dynet::default_device;
   if (init) {
-    *newobj = to_c_ptr_from_value(
-        to_cpp_ptr(pc)->add_lookup_parameters(n, *to_cpp_ptr(d), *to_cpp_ptr(init)));
+    *newobj = to_c_ptr_from_value(to_cpp_ptr(pc)->add_lookup_parameters(
+        n, *to_cpp_ptr(d), *to_cpp_ptr(init), name_str, device_ptr));
   } else {
-    *newobj = to_c_ptr_from_value(
-        to_cpp_ptr(pc)->add_lookup_parameters(n, *to_cpp_ptr(d)));
+    *newobj = to_c_ptr_from_value(to_cpp_ptr(pc)->add_lookup_parameters(
+        n, *to_cpp_ptr(d), name_str, device_ptr));
   }
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS

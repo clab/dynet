@@ -2,6 +2,7 @@
 #define DYNET_C_MODEL_H_
 
 #include <dynet_c/define.h>
+#include <dynet_c/devices.h>
 #include <dynet_c/dim.h>
 #include <dynet_c/model.h>
 #include <dynet_c/param-init.h>
@@ -59,6 +60,15 @@ DYNET_C_API DYNET_C_STATUS dynetGetParameterDim(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetGetParameterValues(
+    dynetParameter_t *param, dynetTensor_t **tensor);
+
+/**
+ * Retrieves internal gradients in the parameter as a tensor.
+ * @param param Pointer of a handler.
+ * @param tensor Pointer to receive a tensor of the internal gradients.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetGetParameterGradients(
     dynetParameter_t *param, dynetTensor_t **tensor);
 
 /**
@@ -200,12 +210,15 @@ DYNET_C_API DYNET_C_STATUS dynetGetParameterCollectionWeightDecayLambda(
  * @param pc Pointer of a handler.
  * @param d Pointer of a dim.
  * @param init Pointer of an initializer.
+ * @param name Name of the parameter.
+ * @param device Pointer of a device.
  * @param newobj Pointer to receive a Parameter object.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetAddParametersToParameterCollection(
     dynetParameterCollection_t *pc, const dynetDim_t *d,
-    const dynetParameterInit_t *init, dynetParameter_t **newobj);
+    const dynetParameterInit_t *init, const char *name, dynetDevice_t *device,
+    dynetParameter_t **newobj);
 
 /**
  * Adds a lookup parameter to the ParameterCollection.
@@ -213,12 +226,15 @@ DYNET_C_API DYNET_C_STATUS dynetAddParametersToParameterCollection(
  * @param n Dimension of each embedding.
  * @param d Pointer of a dim.
  * @param init Pointer of an initializer.
+ * @param name Name of the parameter.
+ * @param device Pointer of a device.
  * @param newobj Pointer to receive a LookupParameter object.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetAddLookupParametersToParameterCollection(
     dynetParameterCollection_t *pc, uint32_t n, const dynetDim_t *d,
-    const dynetParameterInit_t *init, dynetLookupParameter_t **newobj);
+    const dynetParameterInit_t *init, const char *name, dynetDevice_t *device,
+    dynetLookupParameter_t **newobj);
 
 /**
  * Adds a subcollection to the ParameterCollection.
@@ -228,8 +244,8 @@ DYNET_C_API DYNET_C_STATUS dynetAddLookupParametersToParameterCollection(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetAddSubcollectionToParameterCollection(
-    dynetParameterCollection *pc, const char *name,
-    dynetParameterCollection **newobj);
+    dynetParameterCollection_t *pc, const char *name,
+    dynetParameterCollection_t **newobj);
 
 /**
  * Gets the total number of tunable parameters in the ParameterCollection.
