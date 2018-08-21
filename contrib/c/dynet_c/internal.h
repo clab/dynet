@@ -158,6 +158,7 @@ DYNET_C_PTR_TO_PTR(ComputationGraph, dynetComputationGraph);
 DYNET_C_PTR_TO_PTR(Trainer, dynetTrainer);
 DYNET_C_PTR_TO_PTR(Device, dynetDevice);
 DYNET_C_PTR_TO_PTR(Expression, dynetExpression);
+DYNET_C_VAL_TO_PTR(Expression, dynetExpression);
 
 template<typename T, typename U>
 inline void move_vector_to_array_of_c_ptrs(
