@@ -2,9 +2,9 @@
 #define DYNET_C_GRAPH_H_
 
 #include <dynet_c/define.h>
-#include <dynet_c/expr.h>
-#include <dynet_c/graph.h>
 #include <dynet_c/tensor.h>
+
+typedef struct dynetExpression dynetExpression_t;
 
 /**
  * Opaque type of ComputationGraph.

@@ -2,7 +2,6 @@
 #define DYNET_C_IO_H_
 
 #include <dynet_c/define.h>
-#include <dynet_c/io.h>
 #include <dynet_c/model.h>
 
 /**

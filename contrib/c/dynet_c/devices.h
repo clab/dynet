@@ -1,5 +1,5 @@
-#ifndef DYNET_C_INIT_H_
-#define DYNET_C_INIT_H_
+#ifndef DYNET_C_DEVICES_H_
+#define DYNET_C_DEVICES_H_
 
 #include <dynet_c/define.h>
 
@@ -22,4 +22,4 @@ DYNET_C_API DYNET_C_STATUS dynetGetGlobalDevice(const char *name, dynetDevice_t 
  */
 DYNET_C_API DYNET_C_STATUS dynetGetNumDevices(uint32_t *retval);
 
-#endif  // DYNET_C_INIT_H_
+#endif  // DYNET_C_DEVICES_H_

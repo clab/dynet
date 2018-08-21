@@ -1,5 +1,7 @@
 #include <dynet_c/config.h>
 
+#include <vector>
+
 #include <dynet/dim.h>
 #include <dynet_c/internal.h>
 #include <dynet_c/dim.h>

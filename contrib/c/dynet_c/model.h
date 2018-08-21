@@ -4,7 +4,6 @@
 #include <dynet_c/define.h>
 #include <dynet_c/devices.h>
 #include <dynet_c/dim.h>
-#include <dynet_c/model.h>
 #include <dynet_c/param-init.h>
 #include <dynet_c/tensor.h>
 
