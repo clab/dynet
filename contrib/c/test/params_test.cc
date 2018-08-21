@@ -1,5 +1,4 @@
-#define BOOST_TEST_MODULE C_DIM_TEST
-
+#define BOOST_TEST_MODULE C_PARAMS_TEST
 
 #include <boost/test/unit_test.hpp>
 #include <dynet_c/model.h>
@@ -23,7 +22,7 @@ BOOST_AUTO_TEST_CASE (test_parameter_collection) {
                     ::dynetCreateDimWithDimensions(a_dims, 1, &a_dim));
   BOOST_CHECK_EQUAL(DYNET_C_OK,
                     ::dynetAddParametersToParameterCollection(
-                        model, a_dim, nullptr, &a));
+                        model, a_dim, nullptr, nullptr, nullptr, &a));
   ::dynetParameter_t *b;
   ::dynetDim_t *b_dim;
   uint32_t b_dims[] = {1, 2};
@@ -31,7 +30,7 @@ BOOST_AUTO_TEST_CASE (test_parameter_collection) {
                     ::dynetCreateDimWithDimensions(b_dims, 2, &b_dim));
   BOOST_CHECK_EQUAL(DYNET_C_OK,
                     ::dynetAddParametersToParameterCollection(
-                        model, b_dim, nullptr, &b));
+                        model, b_dim, nullptr, nullptr, nullptr, &b));
   ::dynetParameterCollection_t *submodel;
   BOOST_CHECK_EQUAL(DYNET_C_OK,
                     ::dynetAddSubcollectionToParameterCollection(
@@ -43,7 +42,7 @@ BOOST_AUTO_TEST_CASE (test_parameter_collection) {
                     ::dynetCreateDimWithDimensions(c_dims, 1, &c_dim));
   BOOST_CHECK_EQUAL(DYNET_C_OK,
                     ::dynetAddParametersToParameterCollection(
-                        submodel, c_dim, nullptr, &c));
+                        submodel, c_dim, nullptr, nullptr, nullptr, &c));
   ::dynetParameter_t *d;
   ::dynetDim_t *d_dim;
   uint32_t d_dims[] = {1, 2};
@@ -51,7 +50,7 @@ BOOST_AUTO_TEST_CASE (test_parameter_collection) {
                     ::dynetCreateDimWithDimensions(d_dims, 2, &d_dim));
   BOOST_CHECK_EQUAL(DYNET_C_OK,
                     ::dynetAddParametersToParameterCollection(
-                        submodel, d_dim, nullptr, &d));
+                        submodel, d_dim, nullptr, nullptr, nullptr, &d));
   BOOST_CHECK_EQUAL(DYNET_C_OK, ::dynetDeleteDim(a_dim));
   BOOST_CHECK_EQUAL(DYNET_C_OK, ::dynetDeleteParameter(a));
   BOOST_CHECK_EQUAL(DYNET_C_OK, ::dynetDeleteDim(b_dim));
