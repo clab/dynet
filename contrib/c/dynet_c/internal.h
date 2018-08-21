@@ -16,6 +16,7 @@
 #include <dynet/param-init.h>
 #include <dynet/dynet.h>
 #include <dynet/training.h>
+#include <dynet/devices.h>
 #include <dynet/expr.h>
 
 #include <dynet_c/define.h>
@@ -67,6 +68,7 @@ struct dynetTextFileLoader;
 struct dynetParameterInit;
 struct dynetComputationGraph;
 struct dynetTrainer;
+struct dynetDevice;
 struct dynetExpression;
 
 namespace dynet_c {
@@ -154,6 +156,7 @@ DYNET_C_PTR_TO_PTR(TextFileLoader, dynetTextFileLoader);
 DYNET_C_PTR_TO_PTR(ParameterInit, dynetParameterInit);
 DYNET_C_PTR_TO_PTR(ComputationGraph, dynetComputationGraph);
 DYNET_C_PTR_TO_PTR(Trainer, dynetTrainer);
+DYNET_C_PTR_TO_PTR(Device, dynetDevice);
 DYNET_C_PTR_TO_PTR(Expression, dynetExpression);
 
 template<typename T, typename U>

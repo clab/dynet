@@ -11,6 +11,7 @@ install(
 set(dynet_c_HDRS
   api.h
   define.h
+  devices.h
   dim.h
   expr.h
   graph.h
@@ -25,6 +26,7 @@ set(dynet_c_HDRS
 )
 set(
   dynet_c_SRCS
+  devices.cc
   dim.cc
   expr.cc
   graph.cc
