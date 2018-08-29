@@ -258,6 +258,12 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \details This is equivalent to `set_dropout(0)` or `set_dropout(0,0,0)`
    *
    */
+   
+   void set_sparsity(float percent);
+   /**
+   * \brief Select the percent of weights that will be masked, based on their magnitude
+   */
+   
   virtual void disable_dropout() override;
   /**
    * \brief Set dropout masks at the beginning of a sequence for a specific batch size

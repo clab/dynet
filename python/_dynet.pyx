@@ -5358,6 +5358,14 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
         return exprs
 
 
+    cpdef void set_sparsity(self, float sparsity):
+        """Set the sparsity rate
+        
+        Args:
+            sparsity (number): The relative number of weights that will be pruned
+        """
+        self.thisvanillaptr.set_sparsity(sparsity)
+
     cpdef void set_dropouts(self, float d, float d_r):
         """Set the dropout rates
         

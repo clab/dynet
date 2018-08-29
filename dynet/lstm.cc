@@ -293,6 +293,7 @@ void CoupledLSTMBuilder::disable_dropout() {
 enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
 enum { LN_GH, LN_BH, LN_GX, LN_BX, LN_GC, LN_BC};
 
+
 VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false), forget_bias(1.f), dropout_masks_valid(false) { }
 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
@@ -306,12 +307,14 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
     // i
     Parameter p_x2i = local_model.add_parameters({hidden_dim * 4, layer_input_dim});
     Parameter p_h2i = local_model.add_parameters({hidden_dim * 4, hidden_dim});
+    Parameter p_x2i_mask = local_model.add_parameters({hidden_dim * 4, layer_input_dim}, ParameterInitConst(1.0f));
+    Parameter p_h2i_mask = local_model.add_parameters({hidden_dim * 4, hidden_dim}, ParameterInitConst(1.0f));
     //Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
     Parameter p_bi = local_model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
-    vector<Parameter> ps = {p_x2i, p_h2i, /*p_c2i,*/ p_bi};
+    vector<Parameter> ps = {p_x2i, p_h2i, /*p_c2i,*/ p_bi, p_x2i_mask, p_h2i_mask};
     params.push_back(ps);
 
     if (ln_lstm){
@@ -327,6 +330,10 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
   }  // layers
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
+}
+
+void VanillaLSTMBuilder::set_sparsity(float percent){
+    cout<<"Setting sparsity at "<<percent<<"%\n";
 }
 
 void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
@@ -471,14 +478,16 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     if (ln_lstm){
       const vector<Expression>& ln_vars = ln_param_vars[i];
       if (has_prev_state)
-        tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
+        tmp = vars[_BI] + layer_norm(vars[_X2I] *in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
       else
         tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]);
     }else{
       if (has_prev_state)
-        tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
+        tmp = affine_transform({vars[_BI], cmult(vars[_X2I], nobackprop(vars[_BI+1])), in, cmult(vars[_H2I], nobackprop(vars[_BI+2])), i_h_tm1});
+        //tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
       else
-        tmp = affine_transform({vars[_BI], vars[_X2I], in});
+        tmp = affine_transform({vars[_BI], cmult(vars[_X2I], nobackprop(vars[_BI+1])), in});
+        //tmp = affine_transform({vars[_BI], vars[_X2I], in});
     }
     i_ait = pick_range(tmp, 0, hid);
     i_aft = pick_range(tmp, hid, hid * 2);
