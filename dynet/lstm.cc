@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
@@ -332,8 +333,83 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
   dropout_rate_h = 0.f;
 }
 
+struct WEIGHT_MAGNITUDE{
+  float value;
+  int layer_index=0;
+  int params_ofs=0;
+  int index=0;
+} ;
+
+bool mag_compare(WEIGHT_MAGNITUDE &a, WEIGHT_MAGNITUDE &b) { return a.value < b.value; }
+
 void VanillaLSTMBuilder::set_sparsity(float percent){
-    cout<<"Setting sparsity at "<<percent<<"%\n";
+    cout<<"Setting sparsity level at "<<percent<<"%\n";
+    int total_parameters=0;
+    for (unsigned i = 0; i < layers; ++i) {
+      //cout<<"... \n";
+      const vector<Parameter>& vars = params[i];
+      //cout<<vars[_BI+1].dim().ndims()<<"\n";
+      //cout<<"||| \n";
+      total_parameters+=vars[_BI+1].dim().cols()*vars[_BI+1].dim().rows();
+      total_parameters+=vars[_BI+2].dim().cols()*vars[_BI+2].dim().rows();
+    }
+    cout<<"\tTotal number of parameters is "<<total_parameters<<"\n";
+    int prune_count=(int)(percent*total_parameters);
+    cout<<"\tDesired number of parameters is "<<total_parameters-prune_count<<"\n";
+
+    vector<WEIGHT_MAGNITUDE> magnitudes;
+
+    vector<vector<float>> new_mask_1;
+    vector<vector<float>> new_mask_2;
+
+    for (unsigned i = 0; i < layers; ++i) {
+
+      vector<float> tmp_mask_1;
+      vector<float> tmp_mask_2;
+      //cout<<"... \n";
+      vector<Parameter>& vars = params[i];
+      for (int ofs=0; ofs<2; ofs++){
+        Tensor *weight_values_tensor=vars[_X2I+ofs].values();
+        Tensor *mask_values_tensor=vars[_BI+ofs+1].values();
+        vector<float> weight_values=as_vector(weight_values_tensor[0]);
+        vector<float> mask_values=as_vector(mask_values_tensor[0]);
+
+        WEIGHT_MAGNITUDE wm;
+        int size=vars[_BI+ofs+1].dim().cols()*vars[_BI+1+ofs].dim().rows();
+        for (int ii=0;ii<size;ii++){
+          wm.value=std::abs(weight_values[ii]*mask_values[ii]);
+          wm.layer_index=i;
+          wm.params_ofs=ofs;
+          wm.index=ii;
+          magnitudes.push_back(wm);
+          if (ofs==0){
+            tmp_mask_1.push_back(1.0f);
+          }else{
+            tmp_mask_2.push_back(1.0f);
+          }
+        }
+
+
+      }
+      new_mask_1.push_back(tmp_mask_1);
+      new_mask_2.push_back(tmp_mask_2);
+    }
+
+    std::sort(magnitudes.begin(), magnitudes.end(), mag_compare);
+
+    for (int ii=0;ii<prune_count;ii++){
+      if (magnitudes[ii].params_ofs ==0){
+        new_mask_1[magnitudes[ii].layer_index][magnitudes[ii].index]=0.0f;
+      }else{
+        new_mask_2[magnitudes[ii].layer_index][magnitudes[ii].index]=0.0f;
+      }
+    }
+
+    for (int i=0;i<layers;i++){
+      vector<Parameter>& vars = params[i];
+      vars[_BI+1].set_value(new_mask_1[i]);
+      vars[_BI+2].set_value(new_mask_2[i]);
+    }
 }
 
 void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
