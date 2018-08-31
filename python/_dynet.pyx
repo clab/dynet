@@ -5567,8 +5567,8 @@ cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
         """
         self.thisvanillaptr.set_dropout_masks(batch_size)
 
-    def whoami(self): return "VanillaLSTMBuilder"
-# VanillaLSTMBuilder }}}
+    def whoami(self): return "SparseLSTMBuilder"
+# SparseLSTMBuilder }}}
 
 
 # This is an alias for VanillaLSTMBuilder
