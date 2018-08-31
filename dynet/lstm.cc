@@ -474,7 +474,7 @@ Expression VanillaLSTMBuilder::add_input_impl(int prev, const Expression& x) {
     if (ln_lstm){
       const vector<Expression>& ln_vars = ln_param_vars[i];
       if (has_prev_state)
-        tmp = vars[_BI] + layer_norm(vars[_X2I] *in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
+        tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
       else
         tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]);
     }else{
