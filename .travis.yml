@@ -1,7 +1,7 @@
 sudo: required
 services:
   - docker
-dist: xenial
+dist: trusty
 env:
   global:
     - PYTHON=python TWINE_USERNAME=danielh
@@ -135,12 +135,14 @@ jobs:
       language: cpp
       env: PYVER=3.7 PYNUM=3 PYTHON_INSTALL=manual
     - os: linux
+      dist: xenial
       compiler: gcc
       language: python
       python: 3.7
       env: PYVER=3.7 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
       if: type = cron OR tag IS present
     - os: linux
+      dist: xenial
       compiler: gcc
       language: python
       python: 3.7
