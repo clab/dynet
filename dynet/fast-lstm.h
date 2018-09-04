@@ -65,6 +65,7 @@ struct FastLSTMBuilder : public RNNBuilder {
   std::vector<Expression> h0;
   std::vector<Expression> c0;
   unsigned layers;
+  unsigned hid; // Hidden dimension
 };
 
 } // namespace dynet
