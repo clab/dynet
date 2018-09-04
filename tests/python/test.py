@@ -531,7 +531,7 @@ class TestVanillaLSTM(unittest.TestCase):
 
     def test_get_parameters_sanity(self):
         self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
-    
+
     def test_initial_state_vec(self):
         dy.renew_cg()
         init_s = [dy.ones(10), dy.ones(10), dy.ones(10), dy.ones(10)]
