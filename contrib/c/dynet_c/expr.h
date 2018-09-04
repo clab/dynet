@@ -948,4 +948,242 @@ DYNET_C_API DYNET_C_STATUS dynetApplyColwiseAdd(
     const dynetExpression_t *x, const dynetExpression_t *bias,
     dynetExpression_t **newobj);
 
+/**
+ * Computes softmax.
+ * @param x A vector or matrix.
+ * @param d Dimension to normalize over.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplySoftmax(
+    const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj);
+
+/**
+ * Computes log softmax.
+ * @param x A vector or matrix.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyLogSoftmax(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes restricted log softmax.
+ * @param x A vector or matrix.
+ * @param restriction The elements over which to calculate the softmax.
+ * @param n Number of restrictions.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyRestrictedLogSoftmax(
+    const dynetExpression_t *x, const uint32_t *restriction, size_t n,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes log, sum, and exp by dimension.
+ * @param x Expression with respect to which to calculate the logsumexp.
+ * @param d The dimension along which to do the logsumexp.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyLogsumexpDim(
+    const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj);
+
+/**
+ * Computes log, sum, and exp.
+ * @param xs Expressions with respect to which to calculate the logsumexp.
+ * @param n Number of inputs.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyLogsumexp(
+    const dynetExpression_t *const *xs, size_t n, dynetExpression_t **newobj);
+
+/**
+ * Computes negative softmax log likelihood.
+ * @param x A vector of scores.
+ * @param v The element with which to calculate the loss.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyPickneglogsoftmaxOne(
+    const dynetExpression_t *x, uint32_t v, dynetExpression_t **newobj);
+
+/**
+ * Computes batched negative softmax log likelihood.
+ * @param x An expression with vectors of scores over N batch elements.
+ * @param v A size-N vector indicating the index with respect to all the batch
+ *          elements.
+ * @param n Number of indices.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyPickneglogsoftmax(
+    const dynetExpression_t *x, const uint32_t *v, size_t n,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes hinge loss.
+ * @param x A vector of scores.
+ * @param index The index of the correct candidate.
+ * @param m The margin,
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyHingeOne(
+    const dynetExpression_t *x, uint32_t index, float m,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes hinge loss.
+ * @param x A mini-batch of vectors of scores.
+ * @param indices The indices of the correct candidates for each batch element.
+ * @param n Number of indices.
+ * @param m The margin,
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyHinge(
+    const dynetExpression_t *x, const uint32_t *indices, size_t n, float m,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes dimensionwise hinge loss.
+ * @param x A matrix of scores.
+ * @param indices The indices of the correct candidate (equal in length to the
+ *                dimension not specified by "d").
+ * @param n Number of indices.
+ * @param d The dimension over which to calculate the loss (0 or 1).
+ * @param m The margin
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyHingeDimOne(
+    const dynetExpression_t *x, const uint32_t *indices, size_t n, uint32_t d,
+    float m, dynetExpression_t **newobj);
+
+/**
+ * Computes batched dimensionwise hinge loss.
+ * @param x A mini-batch of matrices of scores.
+ * @param indices The indices of the correct candidates for each batch element.
+ * @param n Number of indices.
+ * @param d The dimension over which to calculate the loss (0 or 1).
+ * @param m The margin
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyHingeDim(
+    const dynetExpression_t *x, const uint32_t *indices, size_t n, uint32_t d,
+    float m, dynetExpression_t **newobj);
+
+/**
+ * Computes sparsemax.
+ * @param x A vector of scores.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplySparsemax(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes sparsemax loss.
+ * @param x A vector of scores.
+ * @param target_support The target correct labels.
+ * @param n Number of labels.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplySparsemaxLoss(
+    const dynetExpression_t *x, const uint32_t target_support, size_t n,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes constrained softmax.
+ * @param x A vector of scores.
+ * @param y A vector of upper bound constraints on probabilities.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyConstrainedSoftmax(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes squared norm.
+ * @param x A vector of values.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplySquaredNorm(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes L2 norm.
+ * @param x A vector of values.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyL2Norm(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes squared distance.
+ * @param x A vector of values.
+ * @param y Another vector of values.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplySquaredDistance(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes L1 distance.
+ * @param x A vector of values.
+ * @param y Another vector of values.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyL1Distance(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes huber distance.
+ * @param x A vector of values.
+ * @param y Another vector of values.
+ * @param c The parameter of the huber distance parameterizing the cuttoff.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyHuberDistance(
+    const dynetExpression_t *x, const dynetExpression_t *y, float c,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes binary log loss.
+ * @param x A vector of values.
+ * @param y A vector of true answers.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyBinaryLogLoss(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes pairwise rank loss.
+ * @param x A vector of values.
+ * @param y A vector of true answers.
+ * @param m The margin.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyPairwiseRankLoss(
+    const dynetExpression_t *x, const dynetExpression_t *y, float m,
+    dynetExpression_t **newobj);
+
+/**
+ * Computes poisson loss.
+ * @param x The parameter of the Poisson distribution.
+ * @param y The target value.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyPoissonLoss(
+    const dynetExpression_t *x, uint32_t y, dynetExpression_t **newobj);
+
 #endif  // DYNET_C_EXPR_H_

@@ -19,6 +19,18 @@ DYNET_C_STATUS dynetApply##name( \
   return DYNET_C_OK; \
 } DYNET_C_HANDLE_EXCEPTIONS \
 
+#define DYNET_C_IMPL_BINARY_FUNC(name, cpp_func) \
+DYNET_C_STATUS dynetApply##name( \
+    const dynetExpression_t *x, const dynetExpression_t *y, \
+    dynetExpression_t **newobj) try { \
+  DYNET_C_CHECK_NOT_NULL(x); \
+  DYNET_C_CHECK_NOT_NULL(y); \
+  DYNET_C_CHECK_NOT_NULL(newobj); \
+  *newobj = to_c_ptr_from_value( \
+      dynet::cpp_func(*to_cpp_ptr(x), *to_cpp_ptr(y))); \
+  return DYNET_C_OK; \
+} DYNET_C_HANDLE_EXCEPTIONS \
+
 DYNET_C_STATUS dynetCreateExpression(dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(newobj);
   *newobj = to_c_ptr(new dynet::Expression());
@@ -591,35 +603,9 @@ DYNET_C_STATUS dynetApplySilu(
 
 DYNET_C_IMPL_UNARY_FUNC(Softsign, softsign);
 
-DYNET_C_STATUS dynetApplyPow(
-    const dynetExpression_t *x, const dynetExpression_t *y,
-    dynetExpression_t **newobj) try {
-  DYNET_C_CHECK_NOT_NULL(x);
-  DYNET_C_CHECK_NOT_NULL(y);
-  DYNET_C_CHECK_NOT_NULL(newobj);
-  *newobj = to_c_ptr_from_value(dynet::pow(*to_cpp_ptr(x), *to_cpp_ptr(y)));
-  return DYNET_C_OK;
-} DYNET_C_HANDLE_EXCEPTIONS
-
-DYNET_C_STATUS dynetApplyBmin(
-    const dynetExpression_t *x, const dynetExpression_t *y,
-    dynetExpression_t **newobj) try {
-  DYNET_C_CHECK_NOT_NULL(x);
-  DYNET_C_CHECK_NOT_NULL(y);
-  DYNET_C_CHECK_NOT_NULL(newobj);
-  *newobj = to_c_ptr_from_value(dynet::min(*to_cpp_ptr(x), *to_cpp_ptr(y)));
-  return DYNET_C_OK;
-} DYNET_C_HANDLE_EXCEPTIONS
-
-DYNET_C_STATUS dynetApplyBmax(
-    const dynetExpression_t *x, const dynetExpression_t *y,
-    dynetExpression_t **newobj) try {
-  DYNET_C_CHECK_NOT_NULL(x);
-  DYNET_C_CHECK_NOT_NULL(y);
-  DYNET_C_CHECK_NOT_NULL(newobj);
-  *newobj = to_c_ptr_from_value(dynet::max(*to_cpp_ptr(x), *to_cpp_ptr(y)));
-  return DYNET_C_OK;
-} DYNET_C_HANDLE_EXCEPTIONS
+DYNET_C_IMPL_BINARY_FUNC(Pow, pow);
+DYNET_C_IMPL_BINARY_FUNC(Bmin, min);
+DYNET_C_IMPL_BINARY_FUNC(Bmax, max);
 
 DYNET_C_STATUS dynetApplyMax(
     const dynetExpression_t *const *xs, size_t n,
@@ -637,16 +623,7 @@ DYNET_C_STATUS dynetApplyMax(
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
-DYNET_C_STATUS dynetApplyDotProduct(
-    const dynetExpression_t *x, const dynetExpression_t *y,
-    dynetExpression_t **newobj) try {
-  DYNET_C_CHECK_NOT_NULL(x);
-  DYNET_C_CHECK_NOT_NULL(y);
-  DYNET_C_CHECK_NOT_NULL(newobj);
-  *newobj = to_c_ptr_from_value(
-      dynet::dot_product(*to_cpp_ptr(x), *to_cpp_ptr(y)));
-  return DYNET_C_OK;
-} DYNET_C_HANDLE_EXCEPTIONS
+DYNET_C_IMPL_BINARY_FUNC(DotProduct, dot_product);
 
 DYNET_C_STATUS dynetApplyCircConv(
     const dynetExpression_t *u, const dynetExpression_t *v,
@@ -670,25 +647,8 @@ DYNET_C_STATUS dynetApplyCircCorr(
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
-DYNET_C_STATUS dynetApplyCmult(
-    const dynetExpression_t *x, const dynetExpression_t *y,
-    dynetExpression_t **newobj) try {
-  DYNET_C_CHECK_NOT_NULL(x);
-  DYNET_C_CHECK_NOT_NULL(y);
-  DYNET_C_CHECK_NOT_NULL(newobj);
-  *newobj = to_c_ptr_from_value(dynet::cmult(*to_cpp_ptr(x), *to_cpp_ptr(y)));
-  return DYNET_C_OK;
-} DYNET_C_HANDLE_EXCEPTIONS
-
-DYNET_C_STATUS dynetApplyCdiv(
-    const dynetExpression_t *x, const dynetExpression_t *y,
-    dynetExpression_t **newobj) try {
-  DYNET_C_CHECK_NOT_NULL(x);
-  DYNET_C_CHECK_NOT_NULL(y);
-  DYNET_C_CHECK_NOT_NULL(newobj);
-  *newobj = to_c_ptr_from_value(dynet::cdiv(*to_cpp_ptr(x), *to_cpp_ptr(y)));
-  return DYNET_C_OK;
-} DYNET_C_HANDLE_EXCEPTIONS
+DYNET_C_IMPL_BINARY_FUNC(Cmult, cmult);
+DYNET_C_IMPL_BINARY_FUNC(Cdiv, cdiv);
 
 DYNET_C_STATUS dynetApplyColwiseAdd(
     const dynetExpression_t *x, const dynetExpression_t *bias,
@@ -698,5 +658,175 @@ DYNET_C_STATUS dynetApplyColwiseAdd(
   DYNET_C_CHECK_NOT_NULL(newobj);
   *newobj = to_c_ptr_from_value(
       dynet::colwise_add(*to_cpp_ptr(x), *to_cpp_ptr(bias)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplySoftmax(
+    const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::softmax(*to_cpp_ptr(x), d));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_IMPL_UNARY_FUNC(LogSoftmax, log_softmax);
+
+DYNET_C_STATUS dynetApplyRestrictedLogSoftmax(
+    const dynetExpression_t *x, const uint32_t *restrictions, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(restrictions);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::log_softmax(
+      *to_cpp_ptr(x), std::vector<uint32_t>(restrictions, restrictions + n)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyLogsumexpDim(
+    const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::logsumexp_dim(*to_cpp_ptr(x), d));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyLogsumexp(
+    const dynetExpression_t *const *xs, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(xs);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  const dynet::Expression *const *_xs = 
+      reinterpret_cast<const dynet::Expression *const *>(xs);
+  const std::vector<const dynet::Expression*> xs_p = 
+      std::vector<const dynet::Expression*>(_xs, _xs + n);
+  std::vector<dynet::Expression> xs_v;
+  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
+      [](const dynet::Expression *x) { return *x; });
+  *newobj = to_c_ptr_from_value(dynet::logsumexp(xs_v));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyPickneglogsoftmaxOne(
+    const dynetExpression_t *x, uint32_t v, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::pickneglogsoftmax(*to_cpp_ptr(x), v));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyPickneglogsoftmax(
+    const dynetExpression_t *x, const uint32_t *v, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(v);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::pickneglogsoftmax(
+      *to_cpp_ptr(x), std::vector<uint32_t>(v, v + n)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyHingeOne(
+    const dynetExpression_t *x, uint32_t index, float m,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::hinge(*to_cpp_ptr(x), index, m));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyHinge(
+    const dynetExpression_t *x, const uint32_t *indices, size_t n, float m,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(indices);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::hinge(
+      *to_cpp_ptr(x), std::vector<uint32_t>(indices, indices + n), m));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyHingeDimOne(
+    const dynetExpression_t *x, const uint32_t *indices, size_t n, uint32_t d,
+    float m, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(indices);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::hinge_dim(
+      *to_cpp_ptr(x), std::vector<uint32_t>(indices, indices + n), d, m));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyHingeDim(
+    const dynetExpression_t *x, const uint32_t *indices, size_t n, uint32_t d,
+    float m, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(indices);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  const dynet::Expression *cpp_x = to_cpp_ptr(x);
+  uint32_t batch = cpp_x->dim().batch_size();
+  uint32_t n_elems = n / batch;
+  std::vector<std::vector<uint32_t>> indices_m;
+  indices_m.reserve(batch);
+  for (uint32_t i = 0; i < batch; i++) {
+    std::vector<uint32_t> v;
+    v.reserve(n_elems);
+  	for (uint32_t j = 0; j < n_elems; j++) {
+        v.push_back(*(indices + i * n_elems + j));
+    }
+    indices_m.push_back(v);
+  }
+  *newobj = to_c_ptr_from_value(dynet::hinge_dim(*cpp_x, indices_m, d, m));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_IMPL_UNARY_FUNC(Sparsemax, sparsemax);
+
+DYNET_C_STATUS dynetApplySparsemaxLoss(
+    const dynetExpression_t *x, const uint32_t *target_support, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(target_support);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::sparsemax_loss(
+      *to_cpp_ptr(x),
+      std::vector<uint32_t>(target_support, target_support + n)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_IMPL_BINARY_FUNC(ConstrainedSoftmax, constrained_softmax);
+DYNET_C_IMPL_UNARY_FUNC(SquaredNorm, squared_norm);
+DYNET_C_IMPL_UNARY_FUNC(L2Norm, l2_norm);
+DYNET_C_IMPL_BINARY_FUNC(SquaredDistance, squared_distance);
+DYNET_C_IMPL_BINARY_FUNC(L1Distance, l1_distance);
+
+DYNET_C_STATUS dynetApplyHuberDistance(
+    const dynetExpression_t *x, const dynetExpression_t *y, float c,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(y);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::huber_distance(*to_cpp_ptr(x), *to_cpp_ptr(y), c));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_IMPL_BINARY_FUNC(BinaryLogLoss, binary_log_loss);
+
+DYNET_C_STATUS dynetApplyPairwiseRankLoss(
+    const dynetExpression_t *x, const dynetExpression_t *y, float m,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(y);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::pairwise_rank_loss(*to_cpp_ptr(x), *to_cpp_ptr(y), m));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyPoissonLoss(
+    const dynetExpression_t *x, uint32_t y, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::poisson_loss(*to_cpp_ptr(x), y));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
