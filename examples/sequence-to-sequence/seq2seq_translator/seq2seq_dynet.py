@@ -6,11 +6,14 @@ import unicodedata
 import re
 import random
 import dynet as dy
+import time
+import math
 
 # Data Preparation
 
 SOS_token = 0
 EOS_token = 1
+
 
 class Lang(object):
 
@@ -34,12 +37,14 @@ class Lang(object):
         else:
             self.word2count[word] += 1
 
+
 def unicodeToAscii(s):
 
     return ''.join(
         c for c in unicodedata.normalize('NFD', s)
         if unicodedata.category(c) != 'Mn'
     )
+
 
 def normalizeString(s):
 
@@ -48,10 +53,12 @@ def normalizeString(s):
     s = re.sub(r"[^a-zA-Z.!?]+", r" ", s)
     return s
 
+
 def readLangs(lang1, lang2, reverse=False):
 
     print("Reading lines...")
-    lines = open('data/%s-%s.txt' % (lang1, lang2), encoding='utf-8').read().strip().split('\n')
+    lines = open('data/%s-%s.txt' % (lang1, lang2), encoding='utf-8').read().\
+        strip().split('\n')
     pairs = [[normalizeString(s) for s in l.split('\t')] for l in lines]
     if reverse:
         pairs = [list(reversed(p)) for p in pairs]
@@ -62,9 +69,12 @@ def readLangs(lang1, lang2, reverse=False):
         output_lang = Lang(lang2)
     return input_lang, output_lang, pairs
 
+
 MAX_LENGTH = 10
-eng_prefixes = ("i am ", "i m ", "he is", "he s ", "she is", "she s", "you are", "you re ",
-                "we are", "we re ", "they are", "they re ")
+eng_prefixes = ("i am ", "i m ", "he is", "he s ", "she is", "she s",
+                "you are", "you re ", "we are", "we re ", "they are",
+                "they re ")
+
 
 def filterPair(p):
 
@@ -72,9 +82,11 @@ def filterPair(p):
         len(p[1].split(' ')) < MAX_LENGTH and \
         p[1].startswith(eng_prefixes)
 
+
 def filterPairs(pairs):
 
     return [pair for pair in pairs if filterPair(pair)]
+
 
 def prepareData(lang1, lang2, reverse=False):
 
@@ -91,18 +103,22 @@ def prepareData(lang1, lang2, reverse=False):
     print(output_lang.name, output_lang.n_words)
     return input_lang, output_lang, pairs
 
+
 input_lang, output_lang, pairs = prepareData('eng', 'fra', True)
 print(random.choice(pairs))
 
 # Model
+
 
 class EncoderRNN(object):
 
     def __init__(self, in_vocab, hidden_dim, model):
         self.in_vocab = in_vocab
         self.hidden_dim = hidden_dim
-        self.embedding_enc = model.add_lookup_parameters((self.in_vocab, self.hidden_dim))
-        self.rnn_enc = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim, model)
+        self.embedding_enc = model.add_lookup_parameters((self.in_vocab,
+                                                          self.hidden_dim))
+        self.rnn_enc = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim,
+                                     model)
 
     def __call__(self, input, hidden):
         input_embed = dy.lookup(self.embedding_enc, input)
@@ -113,7 +129,9 @@ class EncoderRNN(object):
     def initHidden(self):
         return [dy.zeros(self.hidden_dim)]
 
+
 DROPOUT_RATE = 0.1
+
 
 class AttnDecoderRNN(object):
 
@@ -121,12 +139,16 @@ class AttnDecoderRNN(object):
         self.hidden_dim = hidden_dim
         self.out_vocab = out_vocab
         self.max_length = max_length
-        self.embedding_dec = model.add_lookup_parameters((self.out_vocab, self.hidden_dim))
-        self.w_attn = model.add_parameters((self.max_length, self.hidden_dim * 2))
+        self.embedding_dec = model.add_lookup_parameters((self.out_vocab,
+                                                          self.hidden_dim))
+        self.w_attn = model.add_parameters((self.max_length,
+                                            self.hidden_dim * 2))
         self.b_attn = model.add_parameters((self.max_length,))
-        self.w_attn_combine = model.add_parameters((self.hidden_dim, self.hidden_dim * 2))
+        self.w_attn_combine = model.add_parameters((self.hidden_dim,
+                                                    self.hidden_dim * 2))
         self.b_attn_combine = model.add_parameters((self.hidden_dim,))
-        self.rnn_dec = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim, model)
+        self.rnn_dec = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim,
+                                     model)
         self.w_dec = model.add_parameters((self.out_vocab, self.hidden_dim))
         self.b_dec = model.add_parameters((self.out_vocab,))
 
@@ -159,7 +181,9 @@ class AttnDecoderRNN(object):
 
 def indexesFromSentence(lang, sentence):
 
-    return [lang.word2index[word] for word in sentence.split(" ")] + [EOS_token]
+    return [lang.word2index[word] for word in sentence.split(" ")] + \
+           [EOS_token]
+
 
 def indexesFromPair(pair):
 
@@ -169,7 +193,9 @@ def indexesFromPair(pair):
 
 # Training the Model
 
+
 teacher_forcing_ratio = 0.5
+
 
 def train(inputs, targets, encoder, decoder, trainer, max_length=MAX_LENGTH):
 
@@ -200,12 +226,14 @@ def train(inputs, targets, encoder, decoder, trainer, max_length=MAX_LENGTH):
 
     if use_teacher_forcing:
         for i in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs, dropout=True)
+            decoder_output, decoder_hidden, decoder_attention = decoder(
+                decoder_input, decoder_hidden, encoder_outputs, dropout=True)
             losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
             decoder_input = targets[i]
     else:
         for i in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs, dropout=True)
+            decoder_output, decoder_hidden, decoder_attention = decoder(
+                decoder_input, decoder_hidden, encoder_outputs, dropout=True)
             losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
             probs = decoder_output.vec_value()
             decoder_input = probs.index(max(probs))
@@ -220,13 +248,12 @@ def train(inputs, targets, encoder, decoder, trainer, max_length=MAX_LENGTH):
 
 # Helper Function to Print Time
 
-import time
-import math
 
 def asMinutes(s):
     m = math.floor(s/60)
     s -= m*60
     return "%dm %ds" % (m, s)
+
 
 def timeSince(since, percent):
     now = time.time()
@@ -237,14 +264,17 @@ def timeSince(since, percent):
 
 # Whole Training Process
 
-def trainIters(encoder, decoder, trainer, n_iters, print_every=1000, plot_every=100):
+
+def trainIters(encoder, decoder, trainer, n_iters, print_every=1000,
+               plot_every=100):
 
     start = time.time()
     plot_losses = []
     print_loss_total = 0
     plot_loss_total = 0
 
-    training_pairs = [indexesFromPair(random.choice(pairs)) for _ in range(n_iters)]
+    training_pairs = [indexesFromPair(random.choice(pairs))
+                      for _ in range(n_iters)]
 
     for iter in range(1, n_iters+1):
 
@@ -260,7 +290,9 @@ def trainIters(encoder, decoder, trainer, n_iters, print_every=1000, plot_every=
         if iter % print_every == 0:
             print_loss_avg = print_loss_total/print_every
             print_loss_total = 0
-            print("%s (%d %d%%) %.4f" % (timeSince(start, iter/n_iters), iter, iter/n_iters*100, print_loss_avg))
+            print("%s (%d %d%%) %.4f" % (timeSince(start, iter/n_iters),
+                                         iter, iter/n_iters*100,
+                                         print_loss_avg))
 
         if iter % plot_every == 0:
             plot_loss_avg = plot_loss_total/plot_every
@@ -268,6 +300,7 @@ def trainIters(encoder, decoder, trainer, n_iters, print_every=1000, plot_every=
             plot_loss_total = 0
 
 # Evaluation
+
 
 def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
 
@@ -293,7 +326,8 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
     decoder_attentions = [dy.zeros(max_length) for _ in range(max_length)]
 
     for i in range(max_length):
-        decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs, dropout=False)
+        decoder_output, decoder_hidden, decoder_attention = decoder(
+            decoder_input, decoder_hidden, encoder_outputs, dropout=False)
         decoder_attentions[i] = decoder_attention
         probs = decoder_output.vec_value()
         pred = probs.index(max(probs))
@@ -319,6 +353,7 @@ def evaluationRandomly(encoder, decoder, n=10):
         print("")
 
 # Start Training and Evaluating
+
 
 model = dy.ParameterCollection()
 hidden_dim = 256

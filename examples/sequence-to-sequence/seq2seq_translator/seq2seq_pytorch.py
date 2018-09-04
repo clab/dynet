@@ -5,6 +5,8 @@ from io import open
 import unicodedata
 import re
 import random
+import time
+import math
 import torch
 import torch.nn as nn
 from torch import optim
@@ -15,6 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 SOS_token = 0
 EOS_token = 1
+
 
 class Lang:
 
@@ -38,6 +41,7 @@ class Lang:
         else:
             self.word2count[word] += 1
 
+
 def unicodeToAscii(s):
 
     return ''.join(
@@ -45,12 +49,14 @@ def unicodeToAscii(s):
         if unicodedata.category(c) != 'Mn'
     )
 
+
 def normalizeString(s):
 
     s = unicodeToAscii(s.lower().strip())
     s = re.sub(r"([.!?])", r" \1", s)
     s = re.sub(r"[^a-zA-Z.!?]+", r" ", s)
     return s
+
 
 def readLangs(lang1, lang2, reverse=False):
 
@@ -71,6 +77,7 @@ def readLangs(lang1, lang2, reverse=False):
 
     return input_lang, output_lang, pairs
 
+
 MAX_LENGTH = 10
 
 eng_prefixes = (
@@ -82,15 +89,18 @@ eng_prefixes = (
     "they are", "they re "
 )
 
+
 def filterPair(p):
 
     return len(p[0].split(' ')) < MAX_LENGTH and \
         len(p[1].split(' ')) < MAX_LENGTH and \
         p[1].startswith(eng_prefixes)
 
+
 def filterPairs(pairs):
 
     return [pair for pair in pairs if filterPair(pair)]
+
 
 def prepareData(lang1, lang2, reverse=False):
 
@@ -107,10 +117,12 @@ def prepareData(lang1, lang2, reverse=False):
     print(output_lang.name, output_lang.n_words)
     return input_lang, output_lang, pairs
 
+
 input_lang, output_lang, pairs = prepareData('eng', 'fra', True)
 print(random.choice(pairs))
 
 # Model
+
 
 class EncoderRNN(nn.Module):
 
@@ -130,9 +142,11 @@ class EncoderRNN(nn.Module):
     def initHidden(self):
         return torch.zeros(1, 1, self.hidden_size, device=device)
 
+
 class AttnDecoderRNN(nn.Module):
 
-    def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=MAX_LENGTH):
+    def __init__(self, hidden_size, output_size, dropout_p=0.1,
+                 max_length=MAX_LENGTH):
         super(AttnDecoderRNN, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -167,6 +181,7 @@ class AttnDecoderRNN(nn.Module):
     def initHidden(self):
         return torch.zeros(1, 1, self.hidden_size, device=device)
 
+
 def indexesFromSentence(lang, sentence):
 
     return [lang.word2index[word] for word in sentence.split(' ')]
@@ -187,10 +202,12 @@ def tensorsFromPair(pair):
 
 # Training the Model
 
+
 teacher_forcing_ratio = 0.5
 
 
-def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, max_length=MAX_LENGTH):
+def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer,
+          decoder_optimizer, criterion, max_length=MAX_LENGTH):
     encoder_hidden = encoder.initHidden()
 
     encoder_optimizer.zero_grad()
@@ -199,7 +216,8 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, deco
     input_length = input_tensor.size(0)
     target_length = target_tensor.size(0)
 
-    encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
+    encoder_outputs = torch.zeros(max_length, encoder.hidden_size,
+                                  device=device)
 
     loss = 0
 
@@ -212,7 +230,8 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, deco
 
     decoder_hidden = encoder_hidden
 
-    use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
+    use_teacher_forcing = True if random.random() < teacher_forcing_ratio \
+        else False
 
     if use_teacher_forcing:
 
@@ -243,9 +262,6 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, deco
 
 # Helper Function to Print Time
 
-import time
-import math
-
 
 def asMinutes(s):
     m = math.floor(s / 60)
@@ -262,7 +278,9 @@ def timeSince(since, percent):
 
 # Whole Training Process
 
-def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, learning_rate=0.01):
+
+def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100,
+               learning_rate=0.01):
 
     start = time.time()
     plot_losses = []
@@ -289,7 +307,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
-                                         iter, iter / n_iters * 100, print_loss_avg))
+                                         iter, iter / n_iters * 100,
+                                         print_loss_avg))
 
         if iter % plot_every == 0:
             plot_loss_avg = plot_loss_total / plot_every
@@ -303,7 +322,8 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
         input_length = input_tensor.size()[0]
         encoder_hidden = encoder.initHidden()
 
-        encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
+        encoder_outputs = torch.zeros(max_length, encoder.hidden_size,
+                                      device=device)
 
         for ei in range(input_length):
             encoder_output, encoder_hidden = encoder(input_tensor[ei],
@@ -332,6 +352,7 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
 
         return decoded_words, decoder_attentions[:di + 1]
 
+
 def evaluateRandomly(encoder, decoder, n=10):
 
     for i in range(n):
@@ -345,9 +366,11 @@ def evaluateRandomly(encoder, decoder, n=10):
 
 # Training and Evaluating
 
+
 hidden_size = 256
 encoder1 = EncoderRNN(input_lang.n_words, hidden_size).to(device)
-attn_decoder1 = AttnDecoderRNN(hidden_size, output_lang.n_words, dropout_p=0.1).to(device)
+attn_decoder1 = AttnDecoderRNN(hidden_size, output_lang.n_words,
+                               dropout_p=0.1).to(device)
 
 trainIters(encoder1, attn_decoder1, 100000, print_every=5000)
 
