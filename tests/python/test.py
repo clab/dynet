@@ -158,10 +158,8 @@ class TestParameters(unittest.TestCase):
         dy.renew_cg()
         # input tensor
         x = dy.inputTensor(np.arange(5).reshape((1, 5)))
-        # add parameter to computation graph
-        e_p = dy.parameter(p)
         # compute dot product
-        res = x * e_p
+        res = x * p
         # Run forward and backward pass
         res.forward()
         res.backward()
@@ -213,11 +211,9 @@ class TestParameters(unittest.TestCase):
         self.assertFalse(self.lp2.is_updated())
 
         dy.renew_cg()
-        pp1 = dy.parameter(self.p1)
-        pp2 = dy.parameter(self.p2)
 
-        a = pp1 * self.lp1[1]
-        b = pp2 * self.lp2[1]
+        a = self.p1 * self.lp1[1]
+        b = self.p2 * self.lp2[1]
         loss = dy.dot_product(a, b) / 100
         loss.backward()
 
@@ -270,22 +266,23 @@ class TestParameters(unittest.TestCase):
             for _ in range(100):
                 p = self.m.add_parameters((1,))
                 dy.renew_cg()
-                x = dy.parameter(p)
-                x.forward()
-                x.backward()
+                p.forward()
+                p.backward()
                 trainer.update()
 
     def test_delete_model(self):
-        p = dy.parameter(dy.ParameterCollection().add_parameters(
-            (1,), init=dy.ConstInitializer(1)))
+        p = dy.ParameterCollection().add_parameters(
+            (1,), init=dy.ConstInitializer(1)
+        )
         p.value()
         gc.collect()
         p.value()
 
     def test_delete_parent_model(self):
         model = dy.ParameterCollection().add_subcollection()
-        p = dy.parameter(model.add_parameters(
-            (1,), init=dy.ConstInitializer(1)))
+        p = model.add_parameters(
+            (1,), init=dy.ConstInitializer(1)
+        )    
         p.value()
         gc.collect()
         p.value()
@@ -373,14 +370,14 @@ class TestIOPartialWeightDecay(unittest.TestCase):
         self.t = dy.SimpleSGDTrainer(self.m)
 
     def test_save_load(self):
-        self.p.expr().forward()
-        self.p.expr().backward()
+        self.p.forward()
+        self.p.backward()
         self.t.update()
         dy.renew_cg()
-        v1 = self.p.expr().value()
+        v1 = self.p.value()
         dy.save(self.file, [self.p])
         [p2] = dy.load(self.file, self.m2)
-        v2 = p2.expr().value()
+        v2 = p2.value()
         self.assertTrue(np.allclose(v1, v2))
 
 
