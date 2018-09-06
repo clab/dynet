@@ -519,6 +519,8 @@ cdef class GlorotInitializer(PyInitializer):
     
     If the dimensions of the parameter matrix are :math:`m,n`, the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{m+n}},g\sqrt{\\frac{6}{m+n}}])`
     
+    In the case of 4d tensors (common in convolutional networks) of shape :math:`XH,XW,XC,N` the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{d}},g\sqrt{\\frac{6}{d}}])` where :math:`d = XC * (XH * XW) + N * (XH * XW)`
+
     The gain :math:`g` depends on the activation function : 
 
     * :math:`\\text{tanh}` : 1.0

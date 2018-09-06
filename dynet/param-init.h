@@ -113,6 +113,7 @@ struct ParameterInitIdentity : public ParameterInit {
  * \ingroup params
  * \brief Initialize with the methods described in [Glorot, 2010](http://www.jmlr.org/proceedings/papers/v9/glorot10a/glorot10a.pdf?hc_location=ufi)
  * \details In order to preserve the variance of the forward and backward flow across layers, the parameters \f$\theta\f$ are initialized such that \f$\mathrm{Var}(\theta)=\frac 2 {n_1+n_2}\f$ where \f$n_1,n_2\f$ are the input and output dim.
+ * \details In the case of 4d tensors (common in convolutional networks) of shape \f$XH,XW,XC,N\f$ the weights are sampled from \f$\mathcal U([-g\sqrt{\frac 6 {d}},g\sqrt{ \frac 6 {d}}])\f$ where \f$d = XC * (XH * XW) + N * (XH * XW)\f$
  * Important note : The underlying distribution is uniform (not gaussian)
  * 
  * *Note:* This is also known as **Xavier initialization**
