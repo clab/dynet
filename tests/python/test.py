@@ -282,7 +282,7 @@ class TestParameters(unittest.TestCase):
         model = dy.ParameterCollection().add_subcollection()
         p = model.add_parameters(
             (1,), init=dy.ConstInitializer(1)
-        )    
+        )
         p.value()
         gc.collect()
         p.value()
