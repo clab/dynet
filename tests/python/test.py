@@ -28,17 +28,22 @@ class TestInput(unittest.TestCase):
                              msg="Dimension mismatch")
             self.assertEqual(x.dim()[1], 1,
                              msg="Dimension mismatch")
-            self.assertTrue(np.allclose(x.npvalue(), input_tensor),
-                            msg="Expression value different from initial value")
-            self.assertEqual(dy.squared_norm(x).scalar_value(), self.squared_norm,
-                             msg="Value mismatch")
+            self.assertTrue(
+                np.allclose(x.npvalue(), input_tensor),
+                msg="Expression value different from initial value"
+            )
+            self.assertEqual(
+                dy.squared_norm(x).scalar_value(), self.squared_norm,
+                msg="Value mismatch"
+            )
 
     def test_sparse_inputTensor(self):
         dy.renew_cg()
         input_tensor = self.input_vals.reshape((3, 3, 3, 3))
         input_vals = [input_tensor[0, 0, 0, 0], input_tensor[0, 1, 2, 0]]
         input_indices = ([0, 0], [0, 1], [0, 2], [0, 0])
-        x = dy.sparse_inputTensor(input_indices, input_vals, (3, 3, 3, 3), batched=True)
+        x = dy.sparse_inputTensor(
+            input_indices, input_vals, (3, 3, 3, 3), batched=True)
         self.assertEqual(x.dim()[0], (3, 3, 3),
                          msg="Dimension mismatch")
         self.assertEqual(x.dim()[1], 3,
@@ -55,28 +60,51 @@ class TestInput(unittest.TestCase):
             dy.renew_cg()
             input_tensor = self.input_vals.reshape(self.shapes[i])
             xb = dy.inputTensor(input_tensor, batched=True)
-            self.assertEqual(xb.dim()[0], (self.shapes[i][:-1] if i > 0 else (1,)),
-                             msg="Dimension mismatch")
-            self.assertEqual(xb.dim()[1], self.shapes[i][-1],
-                             msg="Dimension mismatch")
-            self.assertTrue(np.allclose(xb.npvalue(), input_tensor),
-                            msg="Expression value different from initial value")
-            self.assertEqual(dy.sum_batches(dy.squared_norm(xb)).scalar_value(),
-                             self.squared_norm, msg="Value mismatch")
+            self.assertEqual(
+                xb.dim()[0],
+                (self.shapes[i][:-1] if i > 0 else (1,)),
+                msg="Dimension mismatch"
+            )
+            self.assertEqual(
+                xb.dim()[1],
+                self.shapes[i][-1],
+                msg="Dimension mismatch"
+            )
+            self.assertTrue(
+                np.allclose(xb.npvalue(), input_tensor),
+                msg="Expression value different from initial value"
+            )
+            self.assertEqual(
+                dy.sum_batches(dy.squared_norm(xb)).scalar_value(),
+                self.squared_norm,
+                msg="Value mismatch"
+            )
 
     def test_inputTensor_batched_list(self):
         for i in range(4):
             dy.renew_cg()
             input_tensor = self.input_vals.reshape(self.shapes[i])
-            xb = dy.inputTensor([np.asarray(x).transpose() for x in input_tensor.transpose()])
-            self.assertEqual(xb.dim()[0], (self.shapes[i][:-1] if i > 0 else (1,)),
-                             msg="Dimension mismatch")
-            self.assertEqual(xb.dim()[1], self.shapes[i][-1],
-                             msg="Dimension mismatch")
-            self.assertTrue(np.allclose(xb.npvalue(), input_tensor),
-                            msg="Expression value different from initial value")
-            self.assertEqual(dy.sum_batches(dy.squared_norm(xb)).scalar_value(),
-                             self.squared_norm, msg="Value mismatch")
+            xb = dy.inputTensor([np.asarray(x).transpose()
+                                 for x in input_tensor.transpose()])
+            self.assertEqual(
+                xb.dim()[0],
+                (self.shapes[i][:-1] if i > 0 else (1,)),
+                msg="Dimension mismatch"
+            )
+            self.assertEqual(
+                xb.dim()[1],
+                self.shapes[i][-1],
+                msg="Dimension mismatch"
+            )
+            self.assertTrue(
+                np.allclose(xb.npvalue(), input_tensor),
+                msg="Expression value different from initial value"
+            )
+            self.assertEqual(
+                dy.sum_batches(dy.squared_norm(xb)).scalar_value(),
+                self.squared_norm,
+                msg="Value mismatch"
+            )
 
     def test_inputTensor_except(self):
         dy.renew_cg()
@@ -91,8 +119,10 @@ class TestParameters(unittest.TestCase):
         # Parameters
         self.p1 = self.m.add_parameters((10, 10), init=dy.ConstInitializer(1))
         self.p2 = self.m.add_parameters((10, 10), init=dy.ConstInitializer(1))
-        self.lp1 = self.m.add_lookup_parameters((10, 10), init=dy.ConstInitializer(1))
-        self.lp2 = self.m.add_lookup_parameters((10, 10), init=dy.ConstInitializer(1))
+        self.lp1 = self.m.add_lookup_parameters(
+            (10, 10), init=dy.ConstInitializer(1))
+        self.lp2 = self.m.add_lookup_parameters(
+            (10, 10), init=dy.ConstInitializer(1))
         # Trainer
         self.trainer = dy.SimpleSGDTrainer(self.m, learning_rate=0.1)
         self.trainer.set_clip_threshold(-1)
@@ -136,7 +166,8 @@ class TestParameters(unittest.TestCase):
         res.forward()
         res.backward()
         # Should print the value of x
-        self.assertTrue(np.allclose(p.grad_as_array(), x.npvalue()), msg="Gradient is wrong")
+        self.assertTrue(np.allclose(p.grad_as_array(),
+                                    x.npvalue()), msg="Gradient is wrong")
 
     def test_set_value(self):
         # add parameter
@@ -187,8 +218,8 @@ class TestParameters(unittest.TestCase):
 
         a = pp1 * self.lp1[1]
         b = pp2 * self.lp2[1]
-        l = dy.dot_product(a, b) / 100
-        l.backward()
+        loss = dy.dot_product(a, b) / 100
+        loss.backward()
 
         self.trainer.update()
 
@@ -200,19 +231,18 @@ class TestParameters(unittest.TestCase):
 
     def test_update(self):
         ones = np.ones((10, 10))
-        updated = np.ones((10, 10)) * 0.99
-        gradient = np.ones((10, 10)) * 0.01
 
         dy.renew_cg()
-        pp1 = dy.parameter(self.p1)
-        pp2 = dy.parameter(self.p2)
 
-        a = pp1 * self.lp1[1]
-        b = pp2 * self.lp2[1]
-        l = dy.dot_product(a, b) / 100
-        self.assertEqual(l.scalar_value(), 10, msg=str(l.scalar_value()))
-        l.backward()
+        a = self.p1 * self.lp1[1]
+        b = self.p2 * self.lp2[1]
+        loss = dy.dot_product(a, b) / 100
 
+        self.assertEqual(loss.scalar_value(), 10, msg=str(loss.scalar_value()))
+
+        loss.backward()
+
+        # Check the gradients
         self.assertTrue(np.allclose(self.p1.grad_as_array(), 0.1 * ones),
                         msg=np.array_str(self.p1.grad_as_array()))
         self.assertTrue(np.allclose(self.p2.grad_as_array(), 0.1 * ones),
@@ -224,6 +254,7 @@ class TestParameters(unittest.TestCase):
 
         self.trainer.update()
 
+        # Check the updated parameters
         self.assertTrue(np.allclose(self.p1.as_array(), ones * 0.99),
                         msg=np.array_str(self.p1.as_array()))
         self.assertTrue(np.allclose(self.p2.as_array(), ones * 0.99),
@@ -253,32 +284,34 @@ class TestParameters(unittest.TestCase):
 
     def test_delete_parent_model(self):
         model = dy.ParameterCollection().add_subcollection()
-        p = dy.parameter(model.add_parameters((1,), init=dy.ConstInitializer(1)))
+        p = dy.parameter(model.add_parameters(
+            (1,), init=dy.ConstInitializer(1)))
         p.value()
         gc.collect()
         p.value()
 
     def test_parameters_initializers(self):
 
-        p = self.m.add_parameters((3, 5), init=0)
-        p = self.m.add_parameters((3, 5), init='uniform', scale=2.0)
-        p = self.m.add_parameters((3, 5), init='normal', mean=-1.0, std=2.5)
-        p = self.m.add_parameters((5, 5), init='identity')
-        #p = self.m.add_parameters((5,5), init='saxe')
-        p = self.m.add_parameters((3, 5), init='glorot')
-        p = self.m.add_parameters((3, 5), init='he')
-        arr = np.zeros((3,5))
-        p = self.m.add_parameters(arr.shape, init=arr)
-        p = self.m.add_parameters((3, 5), init=dy.ConstInitializer(2.0))
+        self.m.add_parameters((3, 5), init=0)
+        self.m.add_parameters((3, 5), init='uniform', scale=2.0)
+        self.m.add_parameters((3, 5), init='normal', mean=-1.0, std=2.5)
+        self.m.add_parameters((5, 5), init='identity')
+        # self.m.add_parameters((5,5), init='saxe')
+        self.m.add_parameters((3, 5), init='glorot')
+        self.m.add_parameters((3, 5), init='he')
+        arr = np.zeros((3, 5))
+        self.m.add_parameters(arr.shape, init=arr)
+        self.m.add_parameters((3, 5), init=dy.ConstInitializer(2.0))
 
     def test_lookup_parameters_initializers(self):
 
         p = self.m.add_lookup_parameters((3, 5), init=0)
         p = self.m.add_lookup_parameters((3, 5), init='uniform', scale=2.0)
-        p = self.m.add_lookup_parameters((3, 5), init='normal', mean=-1.0, std=2.5)
+        p = self.m.add_lookup_parameters(
+            (3, 5), init='normal', mean=-1.0, std=2.5)
         p = self.m.add_lookup_parameters((3, 5), init='glorot')
         p = self.m.add_lookup_parameters((3, 5), init='he')
-        arr = np.zeros((3,5))
+        arr = np.zeros((3, 5))
         p = self.m.add_lookup_parameters(arr.shape, init=arr)
         p = self.m.add_lookup_parameters((3, 5), init=dy.ConstInitializer(2.0))
 
@@ -330,6 +363,7 @@ class TestBatchManipulation(unittest.TestCase):
         w = dy.concatenate_to_batch([y, z])
         self.assertTrue(np.allclose(w.npvalue(), self.pval.T))
 
+
 class TestIOPartialWeightDecay(unittest.TestCase):
     def setUp(self):
         self.file = "tmp.model"
@@ -359,7 +393,7 @@ class TestIOEntireModel(unittest.TestCase):
 
     def test_save_load(self):
         self.m.save(self.file)
-        b = dy.BiRNNBuilder(2, 10, 10, self.m2, dy.LSTMBuilder)
+        dy.BiRNNBuilder(2, 10, 10, self.m2, dy.LSTMBuilder)
         self.m2.populate(self.file)
 
 
@@ -420,18 +454,24 @@ class TestExpression(unittest.TestCase):
         dy.renew_cg()
         x = dy.inputTensor(self.v1)
         y = dy.inputTensor(self.v2)
-        l = dy.dot_product(x, y)
-        l.forward()
-        l.backward(full=True)
-        self.assertTrue(np.allclose(x.gradient(), self.v2), msg="{}\n{}\n{}".format(
-            l.value(), x.gradient(), self.v2, y.gradient(), self.v2))
+        loss = dy.dot_product(x, y)
+        loss.forward()
+        loss.backward(full=True)
+        self.assertTrue(np.allclose(x.gradient(), self.v2),
+                        msg="{}\n{}\n{}\n{}\n{}".format(
+                        loss.value(),
+                        x.gradient(),
+                        self.v2,
+                        y.gradient(),
+                        self.v2
+                        ))
 
     def test_gradient_sanity(self):
         dy.renew_cg()
         x = dy.inputTensor(self.v1)
         y = dy.inputTensor(self.v2)
-        l = dy.dot_product(x, y)
-        l.forward()
+        loss = dy.dot_product(x, y)
+        loss.forward()
         self.assertRaises(RuntimeError, gradient_callable, x)
 
 
@@ -450,11 +490,12 @@ class TestOperations(unittest.TestCase):
         g = dy.inputTensor(self.v2)
         b = dy.inputTensor(self.v3)
         y = dy.layer_norm(x, g, b)
-        l = dy.sum_elems(y)
-        l_value = l.scalar_value()
-        l.backward()
+        loss = dy.sum_elems(y)
 
-        y_np_value = self.v2 / self.v1.std() * (self.v1 - self.v1.mean()) + self.v3
+        loss.backward()
+
+        centered_v1 = self.v1 - self.v1.mean()
+        y_np_value = self.v2 / self.v1.std() * centered_v1 + self.v3
 
         self.assertTrue(np.allclose(y.npvalue(), y_np_value))
 
@@ -463,14 +504,21 @@ class TestSlicing(unittest.TestCase):
 
     def test_slicing(self):
         dy.renew_cg()
-        data = np.random.random((10,10,10))
-        self.assertTrue(np.allclose(dy.inputTensor(data)[:1,:2,:3].npvalue(), data[:1,:2,:3]))
-        self.assertTrue(np.allclose(dy.inputTensor(data, batched=True)[:1,:2,:3].npvalue(), data[:1,:2,:3]))
-        self.assertTrue(np.allclose(dy.inputTensor(data)[:,:,:3].npvalue(), data[:,:,:3]))
-        self.assertTrue(np.allclose(dy.inputTensor(data)[3:,:,:].npvalue(), data[3:,:,:]))
-        self.assertTrue(np.allclose(dy.inputTensor(data)[:,:,::1].npvalue(), data[:,:,::1]))
-        self.assertTrue(np.allclose(dy.inputTensor(data)[:,:,::3].npvalue(), data[:,:,::3]))
-        self.assertTrue(np.allclose(dy.inputTensor(data)[3:5,1:3,1:].npvalue(), data[3:5,1:3,1:]))
+        data = np.random.random((10, 10, 10))
+        self.assertTrue(np.allclose(dy.inputTensor(
+            data)[:1, :2, :3].npvalue(), data[:1, :2, :3]))
+        self.assertTrue(np.allclose(dy.inputTensor(data, batched=True)[
+                        :1, :2, :3].npvalue(), data[:1, :2, :3]))
+        self.assertTrue(np.allclose(dy.inputTensor(
+            data)[:, :, :3].npvalue(), data[:, :, :3]))
+        self.assertTrue(np.allclose(dy.inputTensor(
+            data)[3:, :, :].npvalue(), data[3:, :, :]))
+        self.assertTrue(np.allclose(dy.inputTensor(
+            data)[:, :, ::1].npvalue(), data[:, :, ::1]))
+        self.assertTrue(np.allclose(dy.inputTensor(
+            data)[:, :, ::3].npvalue(), data[:, :, ::3]))
+        self.assertTrue(np.allclose(dy.inputTensor(
+            data)[3:5, 1:3, 1:].npvalue(), data[3:5, 1:3, 1:]))
 
 
 class TestSimpleRNN(unittest.TestCase):
@@ -490,7 +538,8 @@ class TestSimpleRNN(unittest.TestCase):
                 self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
+        self.assertRaises(
+            ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
 
 
 class TestGRU(unittest.TestCase):
@@ -510,7 +559,8 @@ class TestGRU(unittest.TestCase):
                 self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
+        self.assertRaises(
+            ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
 
 
 class TestVanillaLSTM(unittest.TestCase):
@@ -530,7 +580,8 @@ class TestVanillaLSTM(unittest.TestCase):
                 self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
+        self.assertRaises(
+            ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
 
     def test_initial_state_vec(self):
         dy.renew_cg()
@@ -573,7 +624,8 @@ class TestCoupledLSTM(unittest.TestCase):
                 self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
+        self.assertRaises(
+            ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
 
     def test_initial_state_vec(self):
         dy.renew_cg()
@@ -616,8 +668,9 @@ class TestFastLSTM(unittest.TestCase):
                 self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
 
     def test_get_parameters_sanity(self):
-        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
-    
+        self.assertRaises(
+            ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
+
     def test_initial_state_vec(self):
         dy.renew_cg()
         init_s = [dy.ones(10), dy.ones(10), dy.ones(10), dy.ones(10)]
@@ -652,10 +705,14 @@ class TestStandardSoftmax(unittest.TestCase):
     def test_sanity(self):
         for i in range(3):
             dy.renew_cg()
-            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 4, update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 5, update=False)
-            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 6, update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 7, update=False)
+            nll = self.sm.neg_log_softmax(
+                dy.inputTensor(np.arange(3)), 4, update=True)
+            nll_const = self.sm.neg_log_softmax(
+                dy.inputTensor(np.arange(3)), 5, update=False)
+            nll = self.sm.neg_log_softmax(
+                dy.inputTensor(np.arange(3)), 6, update=True)
+            nll_const = self.sm.neg_log_softmax(
+                dy.inputTensor(np.arange(3)), 7, update=False)
             nll.value()
             nll_const.value()
 
@@ -672,15 +729,20 @@ class TestClassFactoredSoftmax(unittest.TestCase):
                 f.write(str(i) + " " + str(2 * i + 1) + "\n")
                 dic[str(2 * i)] = len(dic)
                 dic[str(2 * i + 1)] = len(dic)
-        self.sm = dy.ClassFactoredSoftmaxBuilder(3, 'cluster_file.txt', dic, self.pc, True)
+        self.sm = dy.ClassFactoredSoftmaxBuilder(
+            3, 'cluster_file.txt', dic, self.pc, True)
 
     def test_sanity(self):
         for i in range(3):
             dy.renew_cg()
-            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 4, update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 5, update=False)
-            nll = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 6, update=True)
-            nll_const = self.sm.neg_log_softmax(dy.inputTensor(np.arange(3)), 7, update=False)
+            nll = self.sm.neg_log_softmax(
+                dy.inputTensor(np.arange(3)), 4, update=True)
+            nll_const = self.sm.neg_log_softmax(
+                dy.inputTensor(np.arange(3)), 5, update=False)
+            nll = self.sm.neg_log_softmax(
+                dy.inputTensor(np.arange(3)), 6, update=True)
+            nll_const = self.sm.neg_log_softmax(
+                dy.inputTensor(np.arange(3)), 7, update=False)
             nll.value()
             nll_const.value()
 
