@@ -898,6 +898,7 @@ cdef class Parameters(Expression): # {{{
     cdef Expression _const_expr
     def __cinit__(self):
         self._version = -1
+        self._const_version = -1
 
     # All creations MUST go through wrap_ptr
     @staticmethod
