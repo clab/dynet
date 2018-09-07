@@ -1,7 +1,7 @@
 # Requirements
 
 from __future__ import unicode_literals, print_function, division
-from io import open
+import io
 import unicodedata
 import re
 import random
@@ -57,8 +57,8 @@ def normalizeString(s):
 def readLangs(lang1, lang2, reverse=False):
 
     print("Reading lines...")
-    lines = open('data/%s-%s.txt' % (lang1, lang2), encoding='utf-8').read().\
-        strip().split('\n')
+    lines = io.open('data/%s-%s.txt' % (lang1, lang2), encoding='utf-8').\
+        read().strip().split('\n')
     pairs = [[normalizeString(s) for s in l.split('\t')] for l in lines]
     if reverse:
         pairs = [list(reversed(p)) for p in pairs]
@@ -120,8 +120,8 @@ class EncoderRNN(object):
         self.rnn_enc = dy.GRUBuilder(1, self.hidden_dim, self.hidden_dim,
                                      model)
 
-    def __call__(self, input, hidden):
-        input_embed = dy.lookup(self.embedding_enc, input)
+    def __call__(self, inputs, hidden):
+        input_embed = dy.lookup(self.embedding_enc, inputs)
         state_enc = self.rnn_enc.initial_state(vecs=hidden)
         state_enc = state_enc.add_input(input_embed)
         return state_enc.output(), state_enc.h()
@@ -152,8 +152,8 @@ class AttnDecoderRNN(object):
         self.w_dec = model.add_parameters((self.out_vocab, self.hidden_dim))
         self.b_dec = model.add_parameters((self.out_vocab,))
 
-    def __call__(self, input, hidden, encoder_outptus, dropout=False):
-        input_embed = dy.lookup(self.embedding_dec, input)
+    def __call__(self, inputs, hidden, encoder_outptus, dropout=False):
+        input_embed = dy.lookup(self.embedding_dec, inputs)
         if dropout:
             input_embed = dy.dropout(input_embed, DROPOUT_RATE)
         input_cat = dy.concatenate([input_embed, hidden[0]])
@@ -226,7 +226,7 @@ def train(inputs, targets, encoder, decoder, trainer, max_length=MAX_LENGTH):
 
     if use_teacher_forcing:
         for i in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
+            decoder_output, decoder_hidden, _ = decoder(
                 decoder_input, decoder_hidden, encoder_outputs, dropout=True)
             losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
             decoder_input = targets[i]
@@ -276,9 +276,9 @@ def trainIters(encoder, decoder, trainer, n_iters, print_every=1000,
     training_pairs = [indexesFromPair(random.choice(pairs))
                       for _ in range(n_iters)]
 
-    for iter in range(1, n_iters+1):
+    for iteration in range(1, n_iters+1):
 
-        training_pair = training_pairs[iter-1]
+        training_pair = training_pairs[iteration-1]
         inputs = training_pair[0]
         targets = training_pair[1]
 
@@ -287,14 +287,14 @@ def trainIters(encoder, decoder, trainer, n_iters, print_every=1000,
         print_loss_total += loss
         plot_loss_total += loss
 
-        if iter % print_every == 0:
+        if iteration % print_every == 0:
             print_loss_avg = print_loss_total/print_every
             print_loss_total = 0
-            print("%s (%d %d%%) %.4f" % (timeSince(start, iter/n_iters),
-                                         iter, iter/n_iters*100,
+            print("%s (%d %d%%) %.4f" % (timeSince(start, iteration/n_iters),
+                                         iteration, iteration/n_iters*100,
                                          print_loss_avg))
 
-        if iter % plot_every == 0:
+        if iteration % plot_every == 0:
             plot_loss_avg = plot_loss_total/plot_every
             plot_losses.append(plot_loss_avg)
             plot_loss_total = 0
@@ -343,7 +343,7 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
 
 def evaluationRandomly(encoder, decoder, n=10):
 
-    for i in range(n):
+    for _ in range(n):
         pair = random.choice(pairs)
         print(">", pair[0])
         print("=", pair[1])

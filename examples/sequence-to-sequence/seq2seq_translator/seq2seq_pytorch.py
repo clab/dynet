@@ -1,7 +1,7 @@
 # Requirements
 
 from __future__ import unicode_literals, print_function, division
-from io import open
+import io
 import unicodedata
 import re
 import random
@@ -62,7 +62,7 @@ def readLangs(lang1, lang2, reverse=False):
 
     print("Reading lines...")
 
-    lines = open('data/%s-%s.txt' % (lang1, lang2), encoding='utf-8').\
+    lines = io.open('data/%s-%s.txt' % (lang1, lang2), encoding='utf-8').\
         read().strip().split('\n')
 
     pairs = [[normalizeString(s) for s in l.split('\t')] for l in lines]
@@ -133,8 +133,8 @@ class EncoderRNN(nn.Module):
         self.embedding = nn.Embedding(input_size, hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size)
 
-    def forward(self, input, hidden):
-        embedded = self.embedding(input).view(1, 1, -1)
+    def forward(self, inputs, hidden):
+        embedded = self.embedding(inputs).view(1, 1, -1)
         output = embedded
         output, hidden = self.gru(output, hidden)
         return output, hidden
@@ -160,8 +160,8 @@ class AttnDecoderRNN(nn.Module):
         self.gru = nn.GRU(self.hidden_size, self.hidden_size)
         self.out = nn.Linear(self.hidden_size, self.output_size)
 
-    def forward(self, input, hidden, encoder_outputs):
-        embedded = self.embedding(input).view(1, 1, -1)
+    def forward(self, inputs, hidden, encoder_outputs):
+        embedded = self.embedding(inputs).view(1, 1, -1)
         embedded = self.dropout(embedded)
 
         attn_weights = F.softmax(
@@ -236,7 +236,7 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer,
     if use_teacher_forcing:
 
         for di in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
+            decoder_output, decoder_hidden, _ = decoder(
                 decoder_input, decoder_hidden, encoder_outputs)
             loss += criterion(decoder_output, target_tensor[di])
             decoder_input = target_tensor[di]
@@ -244,9 +244,9 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer,
     else:
 
         for di in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
+            decoder_output, decoder_hidden, _ = decoder(
                 decoder_input, decoder_hidden, encoder_outputs)
-            topv, topi = decoder_output.topk(1)
+            _, topi = decoder_output.topk(1)
             decoder_input = topi.squeeze().detach()
 
             loss += criterion(decoder_output, target_tensor[di])
@@ -290,11 +290,11 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100,
     encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
     training_pairs = [tensorsFromPair(random.choice(pairs))
-                      for i in range(n_iters)]
+                      for _ in range(n_iters)]
     criterion = nn.NLLLoss()
 
-    for iter in range(1, n_iters + 1):
-        training_pair = training_pairs[iter - 1]
+    for iteration in range(1, n_iters + 1):
+        training_pair = training_pairs[iteration - 1]
         input_tensor = training_pair[0]
         target_tensor = training_pair[1]
 
@@ -303,14 +303,14 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100,
         print_loss_total += loss
         plot_loss_total += loss
 
-        if iter % print_every == 0:
+        if iteration % print_every == 0:
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
-            print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
-                                         iter, iter / n_iters * 100,
+            print('%s (%d %d%%) %.4f' % (timeSince(start, iteration / n_iters),
+                                         iteration, iteration / n_iters * 100,
                                          print_loss_avg))
 
-        if iter % plot_every == 0:
+        if iteration % plot_every == 0:
             plot_loss_avg = plot_loss_total / plot_every
             plot_losses.append(plot_loss_avg)
             plot_loss_total = 0
@@ -341,7 +341,7 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
             decoder_output, decoder_hidden, decoder_attention = decoder(
                 decoder_input, decoder_hidden, encoder_outputs)
             decoder_attentions[di] = decoder_attention.data
-            topv, topi = decoder_output.data.topk(1)
+            _, topi = decoder_output.data.topk(1)
             if topi.item() == EOS_token:
                 decoded_words.append('<EOS>')
                 break
@@ -355,11 +355,11 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
 
 def evaluateRandomly(encoder, decoder, n=10):
 
-    for i in range(n):
+    for _ in range(n):
         pair = random.choice(pairs)
         print('>', pair[0])
         print('=', pair[1])
-        output_words, attentions = evaluate(encoder, decoder, pair[0])
+        output_words, _ = evaluate(encoder, decoder, pair[0])
         output_sentence = ' '.join(output_words)
         print('<', output_sentence)
         print('')
