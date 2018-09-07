@@ -8,6 +8,7 @@ import random
 import dynet as dy
 import time
 import math
+r = random.SystemRandom()
 
 # Data Preparation
 
@@ -105,7 +106,7 @@ def prepareData(lang1, lang2, reverse=False):
 
 
 input_lang, output_lang, pairs = prepareData('eng', 'fra', True)
-print(random.choice(pairs))
+print(r.choice(pairs))
 
 # Model
 
@@ -219,7 +220,7 @@ def train(inputs, targets, encoder, decoder, trainer, max_length=MAX_LENGTH):
     decoder_input = SOS_token
     decoder_hidden = encoder_hidden
 
-    if random.random() < teacher_forcing_ratio:
+    if r.random() < teacher_forcing_ratio:
         use_teacher_forcing = True
     else:
         use_teacher_forcing = False
@@ -232,7 +233,7 @@ def train(inputs, targets, encoder, decoder, trainer, max_length=MAX_LENGTH):
             decoder_input = targets[i]
     else:
         for i in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
+            decoder_output, decoder_hidden, _ = decoder(
                 decoder_input, decoder_hidden, encoder_outputs, dropout=True)
             losses.append(-dy.log(dy.pick(decoder_output, targets[i])))
             probs = decoder_output.vec_value()
@@ -273,7 +274,7 @@ def trainIters(encoder, decoder, trainer, n_iters, print_every=1000,
     print_loss_total = 0
     plot_loss_total = 0
 
-    training_pairs = [indexesFromPair(random.choice(pairs))
+    training_pairs = [indexesFromPair(r.choice(pairs))
                       for _ in range(n_iters)]
 
     for iteration in range(1, n_iters+1):
@@ -344,7 +345,7 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
 def evaluationRandomly(encoder, decoder, n=10):
 
     for _ in range(n):
-        pair = random.choice(pairs)
+        pair = r.choice(pairs)
         print(">", pair[0])
         print("=", pair[1])
         output_words = evaluate(encoder, decoder, pair[0])

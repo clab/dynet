@@ -12,6 +12,7 @@ import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+r = random.SystemRandom()
 
 # Data Preparation
 
@@ -119,7 +120,7 @@ def prepareData(lang1, lang2, reverse=False):
 
 
 input_lang, output_lang, pairs = prepareData('eng', 'fra', True)
-print(random.choice(pairs))
+print(r.choice(pairs))
 
 # Model
 
@@ -230,7 +231,7 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer,
 
     decoder_hidden = encoder_hidden
 
-    use_teacher_forcing = True if random.random() < teacher_forcing_ratio \
+    use_teacher_forcing = True if r.random() < teacher_forcing_ratio \
         else False
 
     if use_teacher_forcing:
@@ -289,7 +290,7 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100,
 
     encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
-    training_pairs = [tensorsFromPair(random.choice(pairs))
+    training_pairs = [tensorsFromPair(r.choice(pairs))
                       for _ in range(n_iters)]
     criterion = nn.NLLLoss()
 
@@ -356,7 +357,7 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
 def evaluateRandomly(encoder, decoder, n=10):
 
     for _ in range(n):
-        pair = random.choice(pairs)
+        pair = r.choice(pairs)
         print('>', pair[0])
         print('=', pair[1])
         output_words, _ = evaluate(encoder, decoder, pair[0])
