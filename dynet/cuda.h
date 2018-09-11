@@ -37,9 +37,8 @@
                   << "not all free memories can be "       \
                   << "allocated."                          \
                   << std::endl;                            \
-      }else if(err == cudaErrorInvalidValue)		   \
-	std::cerr << "CUDA version is unavailable."	   \
-	    << std::endl;																throw dynet::cuda_exception(#stmt);                  \
+      }							   \
+	throw dynet::cuda_exception(#stmt);                \
     }                                                      \
   } while(0)
 
