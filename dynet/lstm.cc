@@ -150,7 +150,12 @@ Expression CoupledLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
     Expression h_i = h_new[i];
-    Expression c_i = c[t - 1][i];
+    Expression c_i;
+      if (t == 0) {
+          c_i = dynet::zeros(*(h_new[i].pg), Dim({this->hid}));
+      } else {
+          c_i = c[t - 1][i];
+      }
     h[t][i] = h_i;
     c[t][i] = c_i;
   }
@@ -160,13 +165,27 @@ Expression CoupledLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
 Expression CoupledLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
   DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
-                          "LSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
+                          "CoupledLSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
   const unsigned t = c.size();
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
-    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    // Initialize h_i
+    Expression h_i;
+    if (only_c) {
+      // If we're not initializing h_i, copy from the previous timestep
+      // (or set to 0 if this is the first timestep)
+      if (t == 0) {
+        h_i = dynet::zeros(*(s_new[i].pg), Dim({this->hid}));
+      } else {
+        h_i = h[t - 1][i];
+      }
+    } else {
+      // Otherwise set h_i to the given value
+      h_i = s_new[i + layers];
+    }
+    // Initialize c_i
     Expression c_i = s_new[i];
     h[t][i] = h_i;
     c[t][i] = c_i;
@@ -409,7 +428,12 @@ Expression VanillaLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
     Expression h_i = h_new[i];
-    Expression c_i = c[t - 1][i];
+    Expression c_i;
+      if (t == 0) {
+          c_i = dynet::zeros(*(h_new[i].pg), Dim({this->hid}));
+      } else {
+          c_i = c[t - 1][i];
+      }
     h[t][i] = h_i;
     c[t][i] = c_i;
   }
@@ -425,7 +449,21 @@ Expression VanillaLSTMBuilder::set_s_impl(int prev, const std::vector<Expression
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
-    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    // Initialize h_i
+    Expression h_i;
+    if (only_c) {
+      // If we're not initializing h_i, copy from the previous timestep
+      // (or set to 0 if this is the first timestep)
+      if (t == 0) {
+        h_i = dynet::zeros(*(s_new[i].pg), Dim({this->hid}));
+      } else {
+        h_i = h[t - 1][i];
+      }
+    } else {
+      // Otherwise set h_i to the given value
+      h_i = s_new[i + layers];
+    }
+    // Initialize c_i
     Expression c_i = s_new[i];
     h[t][i] = h_i;
     c[t][i] = c_i;
@@ -635,7 +673,12 @@ Expression CompactVanillaLSTMBuilder::set_h_impl(int prev, const vector<Expressi
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
     Expression h_i = h_new[i];
-    Expression c_i = c[t - 1][i];
+    Expression c_i;
+      if (t == 0) {
+          c_i = dynet::zeros(*(h_new[i].pg), Dim({this->hid}));
+      } else {
+          c_i = c[t - 1][i];
+      }
     h[t][i] = h_i;
     c[t][i] = c_i;
   }
@@ -651,7 +694,21 @@ Expression CompactVanillaLSTMBuilder::set_s_impl(int prev, const std::vector<Exp
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
-    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    // Initialize h_i
+    Expression h_i;
+    if (only_c) {
+      // If we're not initializing h_i, copy from the previous timestep
+      // (or set to 0 if this is the first timestep)
+      if (t == 0) {
+        h_i = dynet::zeros(*(s_new[i].pg), Dim({this->hid}));
+      } else {
+        h_i = h[t - 1][i];
+      }
+    } else {
+      // Otherwise set h_i to the given value
+      h_i = s_new[i + layers];
+    }
+    // Initialize c_i
     Expression c_i = s_new[i];
     h[t][i] = h_i;
     c[t][i] = c_i;

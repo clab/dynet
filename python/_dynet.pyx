@@ -654,7 +654,7 @@ cdef class Expression: #{{{
             IndexError: If the indices are too large
             ValueError: In case of improper slice or if step is used
         """
-        assert isinstance(index, (int, slice)), "Expression key must be int or slice: %s" % index
+        assert isinstance(index, (int, slice, tuple)), "Expression key must be int or slice or tuple of slices: %s" % index
         cdef int rows = self.c().dim().rows()
         cdef int i, j
         if isinstance(index, int):
@@ -666,30 +666,34 @@ cdef class Expression: #{{{
             if i < 0:
                 i += rows
             return pick(self, i)
-        else:
-            i = 0
-            j = rows
-            if index.start is not None:
-                i = index.start
-                if i > rows - 1:
-                    raise IndexError("Start index too large: %d > %d" % (i, rows - 1))
-                if i < -rows:
-                    raise IndexError("Start index too small: %d < %d" % (i, -rows))
-                if i < 0:
-                    i += rows
-            if index.stop is not None:
-                j = index.stop
-                if j > rows:
-                    raise IndexError("Stop index too large: %d > %d" % (j, rows))
-                if j < -rows + 1:
-                    raise IndexError("Stop index too small: %d < %d" % (j, -rows + 1))
-                if j < 0:
-                    j += rows
-            if i >= j:
-                raise ValueError("Improper slice: start index must come strictly before stop index")
-            if index.step is not None:
-                raise ValueError("Step sizes not yet supported.")
-            return pick_range(self, i, j)
+        elif isinstance(index, slice):
+            return strided_select(self, [index.step] if index.step is not None else [], 
+                                        [index.start] if index.start is not None else [],
+                                        [index.stop] if index.stop is not None else [])
+        elif isinstance(index, tuple):
+            steps = []
+            for slice_i in index:
+              if slice_i.step is None:
+                steps.append(1)
+              else:
+                if slice_i.step <= 0: raise IndexError("steps must be positive, got:", slice_i.step)
+                steps.append(slice_i.step)
+            starts = []
+            for slice_i in index:
+              if slice_i.start is None:
+                starts.append(0)
+              else:
+                starts.append(slice_i.start)
+            stops = []
+            for i, slice_i in enumerate(index):
+              if slice_i.stop is None:
+                if i == len(self.dim()[0]):
+                  stops.append(self.dim()[1])
+                else:
+                  stops.append(self.dim()[0][i])
+              else:
+                stops.append(slice_i.stop)
+            return strided_select(self, steps, starts, stops)
 
     cpdef scalar_value(self, bool recalculate=False):
         """Returns value of an expression as a scalar
@@ -894,6 +898,7 @@ cdef class Parameters(Expression): # {{{
     cdef Expression _const_expr
     def __cinit__(self):
         self._version = -1
+        self._const_version = -1
 
     # All creations MUST go through wrap_ptr
     @staticmethod
@@ -2126,10 +2131,10 @@ cdef class Tensor: #{{{
 #{{{ Expressions
 cdef ensure_freshness(Expression a):
     if a.cg_version != _cg.version():
-        if type(a) is Parameters:
+        if type(a) is Parameters or type(a) is LookupParameters:
             pass
         else:
-            raise ValueError("Attempt to use a stale expression.")
+            raise ValueError("Attempt to use a stale expression of type {}".format(type(a)))
 
 cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_add(a.c(), b.c()))
 cdef _mul(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_mul(a.c(), b.c()))
@@ -2513,6 +2518,29 @@ def sparse_inputTensor(idxs, values, shape, batched=False, defval=0,device=""):
         batch_size = 1
     idxs = np.ravel_multi_index(idxs, shape, order='F')
     return _cg.inputSparseTensor(idxs, values, dim, batch_size=batch_size, defval=defval, device=device)
+
+cpdef one_hot(d, idx, device=""):
+    """Inputs a one hot vector into the graph.
+    A one hot vecotr is a vector where one coordinate is 1 and everything else is 0
+    If ``idx`` is a list, returns a batch of one hot vectors where batch element ``b`` is one hot in ``idx[b]``
+
+    Args:
+        d (int): dimension of the vector(s)
+        idx (int,list): One hot index
+        device(string): Optional, device on which to create the expression.
+    
+    Returns:
+        Expression: One hot vector(s) expression
+    """
+    if isinstance(idx, int):
+        idx = [idx]
+    idxs = np.asarray(idx, dtype=int)
+    cdef CDevice* dev
+    if str(device) != "":
+        dev = c_str2dev(str(device))
+        return Expression.from_cexpr(_cg.version(), c_one_hot(_cg.thisptr[0], <unsigned> d, <vector[unsigned]> idxs, <CDevice*> dev))
+    else:
+        return Expression.from_cexpr(_cg.version(), c_one_hot(_cg.thisptr[0], <unsigned> d, <vector[unsigned]> idxs))
 
 cdef class _lookupExpression(Expression):
     """Expression corresponding to a lookup from lookup parameter
@@ -3072,7 +3100,7 @@ cpdef Expression l1_distance(Expression x, Expression y):
 cpdef Expression binary_log_loss(Expression x, Expression y):
     """Binary log loss
     
-    The log loss of a binary decision according to the sigmoid sigmoid function :math:`- \sum_i (y_i  \ln(x_i) + (1-y_i)  \ln(1-x_i))`
+    The log loss of a binary decision according to the sigmoid function :math:`- \sum_i (y_i  \ln(x_i) + (1-y_i)  \ln(1-x_i))`
     
     Args:
         x (dynet.Expression): The first input expression
@@ -6061,10 +6089,10 @@ cdef class CyclicalSGDTrainer(Trainer):
         learning_rate_min (number): Lower learning rate (default: {0.01})
         learning_rate_max (number): Upper learning rate (default: {0.1})
         step_size (number): Period of the triangular function in number of iterations (__not__ epochs). According to the original paper, this should be set around (2-8) x (training iterations in epoch) (default: {2000})
-        gamma (number): Learning rate upper bound decay parameter (default: {0.0})
+        gamma (number): Learning rate upper bound decay parameter (1.0 = no decay) (default: {1.0})
     """
     cdef CCyclicalSGDTrainer *thischildptr
-    def __cinit__(self, ParameterCollection m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 0.0):
+    def __cinit__(self, ParameterCollection m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 1.0):
         self.thischildptr = self.thisptr = new CCyclicalSGDTrainer(m.thisptr, learning_rate_min, learning_rate_max, step_size, gamma)
     cpdef update(self):
         self.thischildptr.update()

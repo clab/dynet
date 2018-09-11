@@ -261,6 +261,12 @@ object Expression {
   def concatenateToBatch(v: ExpressionVector): Expression = vectory(v, dn.concatenate_to_batch)
   def concatenateToBatch(exprs: Expression*): Expression = concatenateToBatch(new ExpressionVector(exprs))
 
+  def stridedSelect(x:Expression, strides:IntVector, from:IntVector, to:IntVector):Expression = {
+    unary(x, x => dn.strided_select(x, strides.vector, from.vector, to.vector))
+  }
+  def stridedSelect(x:Expression, strides:Seq[Int], from:Seq[Int], to:Seq[Int]):Expression =
+    stridedSelect(x, new IntVector(strides), new IntVector(from), new IntVector(to))
+
   def concatenateCols(v: ExpressionVector): Expression = vectory(v, dn.concatenate_cols)
   def concatenateCols(exprs: Expression*): Expression = concatenateCols(new ExpressionVector(exprs))
 

@@ -304,11 +304,10 @@ As before, ``cd build/python`` followed by
 cuDNN support
 ~~~~~~~~~~~~~
 
-When running DyNet with CUDA on GPUs, some of DyNet's functionalities
-(e.g. conv2d) will depend on the `NVIDIA cuDNN libraries <https://developer.nvidia.com/cudnn>`__.
-CMake will automatically detect cuDNN in the suggested installation path 
-by NVIDIA (i.e. ``/usr/local/cuda``) and enable those functionalities 
-if detected.
+When running DyNet with CUDA on GPUs, some of DyNet's functionality
+(e.g. conv2d) depends on the `NVIDIA cuDNN libraries <https://developer.nvidia.com/cudnn>`__.
+CMake will automatically detect cuDNN in the CUDA installation path 
+(i.e. ``/usr/local/cuda``) and enable it if detected.
 
 If CMake is unable to find cuDNN automatically, try setting `CUDNN_ROOT`, such as
 
@@ -316,12 +315,9 @@ If CMake is unable to find cuDNN automatically, try setting `CUDNN_ROOT`, such a
 
     -DCUDNN_ROOT="/path/to/CUDNN"
 
-. However, if you don't have cuDNN installed, those dependend functionalities 
+However, if you don't have cuDNN installed, the dependent functionality
 will be automatically disabled and an error will be throwed during runtime if you try
 to use them.
-
-Currently, DyNet supports cuDNN v5.1, future versions will also be supported soon.
-
 
 Using the GPU from Python
 ~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -241,7 +241,6 @@ void initialize(DynetParams& params) {
   }
   cerr << "[dynet] random seed: " << params.random_seed << endl;
   reset_rng(params.random_seed);
-  rndeng = new mt19937(params.random_seed);
 
   // Set weight decay rate
   if (params.weight_decay < 0 || params.weight_decay >= 1)

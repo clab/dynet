@@ -20,6 +20,21 @@ Expression input(ComputationGraph& g, const real *ps, Device *device) { return E
 Expression input(ComputationGraph& g, const Dim& d, const vector<float>& data, Device *device) { return Expression(&g, g.add_input(d, data, device)); }
 Expression input(ComputationGraph& g, const Dim& d, const vector<float>* pdata, Device *device) { return Expression(&g, g.add_input(d, pdata, device)); }
 Expression input(ComputationGraph& g, const Dim& d, const vector<unsigned int>& ids, const vector<float>& data, float defdata, Device *device) { return Expression(&g, g.add_input(d, ids, data, device, defdata)); }
+Expression one_hot(ComputationGraph& g, unsigned int d, unsigned int idx, Device *device) {
+  Dim dim({d});
+  vector<unsigned int> ids = {idx};
+  vector<float> data = {1.0};
+  return Expression(&g, g.add_input(dim, ids, data, device, 0.0));
+}
+Expression one_hot(ComputationGraph& g, unsigned int d, const std::vector<unsigned int>& ids, Device *device) {
+  unsigned batch_size = ids.size();
+  Dim dim({d}, batch_size);
+  vector<unsigned int> flat_ids(batch_size);
+  for (unsigned int b=0; b<batch_size; b++)
+    flat_ids[b] = b * d + ids[b];
+  vector<float> data(batch_size, 1.0);
+  return Expression(&g, g.add_input(dim, flat_ids, data, device, 0.0));
+}
 Expression const_parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression const_parameter(ComputationGraph& g, LookupParameter p) { return Expression(&g, g.add_const_parameters(p)); }
 Expression parameter(ComputationGraph& g, Parameter p) { return Expression(&g, g.add_parameters(p)); }
@@ -174,7 +189,13 @@ Expression pickrange(const Expression& x, unsigned v, unsigned u) {
   return Expression(x.pg, x.pg->add_function<PickRange>({x.i}, v, u, 0));
 }
 
-Expression strided_select(const Expression& x, const std::vector<int>& strides, const std::vector<int>& range_from, const std::vector<int>& range_to) { return Expression(x.pg, x.pg->add_function<StridedSelect>({x.i}, strides, range_from, range_to)); }
+Expression strided_select(const Expression& x, const std::vector<int>& strides, const std::vector<int>& range_from, const std::vector<int>& range_to) {
+  bool inplaced = true;
+  for(unsigned d=0;d<strides.size();d++){ if(strides[d]!=1) inplaced = false; }
+  for(unsigned d=0;d<range_from.size();d++){ if(range_from[d]!=0) inplaced = false; }
+  for(unsigned d=0;d<range_to.size() && d<x.dim().nd;d++){ if(range_to[d]!=x.dim()[d]) inplaced = false; }
+  return Expression(x.pg, x.pg->add_function<StridedSelect>({x.i}, strides, range_from, range_to, inplaced));
+}
 
 Expression pickneglogsoftmax(const Expression& x, unsigned v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }
 Expression pickneglogsoftmax(const Expression& x, const vector<unsigned> & v) { return Expression(x.pg, x.pg->add_function<PickNegLogSoftmax>({x.i}, v)); }

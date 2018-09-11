@@ -2410,6 +2410,31 @@ BOOST_AUTO_TEST_CASE( sparse_input_test ) {
     BOOST_CHECK_CLOSE(exp[i], act[i], 0.001);
 }
 
+// Expression one_hot(ComputationGraph& g, unsigned int d, unsigned int idx, Device *device = dynet::default_device);
+BOOST_AUTO_TEST_CASE( one_hot_test ) {
+  dynet::ComputationGraph cg;
+  unsigned int idx = 5;
+  unsigned int d = 10;
+  Expression z = one_hot(cg, d, idx);
+  std::vector<float> values = as_vector(cg.forward(z));
+  BOOST_CHECK_EQUAL(d, values.size());
+  for (size_t i = 0; i < d; ++i)
+    BOOST_CHECK_EQUAL(values[i], i == idx ? 1.0 : 0.0);
+}
+// Expression one_hot(ComputationGraph& g, unsigned int d, unsigned int batch_size, const std::vector<unsigned int>& ids, Device *device = dynet::default_device);
+BOOST_AUTO_TEST_CASE( batched_one_hot_test ) {
+  dynet::ComputationGraph cg;
+  vector<unsigned int> idxs = {1, 6};
+  unsigned int d = 10;
+  unsigned int batch_size = idxs.size();
+  Expression z = one_hot(cg, d, idxs);
+  std::vector<float> values = as_vector(cg.forward(z));
+  BOOST_CHECK_EQUAL(d * batch_size, values.size());
+  for (size_t b = 0; b < batch_size; ++b)
+    for (size_t i = 0; i < d; ++i)
+      BOOST_CHECK_EQUAL(values[b * d + i], (b * d + i ==  1 || b * d + i == 16 ? 1.0 : 0.0));
+}
+
 // Expression lookup();
 BOOST_AUTO_TEST_CASE( lookup_test ) {
   dynet::ComputationGraph cg;
