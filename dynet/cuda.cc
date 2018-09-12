@@ -24,7 +24,9 @@ vector<Device*> initialize_gpu(DynetParams& params) {
   int driverVersion = 0;
   cudaRuntimeGetVersion(&runtimeVersion);
   cudaDriverGetVersion(&driverVersion);
-  cerr << "[dynet] CUDA driver/runtime version is "<<runtimeVersion/1000<<"."<<(runtimeVersion%100)/10<<"/"<<driverVersion/1000<<"."<<(driverVersion%1000)/10<<endl;
+  cerr << "[dynet] CUDA driver/runtime version are "
+       <<runtimeVersion/1000<<"."<<(runtimeVersion%100)/10<<"/"
+       <<driverVersion/1000<<"."<<(driverVersion%1000)/10<<endl;
 
   // Check gpu_mask
   for (unsigned gpu_id = nDevices; gpu_id < MAX_GPUS; ++gpu_id) {
