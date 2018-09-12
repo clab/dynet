@@ -830,3 +830,208 @@ DYNET_C_STATUS dynetApplyPoissonLoss(
   *newobj = to_c_ptr_from_value(dynet::poisson_loss(*to_cpp_ptr(x), y));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_IMPL_UNARY_FUNC(Nobackprop, nobackprop);
+DYNET_C_IMPL_UNARY_FUNC(FlipGradient, flip_gradient);
+
+DYNET_C_STATUS dynetApplyScaleGradient(
+    const dynetExpression_t *x, float lambd, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::scale_gradient(*to_cpp_ptr(x), lambd));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyArgmaxWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::argmax(*to_cpp_ptr(x), dynet::zero_gradient));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyArgmaxWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::argmax(*to_cpp_ptr(x), dynet::straight_through_gradient));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyReshape(
+    const dynetExpression_t *x, const dynetDim_t *d,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(d);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::reshape(*to_cpp_ptr(x), *to_cpp_ptr(d)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyTranspose(
+    const dynetExpression_t *x, const uint32_t *dims, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  if (dims) {
+    *newobj = to_c_ptr_from_value(dynet::transpose(
+        *to_cpp_ptr(x), std::vector<uint32_t>(dims, dims + n)));
+  } else {
+    *newobj = to_c_ptr_from_value(dynet::transpose(*to_cpp_ptr(x)));
+  }
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplySelectRows(
+    const dynetExpression_t *x, const uint32_t *rows, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(rows);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::select_rows(
+      *to_cpp_ptr(x), std::vector<uint32_t>(rows, rows + n)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplySelectCols(
+    const dynetExpression_t *x, const uint32_t *cols, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(cols);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::select_cols(
+      *to_cpp_ptr(x), std::vector<uint32_t>(cols, cols + n)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyPickOne(
+    const dynetExpression_t *x, uint32_t v, uint32_t d,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::pick(*to_cpp_ptr(x), v, d));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyPick(
+    const dynetExpression_t *x, const uint32_t *v, size_t n, uint32_t d,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(v);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::pick(
+      *to_cpp_ptr(x), std::vector<uint32_t>(v, v + n), d));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyPickRange(
+    const dynetExpression_t *x, uint32_t s, uint32_t e, uint32_t d,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::pick_range(*to_cpp_ptr(x), s, e, d));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyPickBatchElem(
+    const dynetExpression_t *x, uint32_t v, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::pick_batch_elem(*to_cpp_ptr(x), v));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyPickBatchElems(
+    const dynetExpression_t *x, const uint32_t *v, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(v);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::pick_batch_elems(
+      *to_cpp_ptr(x), std::vector<uint32_t>(v, v + n)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyStridedSelect(
+    const dynetExpression_t *x, const int32_t *strides, size_t n_strides,
+    const int32_t *from, size_t n_from, const int32_t *to, size_t n_to,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(strides);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  std::vector<int32_t> from_v = from ?
+      std::vector<int32_t>(from, from + n_from) : std::vector<int32_t>();
+  std::vector<int32_t> to_v = to ?
+      std::vector<int32_t>(to, to + n_to) : std::vector<int32_t>();
+  *newobj = to_c_ptr_from_value(dynet::strided_select(
+      *to_cpp_ptr(x), std::vector<int32_t>(strides, strides + n_strides),
+      from_v, to_v));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyConcatenateToBatch(
+    const dynetExpression_t *const *xs, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(xs);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  const dynet::Expression *const *_xs = 
+      reinterpret_cast<const dynet::Expression *const *>(xs);
+  const std::vector<const dynet::Expression*> xs_p = 
+      std::vector<const dynet::Expression*>(_xs, _xs + n);
+  std::vector<dynet::Expression> xs_v;
+  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
+      [](const dynet::Expression *x) { return *x; });
+  *newobj = to_c_ptr_from_value(dynet::concatenate_to_batch(xs_v));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyConcatenateCols(
+    const dynetExpression_t *const *xs, size_t n,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(xs);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  const dynet::Expression *const *_xs = 
+      reinterpret_cast<const dynet::Expression *const *>(xs);
+  const std::vector<const dynet::Expression*> xs_p = 
+      std::vector<const dynet::Expression*>(_xs, _xs + n);
+  std::vector<dynet::Expression> xs_v;
+  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
+      [](const dynet::Expression *x) { return *x; });
+  *newobj = to_c_ptr_from_value(dynet::concatenate_cols(xs_v));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyConcatenate(
+    const dynetExpression_t *const *xs, size_t n, uint32_t d,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(xs);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  const dynet::Expression *const *_xs = 
+      reinterpret_cast<const dynet::Expression *const *>(xs);
+  const std::vector<const dynet::Expression*> xs_p = 
+      std::vector<const dynet::Expression*>(_xs, _xs + n);
+  std::vector<dynet::Expression> xs_v;
+  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
+      [](const dynet::Expression *x) { return *x; });
+  *newobj = to_c_ptr_from_value(dynet::concatenate(xs_v, d));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyMaxDim(
+    const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::max_dim(*to_cpp_ptr(x), d));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyMinDim(
+    const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::min_dim(*to_cpp_ptr(x), d));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS

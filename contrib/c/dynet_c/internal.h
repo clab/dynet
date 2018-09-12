@@ -42,8 +42,8 @@ inline c_name *to_c_ptr_from_value(dynet::cpp_name &&instance) { \
 }
 
 #define DYNET_C_HANDLE_EXCEPTIONS \
-catch (const std::exception &e) { \
-  return dynet_c::internal::ErrorHandler::get_instance().handle(e); \
+catch (const std::exception &err) { \
+  return dynet_c::internal::ErrorHandler::get_instance().handle(err); \
 }
 
 #define DYNET_C_CHECK_NOT_NULL(var) \

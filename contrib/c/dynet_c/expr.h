@@ -1186,4 +1186,236 @@ DYNET_C_API DYNET_C_STATUS dynetApplyPairwiseRankLoss(
 DYNET_C_API DYNET_C_STATUS dynetApplyPoissonLoss(
     const dynetExpression_t *x, uint32_t y, dynetExpression_t **newobj);
 
+/**
+ * Prevents backprop.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyNobackprop(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Flips gradient.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyFlipGradient(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Scales gradient by constant.
+ * @param x Input expression.
+ * @param lambd scale.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyScaleGradient(
+    const dynetExpression_t *x, float lambd, dynetExpression_t **newobj);
+
+/**
+ * Computes argmax.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyArgmaxWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes argmax.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyArgmaxWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Reshapes to another size.
+ * @param x Input expression.
+ * @param d New dimension.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyReshape(
+    const dynetExpression_t *x, const dynetDim_t *d,
+    dynetExpression_t **newobj);
+
+/**
+ * Transposes a matrix.
+ * @param x Input expression.
+ * @param dims The dimensions to swap.
+ * @param n Number of specified dimensions.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyTranspose(
+    const dynetExpression_t *x, const uint32_t *dims, size_t n,
+    dynetExpression_t **newobj);
+
+/**
+ * Selects rows.
+ * @param x Input expression.
+ * @param rows The rows to extract.
+ * @param n Number of specified rows.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplySelectRows(
+    const dynetExpression_t *x, const uint32_t *rows, size_t n,
+    dynetExpression_t **newobj);
+
+/**
+ * Selects columns.
+ * @param x Input expression.
+ * @param cols The columns to extract.
+ * @param n Number of specified columns.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplySelectCols(
+    const dynetExpression_t *x, const uint32_t *cols, size_t n,
+    dynetExpression_t **newobj);
+
+/**
+ * Picks element.
+ * @param x Input expression.
+ * @param v The index of the element to select.
+ * @param d The dimension along which to choose the element.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyPickOne(
+    const dynetExpression_t *x, uint32_t v, uint32_t d,
+    dynetExpression_t **newobj);
+
+/**
+ * Picks elements from batches.
+ * @param x Input expression.
+ * @param v A vector of indicies to choose, one for each batch in the input
+ *          expression.
+ * @param n Number of indices.
+ * @param d The dimension along which to choose the elements.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyPick(
+    const dynetExpression_t *x, const uint32_t *v, size_t n, uint32_t d,
+    dynetExpression_t **newobj);
+
+/**
+ * Picks range of elements.
+ * @param x Input expression.
+ * @param s The start index.
+ * @param e The end index.
+ * @param d The dimension along which to pick.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyPickRange(
+    const dynetExpression_t *x, uint32_t s, uint32_t e, uint32_t d,
+    dynetExpression_t **newobj);
+
+/**
+ * Picks batch element.
+ * @param x Input expression.
+ * @param v The index of the batch element to be picked.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyPickBatchElem(
+    const dynetExpression_t *x, uint32_t v, dynetExpression_t **newobj);
+
+/**
+ * Picks batch elements.
+ * @param x Input expression.
+ * @param v A vector of indicies of the batch elements to be picked.
+ * @param n Number of indices.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyPickBatchElems(
+    const dynetExpression_t *x, const uint32_t *v, size_t n,
+    dynetExpression_t **newobj);
+
+/**
+ * Stridingly selects in multiple dimensions
+ * @param x Input expression.
+ * @param strides List of strides for each dimension, must be >= 1. Dimensions
+ *                not included default to 1. Batch dimension can be included as
+ *                very last dimension.
+ * @param n_strides Number of strides.
+ * @param from List of 0-based offsets (inclusive) for each dimension, must be
+ *             >= 0. Dimensions not included default to 0. Batch dimension can
+ *             be included as very last dimension.
+ * @param n_from Number of `from` offsets.
+ * @param to List of highest 0-based index to select (exclusive) for each
+ *           dimension, must be >= 0. Dimensions not included default to the
+ *           corresponding dim size. Batch dimension can be included as very
+ *           last dimension.
+ * @param n_to Number of `to` offsets.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyStridedSelect(
+    const dynetExpression_t *x, const int32_t *strides, size_t n_strides,
+    const int32_t *from, size_t n_from, const int32_t *to, size_t n_to,
+    dynetExpression_t **newobj);
+
+/**
+ * Concatenates list of expressions to a single batched expression.
+ * @param xs Input expressions.
+ * @param n Number of inputs.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyConcatenateToBatch(
+    const dynetExpression_t *const *xs, size_t n, dynetExpression_t **newobj);
+
+/**
+ * Concatenates columns.
+ * @param xs Input expressions.
+ * @param n Number of inputs.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyConcatenateCols(
+    const dynetExpression_t *const *xs, size_t n, dynetExpression_t **newobj);
+
+/**
+ * Concatenates expressions.
+ * @param xs Input expressions.
+ * @param n Number of inputs.
+ * @param d The dimension along which to perform concatenation.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyConcatenate(
+    const dynetExpression_t *const *xs, size_t n, uint32_t d,
+    dynetExpression_t **newobj);
+
+/**
+ * Selects max out through a dimension.
+ * @param x Input expression.
+ * @param v The index of the element to select.
+ * @param d The dimension along which to choose the element.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyMaxDim(
+    const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj);
+
+/**
+ * Selects min out through a dimension.
+ * @param x Input expression.
+ * @param v The index of the element to select.
+ * @param d The dimension along which to choose the element.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyMinDim(
+    const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj);
+
 #endif  // DYNET_C_EXPR_H_
