@@ -1035,3 +1035,44 @@ DYNET_C_STATUS dynetApplyMinDim(
   *newobj = to_c_ptr_from_value(dynet::min_dim(*to_cpp_ptr(x), d));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyNoise(
+    const dynetExpression_t *x, float stddev, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::noise(*to_cpp_ptr(x), stddev));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyDropout(
+    const dynetExpression_t *x, float p, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::dropout(*to_cpp_ptr(x), p));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyDropoutDim(
+    const dynetExpression_t *x, uint32_t d, float p,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::dropout_dim(*to_cpp_ptr(x), d, p));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyDropoutBatch(
+    const dynetExpression_t *x, float p, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::dropout_batch(*to_cpp_ptr(x), p));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyBlockDropout(
+    const dynetExpression_t *x, float p, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::block_dropout(*to_cpp_ptr(x), p));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS

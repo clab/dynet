@@ -1399,7 +1399,6 @@ DYNET_C_API DYNET_C_STATUS dynetApplyConcatenate(
 /**
  * Selects max out through a dimension.
  * @param x Input expression.
- * @param v The index of the element to select.
  * @param d The dimension along which to choose the element.
  * @param newobj Pointer to receive an Expression.
  * @return Status code.
@@ -1410,12 +1409,63 @@ DYNET_C_API DYNET_C_STATUS dynetApplyMaxDim(
 /**
  * Selects min out through a dimension.
  * @param x Input expression.
- * @param v The index of the element to select.
  * @param d The dimension along which to choose the element.
  * @param newobj Pointer to receive an Expression.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyMinDim(
     const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj);
+
+/**
+ * Adds Gaussian noise.
+ * @param x Input expression.
+ * @param stddev The standard deviation of the Gaussian.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyNoise(
+    const dynetExpression_t *x, float stddev, dynetExpression_t **newobj);
+
+/**
+ * Applies dropout.
+ * @param x Input expression.
+ * @param p The dropout probability.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyDropout(
+    const dynetExpression_t *x, float p, dynetExpression_t **newobj);
+
+/**
+ * Applies dropout along a specific dimension.
+ * @param x Input expression.
+ * @param d The dimension along which to drop.
+ * @param p The dropout probability.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyDropoutDim(
+    const dynetExpression_t *x, uint32_t d, float p,
+    dynetExpression_t **newobj);
+
+/**
+ * Applies dropout to entire elements of a minibatch.
+ * @param x Input expression.
+ * @param p The dropout probability.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyDropoutBatch(
+    const dynetExpression_t *x, float p, dynetExpression_t **newobj);
+
+/**
+ * Applies block dropout.
+ * @param x Input expression.
+ * @param p The block dropout probability.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyBlockDropout(
+    const dynetExpression_t *x, float p, dynetExpression_t **newobj);
 
 #endif  // DYNET_C_EXPR_H_
