@@ -387,11 +387,32 @@ class TestIOEntireModel(unittest.TestCase):
         self.m = dy.ParameterCollection()
         self.m2 = dy.ParameterCollection()
         self.b = dy.BiRNNBuilder(2, 10, 10, self.m, dy.LSTMBuilder)
+        # Custom parameters
+        self.W1 = self.m.add_parameters(10)
+        self.W2 = self.m.add_parameters(12)
 
     def test_save_load(self):
         self.m.save(self.file)
         dy.BiRNNBuilder(2, 10, 10, self.m2, dy.LSTMBuilder)
+        self.m2.add_parameters(10)
+        self.m2.add_parameters(12)
         self.m2.populate(self.file)
+
+    def test_save_load_with_gradient(self):
+        # Make it so W1 has a gradient
+        dy.renew_cg()
+        dy.sum_elems(self.W1).backward()
+        # Record gradients
+        W1_grad = self.W1.grad_as_array()
+        W2_grad = self.W2.grad_as_array()
+        # Save the ParameterCollection
+        self.m.save(self.file)
+        # Populate
+        self.m.populate(self.file)
+        # Check that the gradients were saved
+        self.assertTrue(np.allclose(self.W1.grad_as_array(), W1_grad))
+        self.assertTrue(np.allclose(self.W2.grad_as_array(), W2_grad))
+
 
 
 class TestIOPartial(unittest.TestCase):
@@ -412,6 +433,7 @@ class TestIOPartial(unittest.TestCase):
 
 
 class TestIOHighLevelAPI(unittest.TestCase):
+
     def setUp(self):
         self.file = "bilstm.model"
         # create models
