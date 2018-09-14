@@ -49,6 +49,8 @@ void read_param_header(std::string line, std::string &type, std::string &name, D
     iss >> grad;
     if (grad == "ZERO_GRAD")
       zero_grad = true;
+    else
+      zero_grad = false;
   }
 }
 
