@@ -55,6 +55,7 @@ after_build:
 
 test_script:
   # Cmake (C++) unit tests
+  - cmd: set PATH=%BOOST_LIBRARYDIR%;%PATH%
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\build
   - cmd: ctest -C %configuration% --output-on-failure --timeout 300
   # Python unit tests
