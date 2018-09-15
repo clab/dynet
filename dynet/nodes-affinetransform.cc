@@ -87,7 +87,7 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
       tvec(fx).device(*dev.edevice) = tvec(*xs[0]);
     } else {
 #ifdef __CUDACC__
-      Eigen::array<int, 3> bcast; bcast[0] = 1; bcast[1] = fx.d[1]/xs[0]->d[1]; bcast[2] = fx.d.bd/xs[0]->d.bd;
+      Eigen::array<ptrdiff_t, 3> bcast = {1, fx.d[1]/xs[0]->d[1], fx.d.bd/xs[0]->d.bd};
       tb<2>(fx).device(*dev.edevice) = tb<2>(*xs[0]).broadcast(bcast);
 #else
       DYNET_ARG_CHECK(xs[0]->d.bd == 1, "In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
@@ -137,10 +137,10 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
       DYNET_ARG_CHECK(dEdxi.d.bd == 1, "In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
 #ifdef __CUDACC__
       if(dEdxi.d[1] == dEdf.d[1]) {
-        Eigen::array<int, 1> red_axis; red_axis[0] = 2;
+        Eigen::array<ptrdiff_t, 1> red_axis = { 2 };
         t<2>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).sum(red_axis);
       } else {
-        Eigen::array<int, 2> red_axis; red_axis[0] = 1; red_axis[1] = 2;
+        Eigen::array<ptrdiff_t, 2> red_axis = {1, 2};
         t<1>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).sum(red_axis);
       }
 #else

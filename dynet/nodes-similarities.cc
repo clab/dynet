@@ -29,8 +29,8 @@ Dim DotProduct::dim_forward(const vector<Dim>& xs) const {
 
 template<class MyDevice>
 void DotProduct::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  Eigen::array<int, 1> red_axis; red_axis[0] = 0;
-  Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+  Eigen::array<ptrdiff_t, 1> red_axis = {0};
+  Eigen::array<ptrdiff_t, 2> bcast = {1, fx.d.bd};
   if(fx.d.bd == 1) {
     t<0>(fx).device(*dev.edevice) = (tvec(*xs[0]) * tvec(*xs[1])).sum();
   } else if(xs[0]->d.bd == xs[1]->d.bd) {
@@ -50,17 +50,17 @@ void DotProduct::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   if(fx.d.bd == 1) {
-    Eigen::array<int, 1> bcast; bcast[0] = xs[i]->d.batch_size();
+    Eigen::array<ptrdiff_t, 1> bcast = { xs[i]->d.batch_size() };
     tvec(dEdxi).device(*dev.edevice) += tvec(*xs[1-i]) * tvec(dEdf).broadcast(bcast);
   } else {
-    Eigen::array<int, 2> bcast; bcast[0] =xs[i]->d.batch_size(); bcast[1] = 1;
+    Eigen::array<ptrdiff_t, 2> bcast = { xs[i]->d.batch_size(), 1 };
     if(xs[0]->d.bd == xs[1]->d.bd) {
       tbvec(dEdxi).device(*dev.edevice) += tbvec(*xs[1-i]) * tbvec(dEdf).broadcast(bcast);
     } else if(dEdxi.d.bd == 1) {
-      Eigen::array<int, 1> red_axis; red_axis[0] = 1;
+      Eigen::array<ptrdiff_t, 1> red_axis = {1};
       tvec(dEdxi).device(*dev.edevice) += (tbvec(*xs[1-i]) * tbvec(dEdf).broadcast(bcast)).sum(red_axis);
     } else {
-      Eigen::array<int, 2> batchcast; batchcast[0] = 1; batchcast[1] = fx.d.bd;
+      Eigen::array<ptrdiff_t, 2> batchcast = {1, fx.d.bd};
       tbvec(dEdxi).device(*dev.edevice) += (tbvec(*xs[1-i]).broadcast(batchcast) * tbvec(dEdf).broadcast(bcast));
     }
   }

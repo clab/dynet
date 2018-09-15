@@ -68,7 +68,7 @@ void Average::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
       // Not all the same batch size, so need to broadcast in the cases where they differ
       TensorTools::zero(fx);
 #ifdef __CUDACC__
-      Eigen::array<int, 2> bcast({ 1, (int)fx.d.bd });
+      Eigen::array<ptrdiff_t, 2> bcast({ 1, fx.d.bd });
 #endif
       for (unsigned i = 0; i < num_args; ++i) {
         if (xs[i]->d.bd == fx.d.bd) {
@@ -166,7 +166,7 @@ Dim MomentElements::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void MomentElements::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in MomentElements::forward");
-  Eigen::array<int, 1> red_axis; red_axis[0] = 0;
+  Eigen::array<ptrdiff_t, 1> red_axis = {0};
   if(order == 1)
     tb<0>(fx).device(*dev.edevice) = tbvec(*xs[0]).sum(red_axis) / (float) xs[0]->d.batch_size();
   else if (order == 2)
@@ -183,7 +183,7 @@ void MomentElements::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in MomentElements::backward");
-  Eigen::array<int, 2> bcast = {(int)xs[0]->d.batch_size(), 1};
+  Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
   if (order == 1)
     tbvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).broadcast(bcast) / (float) xs[0]->d.batch_size();
   else if (order == 2)
@@ -237,7 +237,7 @@ void MomentDimension::forward_dev_impl(const MyDevice & dev, const vector<const 
   }
 
   if(dims.size()==0 && include_batch_dim){
-    Eigen::array<int, 1> reduction_axis = {1};
+    Eigen::array<ptrdiff_t, 1> reduction_axis = {1};
     if(order == 1)
       tvec(fx).device(*dev.edevice) = tbvec(*xs[0]).sum(reduction_axis) / n;
     else if (order == 2)
@@ -246,7 +246,7 @@ void MomentDimension::forward_dev_impl(const MyDevice & dev, const vector<const 
       tvec(fx).device(*dev.edevice) = tbvec(*xs[0]).pow(order).sum(reduction_axis) / n;
   } else if(dims.size()==1 && !include_batch_dim){
     // original code:
-    Eigen::array<int, 1> reduction_axis = {(int)dims[0]};
+    Eigen::array<ptrdiff_t, 1> reduction_axis = {dims[0]};
     if(order == 1)
       tb<2>(fx).device(*dev.edevice) = tb<3>(*xs[0]).sum(reduction_axis) / n;
     else if (order == 2)
@@ -254,7 +254,7 @@ void MomentDimension::forward_dev_impl(const MyDevice & dev, const vector<const 
     else
       tb<2>(fx).device(*dev.edevice) = tb<3>(*xs[0]).pow(order).sum(reduction_axis) / n;
   } else if(dims.size()==1 && include_batch_dim){
-    Eigen::array<int, 2> reduction_axis = {(int)dims[0], 3};
+    Eigen::array<ptrdiff_t, 2> reduction_axis = {dims[0], 3};
     if(order == 1)
       t<2>(fx).device(*dev.edevice) = tb<3>(*xs[0]).sum(reduction_axis) / n;
     else if (order == 2)
@@ -262,7 +262,7 @@ void MomentDimension::forward_dev_impl(const MyDevice & dev, const vector<const 
     else
       t<2>(fx).device(*dev.edevice) = tb<3>(*xs[0]).pow(order).sum(reduction_axis) / n;
   } else if(dims.size()==2 && !include_batch_dim){
-      Eigen::array<int, 2> reduction_axis = {(int)dims[0], (int)dims[1]};
+      Eigen::array<ptrdiff_t, 2> reduction_axis = {dims[0], dims[1]};
       if(order == 1)
         tb<1>(fx).device(*dev.edevice) = tb<3>(*xs[0]).sum(reduction_axis) / n;
       else if (order == 2)
@@ -270,7 +270,7 @@ void MomentDimension::forward_dev_impl(const MyDevice & dev, const vector<const 
       else
         tb<1>(fx).device(*dev.edevice) = tb<3>(*xs[0]).pow(order).sum(reduction_axis) / n;
   } else if(dims.size()==2 && include_batch_dim){
-      Eigen::array<int, 3> reduction_axis = {(int)dims[0], (int)dims[1], 3};
+      Eigen::array<ptrdiff_t, 3> reduction_axis = {dims[0], dims[1], 3};
       if(order == 1)
         t<1>(fx).device(*dev.edevice) = tb<3>(*xs[0]).sum(reduction_axis) / n;
       else if (order == 2)
@@ -298,7 +298,7 @@ void MomentDimension::backward_dev_impl(const MyDevice & dev,
   }
 
   if(dims.size()==0 && include_batch_dim){
-    Eigen::array<int, 2> bcast = {1, (int)xs[0]->d.bd};
+    Eigen::array<ptrdiff_t, 2> bcast = {1, xs[0]->d.bd};
     if (order == 1)
       tbvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).broadcast(bcast) / n;
     else if (order == 2)
@@ -308,8 +308,8 @@ void MomentDimension::backward_dev_impl(const MyDevice & dev,
     else
       tbvec(dEdxi).device(*dev.edevice) += (tbvec(dEdf).broadcast(bcast) * tbvec(*xs[0]).pow(order - 1)) * ( (float) order / n);
   } else if(dims.size()==1 && !include_batch_dim){
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1;
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],xs[0]->d.bd}; morph[dims[0]] = 1;
     if (order == 1)
       tb<3>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).reshape(morph).broadcast(bcast) / n;
     else if (order == 2)
@@ -319,8 +319,8 @@ void MomentDimension::backward_dev_impl(const MyDevice & dev,
     else
       tb<3>(dEdxi).device(*dev.edevice) += (tb<2>(dEdf).reshape(morph).broadcast(bcast) * tb<3>(*xs[0]).pow(order - 1)) * ( (float) order / n);
   } else if(dims.size()==1 && include_batch_dim){
-      Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
-      Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1;
+      Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
+      Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],1}; morph[dims[0]] = 1;
       if (order == 1)
         tb<3>(dEdxi).device(*dev.edevice) += t<2>(dEdf).reshape(morph).broadcast(bcast) / n;
       else if (order == 2)
@@ -330,8 +330,8 @@ void MomentDimension::backward_dev_impl(const MyDevice & dev,
       else
         tb<3>(dEdxi).device(*dev.edevice) += (t<2>(dEdf).reshape(morph).broadcast(bcast) * tb<3>(*xs[0]).pow(order - 1)) * ( (float) order / n);
   } else if(dims.size()==2 && !include_batch_dim){
-      Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
-      Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+      Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
+      Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
       if (order == 1)
         tb<3>(dEdxi).device(*dev.edevice) += tb<1>(dEdf).reshape(morph).broadcast(bcast) / n;
       else if (order == 2)
@@ -341,8 +341,8 @@ void MomentDimension::backward_dev_impl(const MyDevice & dev,
       else
         tb<3>(dEdxi).device(*dev.edevice) += (tb<1>(dEdf).reshape(morph).broadcast(bcast) * tb<3>(*xs[0]).pow(order - 1)) * ( (float) order / n);
   } else if(dims.size()==2 && include_batch_dim){
-      Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
-      Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+      Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
+      Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
       if (order == 1)
         tb<3>(dEdxi).device(*dev.edevice) += t<1>(dEdf).reshape(morph).broadcast(bcast) / n;
       else if (order == 2)
@@ -376,7 +376,7 @@ Dim MomentBatches::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void MomentBatches::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in MomentBatches::forward");
-  Eigen::array<int, 1> red_axis; red_axis[0] = 1;
+  Eigen::array<ptrdiff_t, 1> red_axis = {1};
   if(order == 1)
     tvec(fx).device(*dev.edevice) = tbvec(*xs[0]).sum(red_axis) / (float) xs[0]->d.bd;
   else if (order == 2)
@@ -393,7 +393,7 @@ void MomentBatches::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in MomentBatches::backward");
-  Eigen::array<int, 2> bcast = {1, (int)xs[0]->d.bd};
+  Eigen::array<ptrdiff_t, 2> bcast = {1, xs[0]->d.bd};
   if (order == 1)
     tbvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).broadcast(bcast) / (float) xs[0]->d.bd;
   else if (order == 2)
@@ -500,33 +500,33 @@ void StdDimension::forward_dev_impl(const MyDevice & dev, const vector<const Ten
     tbvec(mean).device(*dev.edevice) = (tbvec(*xs[0]).sum(red_axis).reshape(morph) / n);
     tvec(fx).device(*dev.edevice) = ((tbvec(*xs[0]) - tbvec(mean).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   } else if(dims.size()==1 && !include_batch_dim){
-    Eigen::array<int, 1> red_axis = {(int)dims[0]};
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1;
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
+    Eigen::array<ptrdiff_t, 1> red_axis = {dims[0]};
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],xs[0]->d.bd}; morph[dims[0]] = 1;
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
     Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
     mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
     tb<3>(mean).device(*dev.edevice) = (tb<3>(*xs[0]).sum(red_axis).reshape(morph) / n);
     tb<2>(fx).device(*dev.edevice) = ((tb<3>(*xs[0]) - tb<3>(mean).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   } else if(dims.size()==1 && include_batch_dim){
-    Eigen::array<int, 2> red_axis = {(int)dims[0], (int)3};
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1;
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
+    Eigen::array<ptrdiff_t, 2> red_axis = {dims[0], 3};
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],1}; morph[dims[0]] = 1;
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
     Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
     mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
     tb<3>(mean).device(*dev.edevice) = (tb<3>(*xs[0]).sum(red_axis).reshape(morph) / n);
     t<2>(fx).device(*dev.edevice) = ((tb<3>(*xs[0]) - tb<3>(mean).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   } else if(dims.size()==2 && !include_batch_dim){
-    Eigen::array<int, 2> red_axis = {(int)dims[0], (int)dims[1]};
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
+    Eigen::array<ptrdiff_t, 2> red_axis = {dims[0], dims[1]};
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
     Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
     mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
     tb<3>(mean).device(*dev.edevice) = (tb<3>(*xs[0]).sum(red_axis).reshape(morph) / n);
     tb<1>(fx).device(*dev.edevice) = ((tb<3>(*xs[0]) - tb<3>(mean).broadcast(bcast)).square().sum(red_axis) / n).sqrt();
   } else if(dims.size()==2 && include_batch_dim){
-    Eigen::array<int, 3> red_axis = {(int)dims[0], (int)dims[1], (int)3};
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];  bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
+    Eigen::array<ptrdiff_t, 3> red_axis = {dims[0], dims[1], 3};
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];  bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
     Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
     mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
     tb<3>(mean).device(*dev.edevice) = (tb<3>(*xs[0]).sum(red_axis).reshape(morph) / n);
@@ -564,33 +564,33 @@ void StdDimension::backward_dev_impl(const MyDevice & dev,
     tbvec(mean).device(*dev.edevice) = (tbvec(*xs[0]).sum(red_axis).reshape(morph) / n);
     tbvec(dEdxi).device(*dev.edevice) +=  (2 / n) * (tbvec(*xs[0]) - tbvec(mean).broadcast(bcast)) * (tbvec(fx).binaryExpr(tbvec(dEdf), FSqrtBackward())).broadcast(bcast);
   } else if(dims.size()==1 && !include_batch_dim){
-    Eigen::array<int, 1> red_axis = {(int)dims[0]};
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1;
+    Eigen::array<ptrdiff_t, 1> red_axis = {dims[0]};
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],xs[0]->d.bd}; morph[dims[0]] = 1;
     Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
     mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
     tb<3>(mean).device(*dev.edevice) = (tb<3>(*xs[0]).sum(red_axis).reshape(morph) / n);
     tb<3>(dEdxi).device(*dev.edevice) +=  (2 / n) * (tb<3>(*xs[0]) - tb<3>(mean).broadcast(bcast)) * (tb<2>(fx).binaryExpr(tb<2>(dEdf), FSqrtBackward())).reshape(morph).broadcast(bcast);
   } else if(dims.size()==1 && include_batch_dim){
-    Eigen::array<int, 2> red_axis = {(int)dims[0], 3};
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1;
+    Eigen::array<ptrdiff_t, 2> red_axis = {dims[0], 3};
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],1}; morph[dims[0]] = 1;
     Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
     mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
     tb<3>(mean).device(*dev.edevice) = (tb<3>(*xs[0]).sum(red_axis).reshape(morph) / n);
     tb<3>(dEdxi).device(*dev.edevice) +=  (2 / n) * (tb<3>(*xs[0]) - tb<3>(mean).broadcast(bcast)) * (t<2>(fx).binaryExpr(t<2>(dEdf), FSqrtBackward())).reshape(morph).broadcast(bcast);
   } else if(dims.size()==2 && !include_batch_dim){
-    Eigen::array<int, 2> red_axis = {(int)dims[0], (int)dims[1]};
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+    Eigen::array<ptrdiff_t, 2> red_axis = {dims[0], dims[1]};
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
     Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
     mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
     tb<3>(mean).device(*dev.edevice) = (tb<3>(*xs[0]).sum(red_axis).reshape(morph) / n);
     tb<3>(dEdxi).device(*dev.edevice) +=  (2 / n) * (tb<3>(*xs[0]) - tb<3>(mean).broadcast(bcast)) * (tb<1>(fx).binaryExpr(tb<1>(dEdf), FSqrtBackward())).reshape(morph).broadcast(bcast);
   } else if(dims.size()==2 && include_batch_dim){
-    Eigen::array<int, 3> red_axis = {(int)dims[0], (int)dims[1], 3};
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+    Eigen::array<ptrdiff_t, 3> red_axis = {dims[0], dims[1], 3};
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
     Tensor mean(Dim({(unsigned)morph[0], (unsigned)morph[1], (unsigned)morph[2]}, (unsigned)morph[3]), nullptr, fx.device, fx.mem_pool);
     mean.v = static_cast<float*>(scratch_allocator->allocate(mean.d.size() * sizeof(float)));
     tb<3>(mean).device(*dev.edevice) = (tb<3>(*xs[0]).sum(red_axis).reshape(morph) / n);

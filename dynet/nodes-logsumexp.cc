@@ -90,7 +90,7 @@ void LogSumExp::backward_dev_impl(const MyDevice & dev,
       tvec(dEdxi).device(*dev.edevice) += (tvec(*xs[i]) - tvec(fx)).exp() * tvec(dEdf);
     } else {
       Eigen::array<ptrdiff_t, 2> bcast = {1,fx.d.bd};
-      Eigen::array<int, 1> red_axis = {1};
+      Eigen::array<ptrdiff_t, 1> red_axis = {1};
       tvec(dEdxi).device(*dev.edevice) += ((tbvec(*xs[i]).broadcast(bcast) - tbvec(fx)).exp() * tbvec(dEdf)).sum(red_axis);
     }
   }
@@ -139,8 +139,8 @@ void LogSumExpDimension::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   unsigned other_dim = dimension ^ 1;
-  Eigen::array<int, 3> bcast = {1, 1, 1}; bcast[dimension] = xs[0]->d[dimension];
-  Eigen::array<int, 3> morph = {1, 1, (int)fx.d.bd}; morph[other_dim] = fx.d[0];
+  Eigen::array<ptrdiff_t, 3> bcast = {1, 1, 1}; bcast[dimension] = xs[0]->d[dimension];
+  Eigen::array<ptrdiff_t, 3> morph = {1, 1, fx.d.bd}; morph[other_dim] = fx.d[0];
   tb<2>(dEdxi).device(*dev.edevice) += (tb<2>(*xs[0]) - tb<1>(fx).reshape(morph).broadcast(bcast)).exp() * tb<1>(dEdf).reshape(morph).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(LogSumExpDimension)

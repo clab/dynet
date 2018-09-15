@@ -47,10 +47,10 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
     z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
     Tensor m(Dim({xs[0]->d.cols()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
     m.v = static_cast<float*>(scratch_allocator->allocate(m.d.size() * sizeof(float)));
-    Eigen::array<int, 1> red_dim = {0};
+    Eigen::array<ptrdiff_t, 1> red_dim = {0};
     tb<1>(m).device(*dev.edevice) = tb<2>(*xs[0]).maximum(red_dim);
-    Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
-    Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
+    Eigen::array<ptrdiff_t, 3> bcasts = {xs[0]->d.rows(), 1, 1};
+    Eigen::array<ptrdiff_t, 3> morph = {1, z.d[0], z.d.bd};
     tb<2>(fx).device(*dev.edevice) = (tb<2>(*xs[0]) - tvec(m).reshape(morph).broadcast(bcasts)).exp();
     tb<1>(z).device(*dev.edevice) = tb<2>(fx).sum(red_dim);
     tb<2>(fx).device(*dev.edevice) = tb<2>(fx) / tvec(z).reshape(morph).broadcast(bcasts);
@@ -76,10 +76,10 @@ void Softmax::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>
     z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
     Tensor m(Dim({xs[0]->d.rows()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
     m.v = static_cast<float*>(scratch_allocator->allocate(m.d.size() * sizeof(float)));
-    Eigen::array<int, 1> red_dim = {1};
+    Eigen::array<ptrdiff_t, 1> red_dim = {1};
     tb<1>(m).device(*dev.edevice) = tb<2>(*xs[0]).maximum(red_dim);
-    Eigen::array<int, 3> bcasts = {1, (int)xs[0]->d.cols(), 1};
-    Eigen::array<int, 3> morph = {(int)z.d[0], 1, (int)z.d.bd};
+    Eigen::array<ptrdiff_t, 3> bcasts = {1, xs[0]->d.cols(), 1};
+    Eigen::array<ptrdiff_t, 3> morph = {z.d[0], 1, z.d.bd};
     tb<2>(fx).device(*dev.edevice) = (tb<2>(*xs[0]) - tvec(m).reshape(morph).broadcast(bcasts)).exp();
     tb<1>(z).device(*dev.edevice) = tb<2>(fx).sum(red_dim);
     tb<2>(fx).device(*dev.edevice) = tb<2>(fx) / tvec(z).reshape(morph).broadcast(bcasts);
@@ -98,12 +98,12 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
   AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
   Tensor z(Dim({fx.d.cols()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
   z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
-  Eigen::array<int, 1> red_axis = {0};
+  Eigen::array<ptrdiff_t, 1> red_axis = {0};
   tb<1>(z).device(*dev.edevice) = (tb<2>(fx) * tb<2>(dEdf)).sum(red_axis);
   if(dimension==0){
 #ifdef __CUDACC__ // GPU impl
-    Eigen::array<int, 3> bcast = {(int)xs[0]->d.rows(), 1, 1};
-    Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
+    Eigen::array<ptrdiff_t, 3> bcast = {xs[0]->d.rows(), 1, 1};
+    Eigen::array<ptrdiff_t, 3> morph = {1, z.d[0], z.d.bd};
     tb<2>(dEdxi).device(*dev.edevice) += (tb<2>(dEdf) - tvec(z).reshape(morph).broadcast(bcast)) * tb<2>(fx);
 #else // CPU impl
     unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
@@ -120,10 +120,10 @@ void Softmax::backward_dev_impl(const MyDevice & dev,
   } else {
     Tensor z(Dim({fx.d.rows()},fx.d.bd), nullptr, fx.device, DeviceMempool::FXS);
     z.v = static_cast<float*>(scratch_allocator->allocate(z.d.size() * sizeof(float)));
-    Eigen::array<int, 1> red_axis = {1};
+    Eigen::array<ptrdiff_t, 1> red_axis = {1};
     tb<1>(z).device(*dev.edevice) = (tb<2>(fx) * tb<2>(dEdf)).sum(red_axis);
-    Eigen::array<int, 3> bcast = {1, (int)xs[0]->d.cols(), 1};
-    Eigen::array<int, 3> morph = {(int)z.d[0], 1, (int)z.d.bd};
+    Eigen::array<ptrdiff_t, 3> bcast = {1, xs[0]->d.cols(), 1};
+    Eigen::array<ptrdiff_t, 3> morph = {z.d[0], 1, z.d.bd};
     tb<2>(dEdxi).device(*dev.edevice) += (tb<2>(dEdf) - tvec(z).reshape(morph).broadcast(bcast)) * tb<2>(fx);
   }
   scratch_allocator->free();
@@ -161,16 +161,15 @@ void LogSoftmax::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   TensorTools::logsumexp_dev(dev, *xs[0], m, z);
   if(fx.d.size() == fx.d.rows()) {
 #ifdef __CUDACC__
-    Eigen::array<int, 1> bcast;
-    bcast[0] = xs[0]->d[0];
+    Eigen::array<ptrdiff_t, 1> bcast = { xs[0]->d[0] };
     t<1>(fx).device(*dev.edevice) = t<1>(*xs[0]) - t<1>(z).broadcast(bcast);
 #else
     t<1>(fx).device(*dev.edevice) = t<1>(*xs[0]) - as_scalar(z);
 #endif
   } else {
 #ifdef __CUDACC__ // GPU impl
-    Eigen::array<int, 3> bcasts = {(int)xs[0]->d.rows(), 1, 1};
-    Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
+    Eigen::array<ptrdiff_t, 3> bcasts = {xs[0]->d.rows(), 1, 1};
+    Eigen::array<ptrdiff_t, 3> morph = {1, z.d[0], z.d.bd};
     tb<2>(fx).device(*dev.edevice) = tb<2>(*xs[0]) - tvec(z).reshape(morph).broadcast(bcasts);
 #else // CPU impl
     unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;
@@ -193,11 +192,11 @@ void LogSoftmax::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   Tensor z(Dim({xs[0]->d.cols()},fx.d.bd), (float*)aux_mem, fx.device, DeviceMempool::FXS);
-  Eigen::array<int, 1> red_axis; red_axis[0] = 0;
+  Eigen::array<ptrdiff_t, 1> red_axis = {0};
   tb<1>(z).device(*dev.edevice) = tb<2>(dEdf).sum(red_axis);
 #ifdef __CUDACC__ // GPU impl
-  Eigen::array<int, 3> bcast = {(int)fx.d.rows(), 1, 1};
-  Eigen::array<int, 3> morph = {1, (int)z.d[0], (int)z.d.bd};
+  Eigen::array<ptrdiff_t, 3> bcast = {fx.d.rows(), 1, 1};
+  Eigen::array<ptrdiff_t, 3> morph = {1, z.d[0], z.d.bd};
   tb<2>(dEdxi).device(*dev.edevice) += tb<2>(fx).exp() * -tvec(z).reshape(morph).broadcast(bcast) + tb<2>(dEdf);
 #else // CPU impl
   unsigned size = xs[0]->d[0], num_cols = xs[0]->d[1] * xs[0]->d.bd;

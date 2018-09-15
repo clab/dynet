@@ -94,7 +94,7 @@ void Sum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs
       // Not all the same batch size, so need to broadcast in the cases where they differ
       TensorTools::zero(fx);
 #ifdef __CUDACC__
-      Eigen::array<int, 2> bcast({ 1, (int)fx.d.bd });
+      Eigen::array<ptrdiff_t, 2> bcast({ 1, fx.d.bd });
 #endif
       for (unsigned i = 0; i < num_args; ++i) {
         if (xs[i]->d.bd == fx.d.bd) {
@@ -123,7 +123,7 @@ void Sum::backward_dev_impl(const MyDevice & dev,
   if(dEdxi.d.bd == fx.d.bd) {
     tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
   } else {
-    Eigen::array<int, 1> red_axis = {1};
+    Eigen::array<ptrdiff_t, 1> red_axis = {1};
     tvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).sum(red_axis);
   }
 }
@@ -149,7 +149,7 @@ Dim SumElements::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void SumElements::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SumElements::forward");
-  Eigen::array<int, 1> red_axis; red_axis[0] = 0;
+  Eigen::array<ptrdiff_t, 1> red_axis = {0};
   tb<0>(fx).device(*dev.edevice) = tbvec(*xs[0]).sum(red_axis);
 }
 
@@ -161,7 +161,7 @@ void SumElements::backward_dev_impl(const MyDevice & dev,
                              unsigned i,
                              Tensor& dEdxi) const {
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in SumElements::backward");
-  Eigen::array<int, 2> bcast = {(int)xs[0]->d.batch_size(), 1};
+  Eigen::array<ptrdiff_t, 2> bcast = {xs[0]->d.batch_size(), 1};
   tbvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).broadcast(bcast);
 }
 DYNET_NODE_INST_DEV_IMPL(SumElements)
@@ -199,19 +199,19 @@ void SumDimension::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   DYNET_ASSERT(xs.size() == 1, "Failed input count check in SumDimension");
 
   if(dims.size()==0 && include_batch_dim){
-    Eigen::array<int, 1> reduction_axis = {1};
+    Eigen::array<ptrdiff_t, 1> reduction_axis = {1};
     tvec(fx).device(*dev.edevice) = tbvec(*xs[0]).sum(reduction_axis);
   } else if(dims.size()==1 && !include_batch_dim){
-    Eigen::array<int, 1> reduction_axis = {(int)dims[0]};
+    Eigen::array<ptrdiff_t, 1> reduction_axis = {dims[0]};
     tb<2>(fx).device(*dev.edevice) = tb<3>(*xs[0]).sum(reduction_axis);
   } else if(dims.size()==1 && include_batch_dim){
-    Eigen::array<int, 2> reduction_axis = {(int)dims[0], 3};
+    Eigen::array<ptrdiff_t, 2> reduction_axis = {dims[0], 3};
     t<2>(fx).device(*dev.edevice) = tb<3>(*xs[0]).sum(reduction_axis);
   } else if(dims.size()==2 && !include_batch_dim){
-    Eigen::array<int, 2> reduction_axis = {(int)dims[0], (int)dims[1]};
+    Eigen::array<ptrdiff_t, 2> reduction_axis = {dims[0], dims[1]};
     tb<1>(fx).device(*dev.edevice) = tb<3>(*xs[0]).sum(reduction_axis);
   } else if(dims.size()==2 && include_batch_dim){
-    Eigen::array<int, 3> reduction_axis = {(int)dims[0], (int)dims[1], 3};
+    Eigen::array<ptrdiff_t, 3> reduction_axis = {dims[0], dims[1], 3};
     t<1>(fx).device(*dev.edevice) = tb<3>(*xs[0]).sum(reduction_axis);
   }
 }
@@ -226,23 +226,23 @@ void SumDimension::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(i == 0, "Failed dimension check in SumDimension::backward");
 
   if(dims.size()==0 && include_batch_dim){
-    Eigen::array<int, 2> bcast = {1, (int)xs[0]->d.bd};
+    Eigen::array<ptrdiff_t, 2> bcast = {1, xs[0]->d.bd};
     tbvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).broadcast(bcast);
   } else if(dims.size()==1 && !include_batch_dim){
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1;
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]];
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],xs[0]->d.bd}; morph[dims[0]] = 1;
     tb<3>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).reshape(morph).broadcast(bcast);
   } else if(dims.size()==1 && include_batch_dim){
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1;
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[3] = xs[0]->d.bd;
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],1}; morph[dims[0]] = 1;
     tb<3>(dEdxi).device(*dev.edevice) += t<2>(dEdf).reshape(morph).broadcast(bcast);
   } else if(dims.size()==2 && !include_batch_dim){
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]];
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],xs[0]->d.bd}; morph[dims[0]] = 1; morph[dims[1]] = 1;
     tb<3>(dEdxi).device(*dev.edevice) += tb<1>(dEdf).reshape(morph).broadcast(bcast);
   } else if(dims.size()==2 && include_batch_dim){
-    Eigen::array<int, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
-    Eigen::array<int, 4> morph = {(int)xs[0]->d[0],(int)xs[0]->d[1],(int)xs[0]->d[2],(int)1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
+    Eigen::array<ptrdiff_t, 4> bcast = {1,1,1,1}; bcast[dims[0]] = xs[0]->d[dims[0]]; bcast[dims[1]] = xs[0]->d[dims[1]]; bcast[3] = xs[0]->d.bd;
+    Eigen::array<ptrdiff_t, 4> morph = {xs[0]->d[0],xs[0]->d[1],xs[0]->d[2],1}; morph[dims[0]] = 1; morph[dims[1]] = 1;
     tb<3>(dEdxi).device(*dev.edevice) += t<1>(dEdf).reshape(morph).broadcast(bcast);
   }
 }
@@ -274,13 +274,13 @@ void AddVectorToAllColumns::forward_dev_impl(const MyDevice & dev, const vector<
   // Broadcasting is slow on CPU, so split codepaths
 #ifdef __CUDACC__
   if(xs[0]->d.bd >= xs[1]->d.bd) {
-    Eigen::array<int, 3> bcasts = {1, (int)xs[0]->d[1], (int)(xs[0]->d.bd/xs[1]->d.bd)};
+    Eigen::array<ptrdiff_t, 3> bcasts = {1, xs[0]->d[1], xs[0]->d.bd/xs[1]->d.bd};
     tb<2>(fx).device(*dev.edevice) = tb<2>(*xs[0]) + tb<2>(*xs[1]).broadcast(bcasts);
   } else {
     DYNET_ASSERT(xs[0]->d.bd == 1,
                  "Bad dimensions in AddVectorToAllColumns::forward: " << xs[0]->d << ", " << xs[1]->d);
-    Eigen::array<int, 3> bcasts0 = {1, 1, (int)xs[1]->d.bd};
-    Eigen::array<int, 3> bcasts1 = {1, (int)xs[0]->d[1], 1};
+    Eigen::array<ptrdiff_t, 3> bcasts0 = {1, 1, xs[1]->d.bd};
+    Eigen::array<ptrdiff_t, 3> bcasts1 = {1, xs[0]->d[1], 1};
     tb<2>(fx).device(*dev.edevice) = tb<2>(*xs[0]).broadcast(bcasts0) + tb<2>(*xs[1]).broadcast(bcasts1);
   }
 #else
@@ -315,17 +315,17 @@ void AddVectorToAllColumns::backward_dev_impl(const MyDevice & dev,
     if(dEdf.d.bd == dEdxi.d.bd) {
       tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
     } else {
-      Eigen::array<int, 1> red_axis = {2};
+      Eigen::array<ptrdiff_t, 1> red_axis = {2};
       t<2>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).sum(red_axis);
     }
   } else { // bias
     if(dEdf.d.bd == dEdxi.d.bd) {
-      Eigen::array<int, 1> red_axis = {1};
+      Eigen::array<ptrdiff_t, 1> red_axis = {1};
       tb<1>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).sum(red_axis);
     } else {
       DYNET_ASSERT(dEdxi.d.bd == 1,
                    "Bad dimensions in AddVectorToAllColumns::backward: " << xs[0]->d << ", " << xs[1]->d);
-      Eigen::array<int, 2> red_axis = {1,2};
+      Eigen::array<ptrdiff_t, 2> red_axis = {1,2};
       t<1>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).sum(red_axis);
     }
   }
