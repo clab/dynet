@@ -585,7 +585,7 @@ struct WEIGHT_MAGNITUDE{
   int index=0;
 } ;
 
-bool mag_compare(WEIGHT_MAGNITUDE &a, WEIGHT_MAGNITUDE &b) { return a.value < b.value; }
+bool mag_compare(const WEIGHT_MAGNITUDE &a, const WEIGHT_MAGNITUDE &b) { return a.value < b.value; }
 
 void SparseLSTMBuilder::set_sparsity(float percent){
     cout<<"Setting sparsity level at "<<percent<<"%\n";
