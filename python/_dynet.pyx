@@ -5406,7 +5406,7 @@ cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
     During training the sparsity of the LSTM has to be increased incrementally. 
     Sparsity is controlled using the set_sparsity method. This works by sorting all the weights based on their magnitude and applying mask on the top x-percent weight with the lowest magnitude.
     More details on the process can be found in `Narang et al., 2017 <https://arxiv.org/pdf/1704.05119.pdf>`. The rest of the implementation is identical to VanillaLSTM
- 
+    DISCLAIMER: This is an experimental/untested module.
 
     Args:
         layers (int): Number of layers
