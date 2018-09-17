@@ -5403,18 +5403,10 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
 cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
     """VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
     
-    This cell runs according to the following dynamics :
-
-    .. math::
-
-        \\begin{split}
-            i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+b_i)\\\\
-            f_t & = \sigma(W_{fx}x_t+W_{fh}h_{t-1}+b_f+1)\\\\
-            o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+b_o)\\\\
-            \\tilde{c_t} & = \\tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\\\
-            c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
-            h_t & = \\tanh(c_t)\circ o_t\\\\
-        \end{split}
+    During training the sparsity of the LSTM has to be increased incrementally. 
+    Sparsity is controlled using the set_sparsity method. This works by sorting all the weights based on their magnitude and applying mask on the top x-percent weight with the lowest magnitude.
+    More details on the process can be found in `Narang et al., 2017 <https://arxiv.org/pdf/1704.05119.pdf>`. The rest of the implementation is identical to VanillaLSTM
+ 
 
     Args:
         layers (int): Number of layers
@@ -5424,14 +5416,14 @@ cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
         ln_lstm (bool): Whether to use layer normalization
         forget_bias (float): value to use as forget gate bias(default 1.0)
     """
-    cdef CSparseLSTMBuilder* thisvanillaptr
+    cdef CSparseLSTMBuilder* thissparsevanillaptr
     cdef tuple _spec
     def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False, forget_bias=1.0):
         self._spec = (layers, input_dim, hidden_dim, ln_lstm, forget_bias)
         if layers > 0:
-            self.thisvanillaptr = self.thisptr = new CSparseLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm, forget_bias)
+            self.thissparsevanillaptr = self.thisptr = new CSparseLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm, forget_bias)
         else:
-            self.thisvanillaptr = self.thisptr = new CSparseLSTMBuilder()
+            self.thissparsevanillaptr = self.thisptr = new CSparseLSTMBuilder()
         self.cg_version = -1
 
     @property
@@ -5470,7 +5462,7 @@ cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
             list
         """
         params = []
-        for l in self.thisvanillaptr.params:
+        for l in self.thissparsevanillaptr.params:
             layer_params=[]
             for w in l:
                 layer_params.append(Parameters.wrap_ptr(w))
@@ -5507,11 +5499,11 @@ cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
         Raises:
             ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
         """
-        if self.thisvanillaptr.param_vars.size() == 0 or self.thisvanillaptr.param_vars[0][0].is_stale():
+        if self.thissparsevanillaptr.param_vars.size() == 0 or self.thissparsevanillaptr.param_vars[0][0].is_stale():
             raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing VanillaLSTMBuilder internal parameters expression")
 
         exprs = []
-        for l in self.thisvanillaptr.param_vars:
+        for l in self.thissparsevanillaptr.param_vars:
             layer_exprs=[]
             for w in l:
                 layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
@@ -5525,7 +5517,7 @@ cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
         Args:
             sparsity (number): The relative number of weights that will be pruned
         """
-        self.thisvanillaptr.set_sparsity(sparsity)
+        self.thissparsevanillaptr.set_sparsity(sparsity)
 
     cpdef void set_dropouts(self, float d, float d_r):
         """Set the dropout rates
@@ -5553,7 +5545,7 @@ cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
             d (number): Dropout rate :math:`d_x` for the input :math:`x_t`
             d_r (number): Dropout rate :math:`d_x` for the output :math:`h_t`
         """
-        self.thisvanillaptr.set_dropout(d, d_r)
+        self.thissparsevanillaptr.set_dropout(d, d_r)
 
     cpdef void set_dropout_masks(self, unsigned batch_size=1):
         """Set dropout masks at the beginning of a sequence for a specific batch size
@@ -5565,7 +5557,7 @@ cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
         Args:
             batch_size (int): Batch size (default: {1})
         """
-        self.thisvanillaptr.set_dropout_masks(batch_size)
+        self.thissparsevanillaptr.set_dropout_masks(batch_size)
 
     def whoami(self): return "SparseLSTMBuilder"
 # SparseLSTMBuilder }}}

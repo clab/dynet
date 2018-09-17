@@ -585,16 +585,13 @@ struct WEIGHT_MAGNITUDE{
   int index=0;
 } ;
 
-bool mag_compare(WEIGHT_MAGNITUDE &a, WEIGHT_MAGNITUDE &b) { return a.value < b.value; }
+bool mag_compare(const WEIGHT_MAGNITUDE &a, const WEIGHT_MAGNITUDE &b) { return a.value < b.value; }
 
 void SparseLSTMBuilder::set_sparsity(float percent){
     cout<<"Setting sparsity level at "<<percent<<"%\n";
     int total_parameters=0;
     for (unsigned i = 0; i < layers; ++i) {
-      //cout<<"... \n";
       const vector<Parameter>& vars = params[i];
-      //cout<<vars[_BI+1].dim().ndims()<<"\n";
-      //cout<<"||| \n";
       total_parameters+=vars[_BI+1].dim().cols()*vars[_BI+1].dim().rows();
       total_parameters+=vars[_BI+2].dim().cols()*vars[_BI+2].dim().rows();
     }
@@ -611,7 +608,7 @@ void SparseLSTMBuilder::set_sparsity(float percent){
 
       vector<float> tmp_mask_1;
       vector<float> tmp_mask_2;
-      //cout<<"... \n";
+
       vector<Parameter>& vars = params[i];
       for (int ofs=0; ofs<2; ofs++){
         Tensor *weight_values_tensor=vars[_X2I+ofs].values();

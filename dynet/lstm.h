@@ -321,18 +321,10 @@ typedef VanillaLSTMBuilder LSTMBuilder;
 /**
  * \ingroup rnnbuilders
  * @brief SparseLSTM allows the creation of a "sparse" LSTM, ie with decoupled input and forget gates and no peephole connections
- * @details This cell runs according to the following dynamics :
+ * @details During training the sparsity of the LSTM has to be increased incrementally. 
+ * Sparsity is controlled using the set_sparsity method. This works by sorting all the weights based on their magnitude and applying mask on the top x-percent weight with the lowest magnitude.
+ * More details on the process can be found in [Narang et al., 2017](https://arxiv.org/pdf/1704.05119.pdf). The rest of the implementation is identical to VanillaLSTM
  *
- * \f$
- * \begin{split}
-    i_t & =\sigma(W_{ix}x_t+W_{ih}h_{t-1}+b_i)\\
-    f_t & = \sigma(W_{fx}x_t+W_{fh}h_{t-1}+b_f+1)\\
-    o_t & = \sigma(W_{ox}x_t+W_{oh}h_{t-1}+b_o)\\
-    \tilde{c_t} & = \tanh(W_{cx}x_t+W_{ch}h_{t-1}+b_c)\\
-    c_t & = c_{t-1}\circ f_t + \tilde{c_t}\circ i_t\\
-    h_t & = \tanh(c_t)\circ o_t\\
-   \end{split}
- * \f$
  */
 struct SparseLSTMBuilder : public RNNBuilder {
   /**
@@ -403,16 +395,14 @@ struct SparseLSTMBuilder : public RNNBuilder {
    */
   void set_dropout(float d, float d_r);
   /**
-   * \brief Set all dropout rates to 0
-   * \details This is equivalent to `set_dropout(0)` or `set_dropout(0,0,0)`
-   *
-   */
-   
-   void set_sparsity(float percent);
-   /**
-   * \brief Select the percent of weights that will be masked, based on their magnitude
-   */
-   
+  * \brief Select the percent of weights that will be masked, based on their magnitude
+  */
+  void set_sparsity(float percent);
+  /**
+  * \brief Set all dropout rates to 0
+  * \details This is equivalent to `set_dropout(0)` or `set_dropout(0,0,0)`
+  *
+  */
   virtual void disable_dropout() override;
   /**
    * \brief Set dropout masks at the beginning of a sequence for a specific batch size
@@ -423,7 +413,7 @@ struct SparseLSTMBuilder : public RNNBuilder {
    */
   void set_dropout_masks(unsigned batch_size = 1);
   /**
-   * \brief Get parameters in VanillaLSTMBuilder
+   * \brief Get parameters in SparseLSTMBuilder
    * \return list of points to ParameterStorage objects
    */
   ParameterCollection & get_parameter_collection() override;
