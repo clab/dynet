@@ -46,7 +46,6 @@ before_build:
   - cmd: cd ..
 
 build:
-  - cmd: set PATH=%BOOST_LIBRARYDIR%;%PATH%
   project: build\dynet.sln
   verbosity: normal
 
