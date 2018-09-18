@@ -272,6 +272,23 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \param batch_size Batch size
    */
   void set_dropout_masks(unsigned batch_size = 1);
+ 
+ /**
+  * \brief Set DropConnect rate
+  * \details Apply DropConnect [Wan et al., 2013] to hidden to hidden weight matrix. Weights will be masked by random bernoulli matrix.
+  * Each layer of network gets unique mask. 
+  * \param d Weight drop rate
+  */
+  void set_dropconnect(float d);
+  /**
+   * \brief Set DropConnect rate to 0 
+   */
+  void disable_dropconnect();
+  /**
+   * \brief Set mask for recurrent weight matrices at the beginning of new sequence
+   */ 
+  void set_dropconnect_masks();
+
   /**
    * \brief Get parameters in VanillaLSTMBuilder
    * \return list of points to ParameterStorage objects
@@ -299,6 +316,9 @@ public:
   // first index is layer, then ...
   std::vector<std::vector<Expression>> masks;
 
+  // one mask on recurrent weights per layer
+  std::vector<Expression> dropconnect_masks;
+
   // first index is time, second is layer
   std::vector<std::vector<Expression>> h, c;
 
@@ -313,6 +333,9 @@ public:
   bool ln_lstm;
   float forget_bias;
   bool dropout_masks_valid;
+
+  float dropconnect_rate;
+  bool dropconnect_masks_valid;
 
 private:
   ComputationGraph* _cg; // Pointer to current cg

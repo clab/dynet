@@ -510,9 +510,13 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
         CVanillaLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm, float forget_bias)
         void set_dropout(float d, float d_r)
         void set_dropout_masks(unsigned batch_size)
+        void set_dropconnect(float d)
+        void disable_dropconnect()
+        void set_dropconnect_masks()
 
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
+        vector[CExpression] dropconnect_masks
 
     cdef cppclass CCoupledLSTMBuilder "dynet::CoupledLSTMBuilder" (CRNNBuilder):
         CCoupledLSTMBuilder()
