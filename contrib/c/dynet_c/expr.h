@@ -1468,4 +1468,80 @@ DYNET_C_API DYNET_C_STATUS dynetApplyDropoutBatch(
 DYNET_C_API DYNET_C_STATUS dynetApplyBlockDropout(
     const dynetExpression_t *x, float p, dynetExpression_t **newobj);
 
+DYNET_C_API DYNET_C_STATUS dynetApplyFilter1dNarrow(
+    const dynetExpression_t *x, const dynetExpression_t *f,
+    dynetExpression_t **newobj);
+
+/**
+ * Selects out k maximum values along a given dimension.
+ * @param x Input expression.
+ * @param k Number of maximum values to retrieve along the given dimension.
+ * @param d Dimension on which to perform kmax-pooling.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyKmaxPooling(
+    const dynetExpression_t *x, uint32_t k, uint32_t d,
+    dynetExpression_t **newobj);
+
+DYNET_C_API DYNET_C_STATUS dynetApplyFoldRows(
+    const dynetExpression_t *x, uint32_t nrows,
+    dynetExpression_t **newobj);
+
+DYNET_C_API DYNET_C_STATUS dynetApplyAverageCols(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+DYNET_C_API DYNET_C_STATUS dynetApplyKmhNgram(
+    const dynetExpression_t *x, uint32_t n, dynetExpression_t **newobj);
+
+/**
+ * Applies 2D convolution operation without bias parameters.
+ * @param x The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with
+ *          an optional batch dimension.
+ * @param f 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor.
+ * @param stride The row and column strides.
+ * @param n The number of strides.
+ * @param is_valid 'VALID' convolution or 'SAME' convolution.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyConv2d(
+    const dynetExpression_t *x, const dynetExpression_t *f,
+    const uint32_t *stride, size_t n, DYNET_C_BOOL is_valid,
+    dynetExpression_t **newobj);
+
+/**
+ * Applies 2D convolution operation with bias parameters.
+ * @param x The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with
+ *          an optional batch dimension.
+ * @param f 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor.
+ * @param b The bias (1D: Ci).
+ * @param stride The row and column strides.
+ * @param n The number of strides.
+ * @param is_valid 'VALID' convolution or 'SAME' convolution.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyConv2dWithBias(
+    const dynetExpression_t *x, const dynetExpression_t *f,
+    const dynetExpression_t *b, const uint32_t *stride, size_t n,
+    DYNET_C_BOOL is_valid, dynetExpression_t **newobj);
+
+/**
+ * Applies 2D maxpooling operation.
+ * @param x The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with
+ *          an optional batch dimension.
+ * @param ksize The height and width of the maxpooling2d window or kernel.
+ * @param n_ksize The number of ksize inputs.
+ * @param stride The row and column strides
+ * @param n_stride The number of strides.
+ * @param is_valid 'VALID' or 'SAME'.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyMaxpooling2d(
+    const dynetExpression_t *x, const uint32_t *ksize, size_t n_ksize,
+    const uint32_t *stride, size_t n_stride, DYNET_C_BOOL is_valid,
+    dynetExpression_t **newobj);
+
 #endif  // DYNET_C_EXPR_H_

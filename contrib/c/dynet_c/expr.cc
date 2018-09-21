@@ -1076,3 +1076,85 @@ DYNET_C_STATUS dynetApplyBlockDropout(
   *newobj = to_c_ptr_from_value(dynet::block_dropout(*to_cpp_ptr(x), p));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyFilter1dNarrow(
+    const dynetExpression_t *x, const dynetExpression_t *f,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(f);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::filter1d_narrow(*to_cpp_ptr(x), *to_cpp_ptr(f)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyKmaxPooling(
+    const dynetExpression_t *x, uint32_t k, uint32_t d,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::kmax_pooling(*to_cpp_ptr(x), k, d));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyFoldRows(
+    const dynetExpression_t *x, uint32_t nrows,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::fold_rows(*to_cpp_ptr(x), nrows));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_IMPL_UNARY_FUNC(AverageCols, average_cols);
+
+DYNET_C_STATUS dynetApplyKmhNgram(
+    const dynetExpression_t *x, uint32_t n, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::kmh_ngram(*to_cpp_ptr(x), n));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyConv2d(
+    const dynetExpression_t *x, const dynetExpression_t *f,
+    const uint32_t *stride, size_t n, DYNET_C_BOOL is_valid,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(f);
+  DYNET_C_CHECK_NOT_NULL(stride);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::conv2d(*to_cpp_ptr(x), *to_cpp_ptr(f),
+          std::vector<uint32_t>(stride, stride + n), is_valid));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyConv2dWithBias(
+    const dynetExpression_t *x, const dynetExpression_t *f,
+    const dynetExpression_t *b, const uint32_t *stride, size_t n,
+    DYNET_C_BOOL is_valid, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(f);
+  DYNET_C_CHECK_NOT_NULL(b);
+  DYNET_C_CHECK_NOT_NULL(stride);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::conv2d(*to_cpp_ptr(x), *to_cpp_ptr(f), *to_cpp_ptr(b),
+          std::vector<uint32_t>(stride, stride + n), is_valid));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyMaxpooling2d(
+    const dynetExpression_t *x, const uint32_t *ksize, size_t n_ksize,
+    const uint32_t *stride, size_t n_stride, DYNET_C_BOOL is_valid,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(ksize);
+  DYNET_C_CHECK_NOT_NULL(stride);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::maxpooling2d(
+      *to_cpp_ptr(x), std::vector<uint32_t>(ksize, ksize + n_ksize),
+      std::vector<uint32_t>(stride, stride + n_stride), is_valid));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
