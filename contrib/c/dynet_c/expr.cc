@@ -1158,3 +1158,74 @@ DYNET_C_STATUS dynetApplyMaxpooling2d(
       std::vector<uint32_t>(stride, stride + n_stride), is_valid));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_IMPL_BINARY_FUNC(Contract3d1d, contract3d_1d);
+
+DYNET_C_STATUS dynetApplyContract3d1dWithBias(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    const dynetExpression_t *b, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(y);
+  DYNET_C_CHECK_NOT_NULL(b);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::contract3d_1d(*to_cpp_ptr(x), *to_cpp_ptr(y), *to_cpp_ptr(b)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyContract3d1d1d(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    const dynetExpression_t *z, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(y);
+  DYNET_C_CHECK_NOT_NULL(z);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::contract3d_1d_1d(*to_cpp_ptr(x), *to_cpp_ptr(y), *to_cpp_ptr(z)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyContract3d1d1dWithBias(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    const dynetExpression_t *z, const dynetExpression_t *b,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(y);
+  DYNET_C_CHECK_NOT_NULL(z);
+  DYNET_C_CHECK_NOT_NULL(b);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(dynet::contract3d_1d_1d(
+      *to_cpp_ptr(x), *to_cpp_ptr(y), *to_cpp_ptr(z), *to_cpp_ptr(b)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_IMPL_UNARY_FUNC(Inverse, inverse);
+
+DYNET_C_IMPL_UNARY_FUNC(Logdet, logdet);
+
+DYNET_C_IMPL_BINARY_FUNC(TraceOfProduct, trace_of_product);
+
+DYNET_C_STATUS dynetApplyLayerNorm(
+    const dynetExpression_t *x, const dynetExpression_t *g,
+    const dynetExpression_t *b, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(g);
+  DYNET_C_CHECK_NOT_NULL(b);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::layer_norm(*to_cpp_ptr(x), *to_cpp_ptr(g), *to_cpp_ptr(b)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_IMPL_BINARY_FUNC(WeightNorm, weight_norm);
+
+DYNET_C_STATUS dynetApplyToDevice(
+    const dynetExpression_t *x, dynetDevice_t *device,
+    dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(device);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::to_device(*to_cpp_ptr(x), to_cpp_ptr(device)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS

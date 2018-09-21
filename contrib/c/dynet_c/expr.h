@@ -1544,4 +1544,118 @@ DYNET_C_API DYNET_C_STATUS dynetApplyMaxpooling2d(
     const uint32_t *stride, size_t n_stride, DYNET_C_BOOL is_valid,
     dynetExpression_t **newobj);
 
+/**
+ * Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor.
+ * @param x Rank 3 tensor.
+ * @param y Vector.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyContract3d1d(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    dynetExpression_t **newobj);
+
+/**
+ * Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor with an
+ * additional bias parameter.
+ * @param x Rank 3 tensor.
+ * @param y Vector.
+ * @param b Bias matrix.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyContract3d1dWithBias(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    const dynetExpression_t *b, dynetExpression_t **newobj);
+
+/**
+ * Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor.
+ * @param x Rank 3 tensor.
+ * @param y Vector.
+ * @param z Vector.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyContract3d1d1d(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    const dynetExpression_t *z, dynetExpression_t **newobj);
+
+/**
+ * Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor with an
+ * additional bias parameter.
+ * @param x Rank 3 tensor.
+ * @param y Vector.
+ * @param z Vector.
+ * @param b Bias vector.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyContract3d1d1dWithBias(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    const dynetExpression_t *z, const dynetExpression_t *b,
+    dynetExpression_t **newobj);
+
+/**
+ * Takes the inverse of a matrix.
+ * @param x A square matrix.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyInverse(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Takes the log of the determinant of a matrix.
+ * @param x A square matrix.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyLogdet(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Takes the trace of the product of matrices.
+ * @param x A matrix.
+ * @param y Another matrix.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyTraceOfProduct(
+    const dynetExpression_t *x, const dynetExpression_t *y,
+    dynetExpression_t **newobj);
+
+/**
+ * Performs layer normalization.
+ * @param x Input expression (possibly batched).
+ * @param g Gain (same dimension as x, no batch dimension).
+ * @param b Bias (same dimension as x, no batch dimension).
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyLayerNorm(
+    const dynetExpression_t *x, const dynetExpression_t *g,
+    const dynetExpression_t *b, dynetExpression_t **newobj);
+
+/**
+ * Performs weight normalization.
+ * @param w Input expression (weight parameter).
+ * @param g Gain (scalar expression, usually also a parameter).
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyWeightNorm(
+    const dynetExpression_t *w, const dynetExpression_t *g,
+    dynetExpression_t **newobj);
+
+/**
+ * Copies tensor between devices.
+ * @param x Input expression.
+ * @param device Device to place return tensor.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyToDevice(
+    const dynetExpression_t *x, dynetDevice_t *device,
+    dynetExpression_t **newobj);
+
 #endif  // DYNET_C_EXPR_H_
