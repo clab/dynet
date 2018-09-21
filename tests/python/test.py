@@ -669,6 +669,24 @@ class TestCoupledLSTM(unittest.TestCase):
         state = self.rnn.initial_state()
         state.set_s(init_s)
 
+class TestSparseLSTM(unittest.TestCase):
+
+    def setUp(self):
+        # create model
+        self.m = dy.ParameterCollection()
+        self.rnn = dy.SparseLSTMBuilder(2, 10, 10, self.m)
+
+    def test_get_parameters(self):
+        dy.renew_cg()
+        self.rnn.initial_state()
+        P_p = self.rnn.get_parameters()
+        P_e = self.rnn.get_parameter_expressions()
+        for l_p, l_e in zip(P_p, P_e):
+            for w_p, w_e in zip(l_p, l_e):
+                self.assertTrue(np.allclose(w_e.npvalue(), w_p.as_array()))
+
+    def test_get_parameters_sanity(self):
+        self.assertRaises(ValueError, lambda x: x.get_parameter_expressions(), self.rnn)
 
 class TestFastLSTM(unittest.TestCase):
 
