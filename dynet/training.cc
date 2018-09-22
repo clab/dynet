@@ -41,6 +41,7 @@ bool is_valid(const Eigen::MatrixBase<Derived>& x) {
   return ((x - x).array() == (x - x).array()).all();
 }
 
+#ifndef __CUDACC__
 namespace
 {
 
@@ -85,6 +86,7 @@ void load_trainer_params(std::istream& is, std::vector<ShadowLookupParameters> v
 }
 
 }
+#endif
 
 // --- The actual update code for each operation, implemented on various devices
 
@@ -241,7 +243,6 @@ void CyclicalSGDTrainer::update_lookup_params(real gscale, size_t idx) {
   auto & p = model->lookup_parameters_list()[idx];
   update_rule(gscale, {&p->all_values, &p->all_grads});
 }
-#endif
 
 void CyclicalSGDTrainer::save_state(std::ostream& os)
 {
@@ -269,6 +270,7 @@ void CyclicalSGDTrainer::load_state(std::istream& is, bool restore_hyperparams)
         it = _it;
     }
 }
+#endif
 
 // --- MomentumSGDTrainer
 
