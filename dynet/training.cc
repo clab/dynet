@@ -5,6 +5,7 @@
 // #include "dynet/gpu-ops.h"
 #include "dynet/param-nodes.h"
 #include "dynet/weight-decay.h"
+#include "dynet/io.h"
 
 // Macros for defining parameter update functions
 #ifdef __CUDACC__
@@ -38,6 +39,51 @@ using namespace std;
 template <class Derived>
 bool is_valid(const Eigen::MatrixBase<Derived>& x) {
   return ((x - x).array() == (x - x).array()).all();
+}
+
+namespace
+{
+
+void save_trainer_params(std::ostream& os, const std::vector<ShadowParameters>& vp)
+{
+    for (auto sp : vp)
+        for (unsigned i = 0u ; i < sp.h.d.size() ; ++i)
+            os << TensorTools::access_element(sp.h, i) << ' ';
+}
+
+void save_trainer_params(std::ostream& os, const std::vector<ShadowLookupParameters>& vlp)
+{
+    for (auto slp : vlp)
+        for (unsigned i = 0u ; i < slp.all_h.d.size() ; ++i)
+            os << TensorTools::access_element(slp.all_h, i) << ' ';
+}
+
+void load_trainer_params(std::istream& is, std::vector<ShadowParameters>& vp)
+{
+    std::vector<float> values;
+    for (auto sp : vp)
+    {
+        values.resize(sp.h.d.size());
+        for (unsigned i = 0u ; i < values.size() ; ++i)
+            is >> values[i];
+        TensorTools::set_elements(sp.h, values);
+    }
+}
+
+void load_trainer_params(std::istream& is, std::vector<ShadowLookupParameters> vlp)
+{
+    std::vector<float> values;
+    for (auto slp : vlp)
+    {
+        values.resize(slp.all_h.d.size());
+        std::for_each(
+            values.begin(), values.end(),
+            [&] (float& v) { is >> v; }
+        );
+        TensorTools::set_elements(slp.all_h, values);
+    }
+}
+
 }
 
 // --- The actual update code for each operation, implemented on various devices
@@ -126,6 +172,26 @@ void Trainer::restart(real lr) {
     this->restart();
 }
 
+void Trainer::save_state(std::ostream& os)
+{
+    os << learning_rate << ' ' << clipping_enabled << ' ' << clip_threshold << ' ';
+}
+
+void Trainer::load_state(std::istream& is, bool restore_hyperparams)
+{
+    real _learning_rate;
+    bool _clipping_enabled;
+    real _clip_threshold;
+
+    is >> _learning_rate >> _clipping_enabled >> _clip_threshold;
+    if (restore_hyperparams)
+    {
+        _learning_rate = learning_rate;
+        _clipping_enabled = clipping_enabled;
+        _clip_threshold = clip_threshold;
+    }
+}
+
 
 #endif
 
@@ -177,6 +243,33 @@ void CyclicalSGDTrainer::update_lookup_params(real gscale, size_t idx) {
 }
 #endif
 
+void CyclicalSGDTrainer::save_state(std::ostream& os)
+{
+    Trainer::save_state(os);
+    os << e_min << ' ' << e_max << ' ' << step_size << ' ' << gamma << ' ' << it << ' ';
+}
+
+void CyclicalSGDTrainer::load_state(std::istream& is, bool restore_hyperparams)
+{
+    Trainer::load_state(is, restore_hyperparams);
+
+    float _e_min;
+    float _e_max;
+    float _step_size;
+    float _gamma;
+    unsigned _it;
+    
+    is >> _e_min >> _e_max >> _step_size >> _gamma >> _it;
+    if (restore_hyperparams)
+    {
+        e_min = _e_min;
+        e_max = _e_max;
+        step_size = _step_size;
+        gamma = _gamma;
+        it = _it;
+    }
+}
+
 // --- MomentumSGDTrainer
 
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=momentum
@@ -214,6 +307,29 @@ void MomentumSGDTrainer::restart() {
     TensorTools::zero(sp.h);
   for (auto slp : vlp)
     TensorTools::zero(slp.all_h);
+}
+
+void MomentumSGDTrainer::save_state(std::ostream& os)
+{
+    Trainer::save_state(os);
+    os << momentum << ' ';
+    save_trainer_params(os, vp);
+    save_trainer_params(os, vlp);
+}
+
+void MomentumSGDTrainer::load_state(std::istream& is, bool restore_hyperparams)
+{
+    Trainer::load_state(is, restore_hyperparams);
+
+    real _momentum;
+    is >> _momentum;
+    if (restore_hyperparams)
+    {
+        momentum = _momentum;
+    }
+
+    load_trainer_params(is, vp);
+    load_trainer_params(is, vlp);
 }
 
 #endif
@@ -256,6 +372,29 @@ void AdagradTrainer::restart() {
     TensorTools::zero(sp.h);
   for (auto slp : vlp)
     TensorTools::zero(slp.all_h);
+}
+
+void AdagradTrainer::save_state(std::ostream& os)
+{
+    Trainer::save_state(os);
+    os << epsilon << ' ';
+    save_trainer_params(os, vp);
+    save_trainer_params(os, vlp);
+}
+
+void AdagradTrainer::load_state(std::istream& is, bool restore_hyperparams)
+{
+    Trainer::load_state(is, restore_hyperparams);
+
+    real _epsilon;
+    is >> _epsilon;
+    if (restore_hyperparams)
+    {
+        epsilon = _epsilon;
+    }
+
+    load_trainer_params(is, vp);
+    load_trainer_params(is, vlp);
 }
 
 #endif
@@ -308,6 +447,35 @@ void AdadeltaTrainer::restart() {
     TensorTools::zero(slp.all_h);
 }
 
+void AdadeltaTrainer::save_state(std::ostream& os)
+{
+    Trainer::save_state(os);
+    os << epsilon << ' ' << rho << ' ';
+    save_trainer_params(os, hg);
+    save_trainer_params(os, hlg);
+    save_trainer_params(os, hd);
+    save_trainer_params(os, hld);
+}
+
+void AdadeltaTrainer::load_state(std::istream& is, bool restore_hyperparams)
+{
+    Trainer::load_state(is, restore_hyperparams);
+
+    real _epsilon;
+    real _rho;
+    is >> _epsilon >> _rho;
+    if (restore_hyperparams)
+    {
+        epsilon = _epsilon;
+        rho = _rho;
+    }
+
+    load_trainer_params(is, hg);
+    load_trainer_params(is, hlg);
+    load_trainer_params(is, hd);
+    load_trainer_params(is, hld);
+}
+
 #endif
 
 // --- RMSPropTrainer
@@ -355,6 +523,31 @@ void RMSPropTrainer::restart() {
     TensorTools::zero(sp.h);
   for (auto slp : hlmsg)
     TensorTools::zero(slp.all_h);
+}
+
+void RMSPropTrainer::save_state(std::ostream& os)
+{
+    Trainer::save_state(os);
+    os << epsilon << ' ' << rho << ' ';
+    save_trainer_params(os, hmsg);
+    save_trainer_params(os, hlmsg);
+}
+
+void RMSPropTrainer::load_state(std::istream& is, bool restore_hyperparams)
+{
+    Trainer::load_state(is, restore_hyperparams);
+
+    real _epsilon;
+    real _rho;
+    is >> _epsilon >> _rho;
+    if (restore_hyperparams)
+    {
+        epsilon = _epsilon;
+        rho = _rho;
+    }
+
+    load_trainer_params(is, hmsg);
+    load_trainer_params(is, hlmsg);
 }
 
 #endif
@@ -405,6 +598,37 @@ void AdamTrainer::restart() {
     TensorTools::zero(slp.all_h);
   for (auto slp : lv)
     TensorTools::zero(slp.all_h);
+}
+
+void AdamTrainer::save_state(std::ostream& os)
+{
+    Trainer::save_state(os);
+    os << beta_1 << ' ' << beta_2 << ' ' << epsilon << ' ';
+    save_trainer_params(os, m);
+    save_trainer_params(os, lm);
+    save_trainer_params(os, v);
+    save_trainer_params(os, lv);
+}
+
+void AdamTrainer::load_state(std::istream& is, bool restore_hyperparams)
+{
+    Trainer::load_state(is, restore_hyperparams);
+
+    real _beta_1;
+    real _beta_2;
+    real _epsilon;
+    is >> _beta_1 >> _beta_2 >> _epsilon;
+    if (restore_hyperparams)
+    {
+        beta_1 = _beta_1;
+        beta_2 = _beta_2;
+        epsilon = _epsilon;
+    }
+
+    load_trainer_params(is, m);
+    load_trainer_params(is, lm);
+    load_trainer_params(is, v);
+    load_trainer_params(is, lv);
 }
 
 #endif
@@ -464,6 +688,41 @@ void AmsgradTrainer::restart() {
     TensorTools::zero(slp.all_h);
 }
 
+void AmsgradTrainer::save_state(std::ostream& os)
+{
+    Trainer::save_state(os);
+    os << beta_1 << ' ' << beta_2 << ' ' << epsilon << ' ';
+    save_trainer_params(os, m);
+    save_trainer_params(os, lm);
+    save_trainer_params(os, v);
+    save_trainer_params(os, lv);
+    save_trainer_params(os, vhat);
+    save_trainer_params(os, lvhat);
+}
+
+void AmsgradTrainer::load_state(std::istream& is, bool restore_hyperparams)
+{
+    Trainer::load_state(is, restore_hyperparams);
+
+    real _beta_1;
+    real _beta_2;
+    real _epsilon;
+    is >> _beta_1 >> _beta_2 >> _epsilon;
+    if (restore_hyperparams)
+    {
+        beta_1 = _beta_1;
+        beta_2 = _beta_2;
+        epsilon = _epsilon;
+    }
+
+    load_trainer_params(is, m);
+    load_trainer_params(is, lm);
+    load_trainer_params(is, v);
+    load_trainer_params(is, lv);
+    load_trainer_params(is, vhat);
+    load_trainer_params(is, lvhat);
+}
+
 #endif
 
 template <class MyDevice>
@@ -513,6 +772,39 @@ void EGTrainer::restart() {
     TensorTools::zero(slp.all_h);
 }
 
+void EGTrainer::save_state(std::ostream& os)
+{
+    Trainer::save_state(os);
+    os << momentum << ' ' << e_min << ' ' << e_max << ' ' << step_size << ' ' << gamma << ' ' << it << ' ' << isCyclical << ' ';
+    save_trainer_params(os, hp);
+    save_trainer_params(os, hlp);
+}
+
+void EGTrainer::load_state(std::istream& is, bool restore_hyperparams)
+{
+    Trainer::load_state(is, restore_hyperparams);
+
+    real _momentum;
+    float _e_min, _e_max, _step_size, _gamma;
+    unsigned _it;
+    bool _isCyclical;
+    is >>  _momentum >> _e_min >> _e_max >> _step_size >> _gamma >> _it >> _isCyclical;
+    if (restore_hyperparams)
+    {
+        momentum = _momentum;
+        e_min = _e_min;
+        e_max = _e_max;
+        step_size = _step_size;
+        gamma = _gamma;
+        it = _it;
+        isCyclical = _isCyclical;
+    }
+
+    load_trainer_params(is, hp);
+    load_trainer_params(is, hlp);
+}
+
 #endif
+
 
 } // namespace dynet
