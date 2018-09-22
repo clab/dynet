@@ -48,15 +48,13 @@ namespace
 void save_trainer_params(std::ostream& os, const std::vector<ShadowParameters>& vp)
 {
     for (auto sp : vp)
-        for (unsigned i = 0u ; i < sp.h.d.size() ; ++i)
-            os << TensorTools::access_element(sp.h, i) << ' ';
+         os << dynet::as_vector(sp.h);
 }
 
 void save_trainer_params(std::ostream& os, const std::vector<ShadowLookupParameters>& vlp)
 {
     for (auto slp : vlp)
-        for (unsigned i = 0u ; i < slp.all_h.d.size() ; ++i)
-            os << TensorTools::access_element(slp.all_h, i) << ' ';
+	os << dynet::as_vector(slp.all_h);
 }
 
 void load_trainer_params(std::istream& is, std::vector<ShadowParameters>& vp)
