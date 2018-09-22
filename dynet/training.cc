@@ -54,7 +54,7 @@ void save_trainer_params(std::ostream& os, const std::vector<ShadowParameters>& 
 void save_trainer_params(std::ostream& os, const std::vector<ShadowLookupParameters>& vlp)
 {
     for (auto slp : vlp)
-	os << dynet::as_vector(slp.all_h);
+        os << dynet::as_vector(slp.all_h);
 }
 
 void load_trainer_params(std::istream& is, std::vector<ShadowParameters>& vp)
@@ -186,9 +186,9 @@ void Trainer::load_state(std::istream& is, bool restore_hyperparams)
     is >> _learning_rate >> _clipping_enabled >> _clip_threshold;
     if (restore_hyperparams)
     {
-        _learning_rate = learning_rate;
-        _clipping_enabled = clipping_enabled;
-        _clip_threshold = clip_threshold;
+        learning_rate = _learning_rate;
+        clipping_enabled = _clipping_enabled;
+        clip_threshold = _clip_threshold;
     }
 }
 
