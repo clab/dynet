@@ -5,6 +5,25 @@
 
 using namespace dynet;
 
+
+void DynamicCPUMemoryPool::zero(void* p, size_t n) {
+  auto rounded_n = a->round_up_align(n);
+  a->zero(p, rounded_n);
+}
+
+void* DynamicCPUMemoryPool::allocate(size_t n) {
+  auto rounded_n = a->round_up_align(n);
+  void* res = a->malloc(rounded_n);
+  if (res) {
+    ptrs.push_back(res);
+    sizes.push_back(rounded_n);
+  }
+  return res;
+}
+
+void DynamicCPUMemoryPool::sys_alloc(size_t cap) {}
+
+
 void* InternalMemoryPool::allocate(size_t n) {
   auto rounded_n = a->round_up_align(n);
   if (rounded_n + used > capacity) {
@@ -23,9 +42,13 @@ void InternalMemoryPool::sys_alloc(size_t cap) {
   used = 0;
 }
 
-AlignedMemoryPool::AlignedMemoryPool(const std::string &name, size_t initial_cap, MemAllocator *a, size_t expanding_unit) : name(name), cap(initial_cap), current(0), a(a), expanding_unit(expanding_unit) {
+AlignedMemoryPool::AlignedMemoryPool(const std::string &name, size_t initial_cap, MemAllocator *a, size_t expanding_unit, bool dynamic) : name(name), cap(initial_cap), current(0), a(a), expanding_unit(expanding_unit), dynamic(dynamic) {
   DYNET_ARG_CHECK(cap > 0, "Attempt to allocate memory of size 0 in AlignedMemoryPool");
-  pools.push_back(new InternalMemoryPool(name, cap, a));
+  if (dynamic) {
+    pools.push_back(new DynamicCPUMemoryPool(name, cap));
+  } else {
+    pools.push_back(new InternalMemoryPool(name, cap, a));
+  }
 }
 AlignedMemoryPool::~AlignedMemoryPool() {
   for ( auto p : pools) { delete p; }
@@ -36,7 +59,11 @@ void* AlignedMemoryPool::allocate(size_t n) {
   if (res == 0) {
     // round up to the nearest multiple of expanding_unit
     size_t new_pool_size  = (n + expanding_unit-1) / expanding_unit * expanding_unit;
-    pools.push_back(new InternalMemoryPool(name, new_pool_size, a));
+    if (dynamic) {
+      pools.push_back(new DynamicCPUMemoryPool(name, new_pool_size));
+    } else {
+      pools.push_back(new InternalMemoryPool(name, new_pool_size, a));
+    }
     cap += new_pool_size;
     current++;
     res = pools[current]->allocate(n);
@@ -49,7 +76,12 @@ void AlignedMemoryPool::free() {
   if (current > 0) {
     for (auto p : pools) { delete p; }
     pools.clear();
-    pools.push_back(new InternalMemoryPool(name, cap, a));
+    if (dynamic) {
+      pools.push_back(new DynamicCPUMemoryPool(name, cap));
+    } else {
+      pools.push_back(new InternalMemoryPool(name, cap, a));
+    }
+    cap = cap * (current + 1);
     current = 0;
   }
   pools[0]->free();

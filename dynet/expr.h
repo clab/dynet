@@ -23,7 +23,6 @@
 
 #include <stdexcept>
 
-
 namespace dynet {
 /**
  * \ingroup operations
@@ -37,6 +36,7 @@ struct Expression {
 
   Expression() : pg(nullptr), i(0), graph_id(0) {}
 
+  const bool is_dynamic() const;
   /**
    * \brief Base expression constructor
    * \details Used when creating operations
@@ -59,7 +59,7 @@ struct Expression {
    * \return Value of the expression as a tensor
    */
   const Tensor& value() const {
-    if (this->is_stale()) {
+    if (!this->is_dynamic() && this->is_stale()) {
       throw std::runtime_error("Attempt to use a stale expression.");
     }
     return pg->get_value(i);
@@ -75,7 +75,7 @@ struct Expression {
    * \return Value of the expression as a tensor
    */
   const Tensor& gradient() const {
-    if (this->is_stale()) {
+    if (!this->is_dynamic() && this->is_stale()) {
       throw std::runtime_error("Attempt to use a stale expression.");
     }
     return pg->get_gradient(i);
@@ -86,7 +86,7 @@ struct Expression {
    * \return Dimension of the expression
    */
   const Dim& dim() const {
-    if (this->is_stale()) {
+    if (!this->is_dynamic() && this->is_stale()) {
       throw std::runtime_error("Attempt to use a stale expression.");
     }
     return pg->get_dimension(i);

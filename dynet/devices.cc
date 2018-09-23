@@ -130,7 +130,7 @@ void Device_GPU::reset_rng(unsigned seed) {
 }
 #endif
 
-Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
+Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared, bool dynamic) :
   Device(my_id, DeviceType::CPU, &cpu_mem), shmem(mem) {
   if (shared) shmem = new SharedAllocator();
   kSCALAR_MINUSONE = (float*) mem->malloc(sizeof(float));
@@ -145,10 +145,11 @@ Device_CPU::Device_CPU(int my_id, const DeviceMempoolSizes & mbs, bool shared) :
   edevice = new Eigen::DefaultDevice;
 
   // this is the big memory allocation.
-  pools[0] = new AlignedMemoryPool("CPU forward memory", (mbs.used[0] << 20), &cpu_mem);
-  pools[1] = new AlignedMemoryPool("CPU backward memory", (mbs.used[1] << 20), &cpu_mem);
-  pools[2] = new AlignedMemoryPool("CPU parameter memory", (mbs.used[2] << 20), shmem);
-  pools[3] = new AlignedMemoryPool("CPU scratch memory", (mbs.used[3] << 20), &cpu_mem);
+  const size_t initial = 1<<24;
+  pools[0] = new AlignedMemoryPool("CPU forward memory",   (mbs.used[0] << 20), &cpu_mem, initial, dynamic);
+  pools[1] = new AlignedMemoryPool("CPU backward memory",  (mbs.used[1] << 20), &cpu_mem, initial, dynamic);
+  pools[2] = new AlignedMemoryPool("CPU parameter memory", (mbs.used[2] << 20), shmem,    initial, dynamic);
+  pools[3] = new AlignedMemoryPool("CPU scratch memory",   (mbs.used[3] << 20), &cpu_mem, initial, dynamic);
 }
 
 Device_CPU::~Device_CPU() {}

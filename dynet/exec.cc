@@ -34,6 +34,26 @@ vector<const Tensor*> ExecutionEngine::forward(
   return ret;
 }
 
+SimpleExecutionEngine::SimpleExecutionEngine(const ComputationGraph& cg) :
+  ExecutionEngine(cg), num_nodes_evaluated(0) {
+  if (default_device->pools[0]->is_dynamic()) {
+    mem = new CPUAllocator();
+    pool_fxs   = new AlignedMemoryPool("CPU forward memory",  1 << 24, mem, 1 << 24, true);
+    pool_dEdfs = new AlignedMemoryPool("CPU backward memory", 1 << 24, mem, 1 << 24, true);
+  } else {
+    pool_fxs   = default_device->pools[(int)DeviceMempool::FXS];
+    pool_dEdfs = default_device->pools[(int)DeviceMempool::DEDFS];
+  }
+}
+
+SimpleExecutionEngine::~SimpleExecutionEngine() {
+  if (default_device->pools[0]->is_dynamic()) {
+    delete pool_fxs;
+    delete pool_dEdfs;
+    delete mem;
+  }
+}
+
 void SimpleExecutionEngine::invalidate() {
   num_nodes_evaluated = 0;
   backward_computed = 0;
@@ -96,6 +116,15 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
     string current_node_name;  // Optionally used for debugging (reused).
     vector<const Tensor*> xs(16);  // Container for arguments to nodes (reused).
 
+    unsigned size = 0;
+    void* begin;
+    for (unsigned j = num_nodes_evaluated; j <= i; ++j) {
+      const Node* node = cg.nodes[j];
+      auto rounded_n = pool_fxs->round_up_align(node->dim.size() * sizeof(float));
+      size += rounded_n;
+    }
+    begin = pool_fxs->allocate(size);
+
     for (; num_nodes_evaluated <= i; ++num_nodes_evaluated) {
       const Node* node = cg.nodes[num_nodes_evaluated];
       if (profiling_flag) {
@@ -144,7 +173,6 @@ const Tensor& SimpleExecutionEngine::incremental_forward(VariableIndex i) {
             DYNET_RUNTIME_ERR("Ran out of auxiliary memory when executing node "
                               << num_nodes_evaluated);
         }
-        node->aux_mem = aux_mem;
 
         // Compute f(xs) and store to node_fx.
         node->forward(xs, node_fx);
@@ -173,12 +201,21 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
 
   const unsigned num_nodes = from_where + 1;
   ndEdfs.resize(num_nodes);
-  const vector<Device*> &devices = device_manager->get_devices();
-  for(Device* device : devices)
-    device->pools[(int)DeviceMempool::DEDFS]->free();
+  pool_dEdfs->free();
 
   // This loop allocates memory on the appropriate devices for the nodes whose
   // derivatives will be computed.
+  // This assumes all of these use the same device!
+  unsigned size = 0;
+  void* begin;
+  for (unsigned i = 0; i < num_nodes; ++i) {
+    const Node* node = cg.nodes[i];
+    auto rounded_n = pool_dEdfs->round_up_align(node->dim.size() * sizeof(float));
+    size += rounded_n;
+  }
+  begin = pool_dEdfs->allocate(size);
+  pool_dEdfs->zero_allocated_memory();
+
   for (unsigned i = 0; i < num_nodes; ++i) {
     const auto dim = nfxs[i].d;
     auto& node_dEdfx = ndEdfs[i];
@@ -203,9 +240,6 @@ void SimpleExecutionEngine::backward(VariableIndex from_where, bool full) {
       }
     }
   }
-  // Zero all derivative memory (which is contiguous on each device)
-  for (Device* device : devices)
-    device->pools[(int)DeviceMempool::DEDFS]->zero_allocated_memory();
 
   // initialize dE/dE = 1
   ndEdfs.back().v = cg.nodes.back()->device->kSCALAR_ONE;
