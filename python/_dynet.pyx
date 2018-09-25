@@ -519,6 +519,8 @@ cdef class GlorotInitializer(PyInitializer):
     
     If the dimensions of the parameter matrix are :math:`m,n`, the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{m+n}},g\sqrt{\\frac{6}{m+n}}])`
     
+    In the case of 4d tensors (common in convolutional networks) of shape :math:`XH,XW,XC,N` the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{d}},g\sqrt{\\frac{6}{d}}])` where :math:`d = XC * (XH * XW) + N * (XH * XW)`
+
     The gain :math:`g` depends on the activation function : 
 
     * :math:`\\text{tanh}` : 1.0
@@ -898,6 +900,7 @@ cdef class Parameters(Expression): # {{{
     cdef Expression _const_expr
     def __cinit__(self):
         self._version = -1
+        self._const_version = -1
 
     # All creations MUST go through wrap_ptr
     @staticmethod
@@ -5254,6 +5257,11 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
             c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
             h_t & = \\tanh(c_t)\circ o_t\\\\
         \end{split}
+
+    The parameters are initialized as follow:
+    - :math:`W_{*x}` (input connections): Sampled from :math:`\mathcal U\left([\sqrt{\\frac{6}{4d_h + d_x}}]\\right)`
+    - :math:`W_{*h}` (recurrent connections): Sampled from :math:`\mathcal U\left([\sqrt{\frac{6}{4d_h + d_h}}]\right)`
+    - :math:`b_{h}` (biases): Set to :math:`0` except for :math:`d_f` which is set to :math:`1`
 
     Args:
         layers (int): Number of layers

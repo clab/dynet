@@ -163,13 +163,17 @@ size_t BlockDropout::aux_storage_size() const {
 
 template<class MyDevice>
 void BlockDropout::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  bernoulli_distribution distribution(1.0 - dropout_probability);
-  float block_multiplier = distribution(*rndeng)? 1.0 : 0.0;
-  block_multiplier =
-    dropout_probability == 1.0? 0.0 : block_multiplier / (1.0 - dropout_probability);
-  if (dropout_probability > 1.0 || dropout_probability < 0.0)
+  float p = dropout_probability;
+  Tensor m(Dim({1}), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  if (p > 1.0 || p < 0.0) {
     DYNET_INVALID_ARG("Dropout probability must be in the range [0, 1]");
-  *(static_cast<float*>(aux_mem)) = block_multiplier;
+  } else {
+    if (p == 1.0)
+      TensorTools::zero(m);
+    else
+      TensorTools::randomize_bernoulli(m, (1.f-p), 1.f / (1.f-p));
+  }
+  float block_multiplier = as_scalar(m);
   tvec(fx).device(*dev.edevice) = tvec(*xs[0]) * block_multiplier;
 }
 
@@ -180,7 +184,8 @@ void BlockDropout::backward_dev_impl(const MyDevice & dev,
                              const Tensor& dEdf,
                              unsigned i,
                              Tensor& dEdxi) const {
-  float block_multiplier = *(static_cast<float*>(aux_mem));
+  Tensor m(Dim({1}), (float*)aux_mem, fx.device, DeviceMempool::FXS);
+  float block_multiplier = as_scalar(m);
   tvec(dEdxi).device(*dev.edevice) += tvec(dEdf) * block_multiplier;
 }
 DYNET_NODE_INST_DEV_IMPL(BlockDropout)

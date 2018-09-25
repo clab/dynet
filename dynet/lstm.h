@@ -184,6 +184,11 @@ private:
     h_t & = \tanh(c_t)\circ o_t\\
    \end{split}
  * \f$
+ *
+ * The parameters are initialized as follow:
+ *  - \f$W_{*x}\f$ (input connections): Sampled from \f$\mathcal U\left([\sqrt{\frac{6}{4d_h + d_x}}]\right)\f$
+ *  - \f$W_{*h}\f$ (recurrent connections): Sampled from \f$\mathcal U\left([\sqrt{\frac{6}{4d_h + d_h}}]\right)\f$
+ *  - \f$b_{h}\f$ (biases): Set to \f$0\f$ except for \f$d_f\f$ which is set to \f$1\f$ 
  */
 struct VanillaLSTMBuilder : public RNNBuilder {
   /**

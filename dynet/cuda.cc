@@ -19,6 +19,15 @@ vector<Device*> initialize_gpu(DynetParams& params) {
   if (nDevices < 1)
     throw std::runtime_error("No GPUs found but DyNet compiled with CUDA support. Recompile without -DBACKEND=cuda");
 
+  // Get CUDA runtime/driver version
+  int runtimeVersion = 0;
+  int driverVersion = 0;
+  cudaRuntimeGetVersion(&runtimeVersion);
+  cudaDriverGetVersion(&driverVersion);
+  cerr << "[dynet] CUDA driver/runtime versions are "
+       <<runtimeVersion/1000<<"."<<(runtimeVersion%100)/10<<"/"
+       <<driverVersion/1000<<"."<<(driverVersion%1000)/10<<endl;
+
   // Check gpu_mask
   for (unsigned gpu_id = nDevices; gpu_id < MAX_GPUS; ++gpu_id) {
     if (params.gpu_mask[gpu_id] != 0) {

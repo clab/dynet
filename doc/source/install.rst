@@ -236,6 +236,6 @@ dynet (whether in native C++ or Python). For example:
 
 ::
 
-    set PATH="C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin";"c:\libs\cudnn-8.0-windows10-x64-v5.1\bin";%PATH%
+    set PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;c:\libs\cudnn-8.0-windows10-x64-v5.1\bin;%PATH%
 
 

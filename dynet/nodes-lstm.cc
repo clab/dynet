@@ -142,7 +142,7 @@ namespace dynet {
 
     //bias
 #ifdef __CUDACC__
-    Eigen::array<int, 3> bcast = {1, 1, (int)batch_size};
+    Eigen::array<ptrdiff_t, 3> bcast = {1, 1, batch_size};
     tb<2>(fx).device(*dev.edevice) = tb<2>(*b).broadcast(bcast);
 #else
     float *curr_ptr = fx.v, *end_ptr = curr_ptr + fx.d.size(), *in_ptr = b->v;
@@ -160,7 +160,7 @@ namespace dynet {
       } else {
         mask_x.v = static_cast<float*>(scratch_allocator->allocate(mask_x.d.size() * sizeof(float)));
 #ifdef __CUDACC__
-        Eigen::array<int, 2> bcast = {1, (int)batch_size};
+        Eigen::array<ptrdiff_t, 2> bcast = {1, batch_size};
         tbvec(mask_x).device(*dev.edevice) = tbvec(*xs[num_inputs+4]).broadcast(bcast);
 #else
         float *curr_ptr = mask_x.v, *end_ptr = curr_ptr + mask_x.d.size(), *in_ptr = xs[num_inputs+4]->v;
@@ -181,7 +181,7 @@ namespace dynet {
       } else {
         mask_h.v = static_cast<float*>(scratch_allocator->allocate(mask_h.d.size() * sizeof(float)));
 #ifdef __CUDACC__
-        Eigen::array<int, 2> bcast = {1, (int)batch_size};
+        Eigen::array<ptrdiff_t, 2> bcast = {1, batch_size};
         tbvec(mask_h).device(*dev.edevice) = tbvec(*xs[num_inputs+5]).broadcast(bcast);
 #else
         float *curr_ptr = mask_h.v, *end_ptr = curr_ptr + mask_h.d.size(), *in_ptr = xs[num_inputs+5]->v;
@@ -269,8 +269,7 @@ namespace dynet {
     Eigen::DSizes<ptrdiff_t, 3> sizes_mat_1(hidden_dim, 1, static_cast<ptrdiff_t>(fx.d.bd));
     Eigen::DSizes<ptrdiff_t, 3> sizes_mat_1_inp(input_dim, 1, static_cast<ptrdiff_t>(fx.d.bd));
     Eigen::DSizes<ptrdiff_t, 3> sizes_mat_3(hidden_dim*3, 1, static_cast<ptrdiff_t>(fx.d.bd));
-    Eigen::array<int, 1> vec_batch_axis; vec_batch_axis[0] = 1;
-    Eigen::array<int, 1> mat_batch_axis; mat_batch_axis[0] = 2;
+    Eigen::array<ptrdiff_t, 1> vec_batch_axis = {1};
 
     AlignedMemoryPool* scratch_allocator = fx.device->pools[(int)DeviceMempool::SCS];
 
@@ -296,7 +295,7 @@ namespace dynet {
       } else {
         mask_x.v = static_cast<float*>(scratch_allocator->allocate(mask_x.d.size() * sizeof(float)));
 #ifdef __CUDACC__
-        Eigen::array<int, 2> bcast = {1, (int)batch_size};
+        Eigen::array<ptrdiff_t, 2> bcast = {1, batch_size};
         tbvec(mask_x).device(*dev.edevice) = tbvec(*xs[num_inputs+4]).broadcast(bcast);
 #else
         float *curr_ptr = mask_x.v, *end_ptr = curr_ptr + mask_x.d.size(), *in_ptr = xs[num_inputs+4]->v;
@@ -311,7 +310,7 @@ namespace dynet {
       } else {
         mask_h.v = static_cast<float*>(scratch_allocator->allocate(mask_h.d.size() * sizeof(float)));
 #ifdef __CUDACC__
-        Eigen::array<int, 2> bcast = {1, (int)batch_size};
+        Eigen::array<ptrdiff_t, 2> bcast = {1, batch_size};
         tbvec(mask_h).device(*dev.edevice) = tbvec(*xs[num_inputs+5]).broadcast(bcast);
 #else
         float *curr_ptr = mask_h.v, *end_ptr = curr_ptr + mask_h.d.size(), *in_ptr = xs[num_inputs+5]->v;

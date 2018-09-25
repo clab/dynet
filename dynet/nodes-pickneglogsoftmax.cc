@@ -129,7 +129,7 @@ void PickNegLogSoftmax::backward_dev_impl(const MyDevice & dev,
     Tensor z(Dim({1},fx.d.batch_elems()), (float*)aux_mem, fx.device, DeviceMempool::FXS);
     unsigned int *ids_dev = (unsigned int*)((float*)aux_mem + 2*fx.d.bd);
 #ifdef __CUDACC__
-    Eigen::array<int, 2> bcast({(int)xs[0]->d[0],1});
+    Eigen::array<ptrdiff_t, 2> bcast = { xs[0]->d[0], 1 };
     tb<1>(dEdxi).device(*dev.edevice) += (tb<1>(*xs[0]) - tb<1>(z).broadcast(bcast)).exp() * tb<1>(dEdf).broadcast(bcast);
     dynet::gpu::dense_to_sparse_subtract(fx.d.bd, ids_dev, dEdf.v, dEdxi.v);
 #else
