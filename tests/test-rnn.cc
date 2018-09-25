@@ -130,7 +130,7 @@ DYNET_RNN_GRADIENT_TEST_CASE(simple_rnn_gradient, dynet::SimpleRNNBuilder)
 
 DYNET_RNN_GRADIENT_TEST_CASE(vanilla_lstm_gradient, dynet::VanillaLSTMBuilder)
 
-DYNET_RNN_GRADIENT_TEST_CASE(vanilla_lstm_gradient, dynet::SparseLSTMBuilder)
+DYNET_RNN_GRADIENT_TEST_CASE(sparse_lstm_gradient, dynet::SparseLSTMBuilder)
 
 DYNET_RNN_GRADIENT_TEST_CASE(compact_vanilla_lstm_gradient, dynet::CompactVanillaLSTMBuilder)
 
