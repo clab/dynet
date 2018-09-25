@@ -699,7 +699,6 @@ void SparseLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
     vars.push_back(update ? cmult(parameter(cg, p[0]), const_parameter(cg, p[3])) : cmult(const_parameter(cg, p[0]), const_parameter(cg, p[3])));
     vars.push_back(update ? cmult(parameter(cg, p[1]), const_parameter(cg, p[4])) : cmult(const_parameter(cg, p[1]), const_parameter(cg, p[4])));
     vars.push_back(update ? parameter(cg, p[2]): const_parameter(cg, p[2]));
-
     param_vars.push_back(vars);
     if (ln_lstm){
       auto& ln_p = ln_params[i];
