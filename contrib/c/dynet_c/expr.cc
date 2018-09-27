@@ -399,14 +399,9 @@ DYNET_C_STATUS dynetApplyAffineTransform(
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(xs);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  const dynet::Expression *const *_xs = 
-      reinterpret_cast<const dynet::Expression *const *>(xs);
-  const std::vector<const dynet::Expression*> xs_p = 
-      std::vector<const dynet::Expression*>(_xs, _xs + n);
-  std::vector<dynet::Expression> xs_v;
-  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
-      [](const dynet::Expression *x) { return *x; });
-  *newobj = to_c_ptr_from_value(dynet::affine_transform(xs_v));
+  std::vector<dynet::Expression> _xs;
+  dynet_c::internal::copy_array_of_c_ptrs_to_vector(xs, n, &_xs);
+  *newobj = to_c_ptr_from_value(dynet::affine_transform(_xs));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -415,14 +410,9 @@ DYNET_C_STATUS dynetApplySum(
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(xs);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  const dynet::Expression *const *_xs = 
-      reinterpret_cast<const dynet::Expression *const *>(xs);
-  const std::vector<const dynet::Expression*> xs_p = 
-      std::vector<const dynet::Expression*>(_xs, _xs + n);
-  std::vector<dynet::Expression> xs_v;
-  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
-      [](const dynet::Expression *x) { return *x; });
-  *newobj = to_c_ptr_from_value(dynet::sum(xs_v));
+  std::vector<dynet::Expression> _xs;
+  dynet_c::internal::copy_array_of_c_ptrs_to_vector(xs, n, &_xs);
+  *newobj = to_c_ptr_from_value(dynet::sum(_xs));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -548,14 +538,9 @@ DYNET_C_STATUS dynetApplyAverage(
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(xs);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  const dynet::Expression *const *_xs = 
-      reinterpret_cast<const dynet::Expression *const *>(xs);
-  const std::vector<const dynet::Expression*> xs_p = 
-      std::vector<const dynet::Expression*>(_xs, _xs + n);
-  std::vector<dynet::Expression> xs_v;
-  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
-      [](const dynet::Expression *x) { return *x; });
-  *newobj = to_c_ptr_from_value(dynet::average(xs_v));
+  std::vector<dynet::Expression> _xs;
+  dynet_c::internal::copy_array_of_c_ptrs_to_vector(xs, n, &_xs);
+  *newobj = to_c_ptr_from_value(dynet::average(_xs));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -612,14 +597,9 @@ DYNET_C_STATUS dynetApplyMax(
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(xs);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  const dynet::Expression *const *_xs = 
-      reinterpret_cast<const dynet::Expression *const *>(xs);
-  const std::vector<const dynet::Expression*> xs_p = 
-      std::vector<const dynet::Expression*>(_xs, _xs + n);
-  std::vector<dynet::Expression> xs_v;
-  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
-      [](const dynet::Expression *x) { return *x; });
-  *newobj = to_c_ptr_from_value(dynet::max(xs_v));
+  std::vector<dynet::Expression> _xs;
+  dynet_c::internal::copy_array_of_c_ptrs_to_vector(xs, n, &_xs);
+  *newobj = to_c_ptr_from_value(dynet::max(_xs));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -695,14 +675,9 @@ DYNET_C_STATUS dynetApplyLogsumexp(
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(xs);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  const dynet::Expression *const *_xs = 
-      reinterpret_cast<const dynet::Expression *const *>(xs);
-  const std::vector<const dynet::Expression*> xs_p = 
-      std::vector<const dynet::Expression*>(_xs, _xs + n);
-  std::vector<dynet::Expression> xs_v;
-  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
-      [](const dynet::Expression *x) { return *x; });
-  *newobj = to_c_ptr_from_value(dynet::logsumexp(xs_v));
+  std::vector<dynet::Expression> _xs;
+  dynet_c::internal::copy_array_of_c_ptrs_to_vector(xs, n, &_xs);
+  *newobj = to_c_ptr_from_value(dynet::logsumexp(_xs));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -977,14 +952,9 @@ DYNET_C_STATUS dynetApplyConcatenateToBatch(
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(xs);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  const dynet::Expression *const *_xs = 
-      reinterpret_cast<const dynet::Expression *const *>(xs);
-  const std::vector<const dynet::Expression*> xs_p = 
-      std::vector<const dynet::Expression*>(_xs, _xs + n);
-  std::vector<dynet::Expression> xs_v;
-  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
-      [](const dynet::Expression *x) { return *x; });
-  *newobj = to_c_ptr_from_value(dynet::concatenate_to_batch(xs_v));
+  std::vector<dynet::Expression> _xs;
+  dynet_c::internal::copy_array_of_c_ptrs_to_vector(xs, n, &_xs);
+  *newobj = to_c_ptr_from_value(dynet::concatenate_to_batch(_xs));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -993,14 +963,9 @@ DYNET_C_STATUS dynetApplyConcatenateCols(
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(xs);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  const dynet::Expression *const *_xs = 
-      reinterpret_cast<const dynet::Expression *const *>(xs);
-  const std::vector<const dynet::Expression*> xs_p = 
-      std::vector<const dynet::Expression*>(_xs, _xs + n);
-  std::vector<dynet::Expression> xs_v;
-  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
-      [](const dynet::Expression *x) { return *x; });
-  *newobj = to_c_ptr_from_value(dynet::concatenate_cols(xs_v));
+  std::vector<dynet::Expression> _xs;
+  dynet_c::internal::copy_array_of_c_ptrs_to_vector(xs, n, &_xs);
+  *newobj = to_c_ptr_from_value(dynet::concatenate_cols(_xs));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -1009,14 +974,9 @@ DYNET_C_STATUS dynetApplyConcatenate(
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(xs);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  const dynet::Expression *const *_xs = 
-      reinterpret_cast<const dynet::Expression *const *>(xs);
-  const std::vector<const dynet::Expression*> xs_p = 
-      std::vector<const dynet::Expression*>(_xs, _xs + n);
-  std::vector<dynet::Expression> xs_v;
-  std::transform(xs_p.begin(), xs_p.end(), std::back_inserter(xs_v),
-      [](const dynet::Expression *x) { return *x; });
-  *newobj = to_c_ptr_from_value(dynet::concatenate(xs_v, d));
+  std::vector<dynet::Expression> _xs;
+  dynet_c::internal::copy_array_of_c_ptrs_to_vector(xs, n, &_xs);
+  *newobj = to_c_ptr_from_value(dynet::concatenate(_xs, d));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -1229,3 +1189,6 @@ DYNET_C_STATUS dynetApplyToDevice(
       dynet::to_device(*to_cpp_ptr(x), to_cpp_ptr(device)));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
+
+#undef DYNET_C_IMPL_UNARY_FUNC
+#undef DYNET_C_IMPL_BINARY_FUNC

@@ -160,22 +160,39 @@ DYNET_C_PTR_TO_PTR(Device, dynetDevice);
 DYNET_C_PTR_TO_PTR(Expression, dynetExpression);
 DYNET_C_VAL_TO_PTR(Expression, dynetExpression);
 
-template<typename T, typename U>
+template<typename S, typename T>
 inline void move_vector_to_array_of_c_ptrs(
-    std::vector<T> *src, U **array, std::size_t *size) {
-  if (array) {
+    std::vector<S> *src, T **target, std::size_t *size) {
+  DYNET_C_CHECK_NOT_NULL(src);
+  DYNET_C_CHECK_NOT_NULL(size);
+  if (target) {
     if (*size < src->size()) {
       DYNET_C_THROW_ERROR("Size is not enough to move a vector.");
     }
     std::transform(std::make_move_iterator(src->begin()),
                    std::make_move_iterator(src->end()),
-                   array,
-                   [](T &&x) {
-                     return to_c_ptr_from_value(std::forward<T>(x));
+                   target,
+                   [](S &&x) {
+                     return to_c_ptr_from_value(std::forward<S>(x));
                    });
   } else {
     *size = src->size();
   }
+}
+
+template<typename S, typename T>
+inline void copy_array_of_c_ptrs_to_vector(
+    const S *const *src, std::size_t size, std::vector<T> *target) {
+  DYNET_C_CHECK_NOT_NULL(src);
+  DYNET_C_CHECK_NOT_NULL(target);
+  const T *const *_src = reinterpret_cast<const T *const *>(src);
+  const std::vector<const T*> src_v = std::vector<const T*>(_src, _src + size);
+  std::transform(src_v.begin(),
+                 src_v.end(),
+                 std::back_inserter(*target),
+                 [](const T *x) {
+                   return *x;
+                 });
 }
 
 template<typename T>
