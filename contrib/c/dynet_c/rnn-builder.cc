@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include <dynet/fast-lstm.h>
+#include <dynet/lstm.h>
 #include <dynet/rnn.h>
 #include <dynet_c/internal.h>
 #include <dynet_c/rnn-builder.h>
@@ -223,5 +225,102 @@ DYNET_C_STATUS dynetSetSimpleRNNBuilderDropoutMasks(
   DYNET_C_CHECK_NOT_NULL(builder);
   reinterpret_cast<dynet::SimpleRNNBuilder*>(builder)
       ->set_dropout_masks(batch_size);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetCreateCoupledLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(model);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::CoupledLSTMBuilder(
+      layers, input_dim, hidden_dim, *to_cpp_ptr(model)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetSetCoupledLSTMBuilderDropout(
+    dynetRNNBuilder_t *builder, float d, float d_h, float d_c) try {
+  DYNET_C_CHECK_NOT_NULL(builder);
+  reinterpret_cast<dynet::CoupledLSTMBuilder*>(builder)
+      ->set_dropout(d, d_h, d_c);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetSetCoupledLSTMBuilderDropoutMasks(
+    dynetRNNBuilder_t *builder, uint32_t batch_size) try {
+  DYNET_C_CHECK_NOT_NULL(builder);
+  reinterpret_cast<dynet::CoupledLSTMBuilder*>(builder)
+      ->set_dropout_masks(batch_size);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetCreateVanillaLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, DYNET_C_BOOL ln_lstm, float forget_bias,
+    dynetRNNBuilder_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(model);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::VanillaLSTMBuilder(
+      layers, input_dim, hidden_dim, *to_cpp_ptr(model),
+      ln_lstm, forget_bias));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetSetVanillaLSTMBuilderDropout(
+    dynetRNNBuilder_t *builder, float d, float d_r) try {
+  DYNET_C_CHECK_NOT_NULL(builder);
+  reinterpret_cast<dynet::VanillaLSTMBuilder*>(builder)->set_dropout(d, d_r);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetSetVanillaLSTMBuilderDropoutMasks(
+    dynetRNNBuilder_t *builder, uint32_t batch_size) try {
+  DYNET_C_CHECK_NOT_NULL(builder);
+  reinterpret_cast<dynet::VanillaLSTMBuilder*>(builder)
+      ->set_dropout_masks(batch_size);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetCreateCompactVanillaLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(model);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::CompactVanillaLSTMBuilder(
+      layers, input_dim, hidden_dim, *to_cpp_ptr(model)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetSetCompactVanillaLSTMBuilderDropout(
+    dynetRNNBuilder_t *builder, float d, float d_r) try {
+  DYNET_C_CHECK_NOT_NULL(builder);
+  reinterpret_cast<dynet::CompactVanillaLSTMBuilder*>(builder)
+      ->set_dropout(d, d_r);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetSetCompactVanillaLSTMBuilderDropoutMasks(
+    dynetRNNBuilder_t *builder, uint32_t batch_size) try {
+  DYNET_C_CHECK_NOT_NULL(builder);
+  reinterpret_cast<dynet::CompactVanillaLSTMBuilder*>(builder)
+      ->set_dropout_masks(batch_size);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetSetCompactVanillaLSTMBuilderWeightnoise(
+    dynetRNNBuilder_t *builder, float std) try {
+  DYNET_C_CHECK_NOT_NULL(builder);
+  reinterpret_cast<dynet::CompactVanillaLSTMBuilder*>(builder)
+      ->set_weightnoise(std);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetCreateFastLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(model);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::FastLSTMBuilder(
+      layers, input_dim, hidden_dim, *to_cpp_ptr(model)));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS

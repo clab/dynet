@@ -239,7 +239,7 @@ DYNET_C_API DYNET_C_STATUS dynetAddSimpleRNNBuilderAuxiliaryInput(
     const dynetExpression_t *aux, dynetExpression_t **newobj);
 
 /**
- * Sets dropout.
+ * Sets the dropout rates.
  * @param builder Pointer of a handler.
  * @param d Dropout rate.
  * @param d_h Another dropout rate.
@@ -249,12 +249,134 @@ DYNET_C_API DYNET_C_STATUS dynetSetSimpleRNNBuilderDropout(
     dynetRNNBuilder_t *builder, float d, float d_h);
 
 /**
- * Set dropout masks at the beginning of a sequence for a specific batch size.
+ * Sets dropout masks at the beginning of a sequence for a specific batch size.
  * @param builder Pointer of a handler.
  * @param batch_size Batch size.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetSetSimpleRNNBuilderDropoutMasks(
     dynetRNNBuilder_t *builder, uint32_t batch_size);
+
+/**
+ * Creates a new CoupledLSTMBuilder object.
+ * @param layers Number of layers.
+ * @param input_dim Dimention of the input \f$x_t\f$.
+ * @param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$.
+ * @param model ParameterCollection holding the parameters.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCreateCoupledLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj);
+
+/**
+ * Sets the dropout rates.
+ * @param builder Pointer of a handler.
+ * @param d Dropout rate \f$d_x\f$ for the input \f$x_t\f$.
+ * @param d_h Dropout rate \f$d_x\f$ for the output \f$h_t\f$.
+ * @param d_c Dropout rate \f$d_x\f$ for the cell \f$c_t\f$.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetSetCoupledLSTMBuilderDropout(
+    dynetRNNBuilder_t *builder, float d, float d_h, float d_c);
+
+/**
+ * Sets dropout masks at the beginning of a sequence for a specific batch size.
+ * @param builder Pointer of a handler.
+ * @param batch_size Batch size.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetSetCoupledLSTMBuilderDropoutMasks(
+    dynetRNNBuilder_t *builder, uint32_t batch_size);
+
+/**
+ * Creates a new VanillaLSTMBuilder object.
+ * @param layers Number of layers.
+ * @param input_dim Dimention of the input \f$x_t\f$.
+ * @param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$.
+ * @param model ParameterCollection holding the parameters.
+ * @param ln_lstm Whether to use layer normalization.
+ * @param forget_bias A float value to use as bias for the forget gate.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCreateVanillaLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, DYNET_C_BOOL ln_lstm, float forget_bias,
+    dynetRNNBuilder_t **newobj);
+
+/**
+ * Sets the dropout rates.
+ * @param builder Pointer of a handler.
+ * @param d Dropout rate \f$d_x\f$ for the input \f$x_t\f$.
+ * @param d_r Dropout rate \f$d_r\f$ for the output \f$h_t\f$.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetSetVanillaLSTMBuilderDropout(
+    dynetRNNBuilder_t *builder, float d, float d_r);
+
+/**
+ * Sets dropout masks at the beginning of a sequence for a specific batch size.
+ * @param builder Pointer of a handler.
+ * @param batch_size Batch size.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetSetVanillaLSTMBuilderDropoutMasks(
+    dynetRNNBuilder_t *builder, uint32_t batch_size);
+
+/**
+ * Creates a new CompactVanillaLSTMBuilder object.
+ * @param layers Number of layers.
+ * @param input_dim Dimention of the input \f$x_t\f$.
+ * @param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$.
+ * @param model ParameterCollection holding the parameters.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCreateCompactVanillaLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj);
+
+/**
+ * Sets the dropout rates.
+ * @param builder Pointer of a handler.
+ * @param d Dropout rate \f$d_x\f$ for the input \f$x_t\f$.
+ * @param d_r Dropout rate \f$d_r\f$ for the output \f$h_t\f$.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetSetCompactVanillaLSTMBuilderDropout(
+    dynetRNNBuilder_t *builder, float d, float d_r);
+
+/**
+ * Sets dropout masks at the beginning of a sequence for a specific batch size.
+ * @param builder Pointer of a handler.
+ * @param batch_size Batch size.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetSetCompactVanillaLSTMBuilderDropoutMasks(
+    dynetRNNBuilder_t *builder, uint32_t batch_size);
+
+/**
+ * Sets the gaussian weight noise.
+ * @param builder Pointer of a handler.
+ * @param std Standard deviation of weight noise.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetSetCompactVanillaLSTMBuilderWeightnoise(
+    dynetRNNBuilder_t *builder, float std);
+
+/**
+ * Creates a new FastLSTMBuilder object.
+ * @param layers Number of layers.
+ * @param input_dim Dimention of the input \f$x_t\f$.
+ * @param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$.
+ * @param model ParameterCollection holding the parameters.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCreateFastLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj);
 
 #endif  // DYNET_C_RNN_BUILDER_H_
