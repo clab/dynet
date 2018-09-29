@@ -161,7 +161,7 @@ struct RNNBuilder {
    * \details - This can be used in implementing complex structures
    * such as trees, etc.
    */
-  RNNPointer get_head(const RNNPointer& p) {
+  RNNPointer get_head(const RNNPointer& p) const {
     return head[p];
   }
 

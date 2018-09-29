@@ -20,6 +20,7 @@ set(dynet_c_HDRS
   io.h
   model.h
   param-init.h
+  rnn-builder.h
   status.h
   tensor.h
   training.h
@@ -35,6 +36,7 @@ set(
   io.cc
   model.cc
   param-init.cc
+  rnn-builder.cc
   status.cc
   tensor.cc
   training.cc

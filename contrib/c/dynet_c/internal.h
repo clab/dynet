@@ -18,6 +18,7 @@
 #include <dynet/training.h>
 #include <dynet/devices.h>
 #include <dynet/expr.h>
+#include <dynet/rnn.h>
 
 #include <dynet_c/define.h>
 
@@ -70,6 +71,7 @@ struct dynetComputationGraph;
 struct dynetTrainer;
 struct dynetDevice;
 struct dynetExpression;
+struct dynetRNNBuilder;
 
 namespace dynet_c {
 
@@ -159,6 +161,7 @@ DYNET_C_PTR_TO_PTR(Trainer, dynetTrainer);
 DYNET_C_PTR_TO_PTR(Device, dynetDevice);
 DYNET_C_PTR_TO_PTR(Expression, dynetExpression);
 DYNET_C_VAL_TO_PTR(Expression, dynetExpression);
+DYNET_C_PTR_TO_PTR(RNNBuilder, dynetRNNBuilder);
 
 template<typename S, typename T>
 inline void move_vector_to_array_of_c_ptrs(

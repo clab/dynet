@@ -14,6 +14,6 @@
 #include <dynet_c/training.h>
 #include <dynet_c/devices.h>
 #include <dynet_c/expr.h>
-#include <dynet_c/rnn.h>
+#include <dynet_c/rnn-builder.h>
 
 #endif  // DYNET_C_API_H_
