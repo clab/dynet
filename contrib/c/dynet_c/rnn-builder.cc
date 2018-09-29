@@ -3,8 +3,10 @@
 #include <vector>
 
 #include <dynet/fast-lstm.h>
+#include <dynet/gru.h>
 #include <dynet/lstm.h>
 #include <dynet/rnn.h>
+#include <dynet/treelstm.h>
 #include <dynet_c/internal.h>
 #include <dynet_c/rnn-builder.h>
 
@@ -321,6 +323,66 @@ DYNET_C_STATUS dynetCreateFastLSTMBuilder(
   DYNET_C_CHECK_NOT_NULL(model);
   DYNET_C_CHECK_NOT_NULL(newobj);
   *newobj = to_c_ptr(new dynet::FastLSTMBuilder(
+      layers, input_dim, hidden_dim, *to_cpp_ptr(model)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetAddTreeLSTMBuilderInput(
+    dynetRNNBuilder_t *builder, int32_t id, int32_t *children, size_t n,
+    const dynetExpression_t *x, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(builder);
+  DYNET_C_CHECK_NOT_NULL(children);
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      reinterpret_cast<dynet::TreeLSTMBuilder*>(builder)->add_input(
+          id, std::vector<int32_t>(children, children + n), *to_cpp_ptr(x)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetSetTreeLSTMBuilderNumElements(
+    dynetRNNBuilder_t *builder, int32_t num) try {
+  DYNET_C_CHECK_NOT_NULL(builder);
+  reinterpret_cast<dynet::TreeLSTMBuilder*>(builder)->set_num_elements(num);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetCreateNaryTreeLSTMBuilder(
+    uint32_t N, uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(model);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::NaryTreeLSTMBuilder(
+      N, layers, input_dim, hidden_dim, *to_cpp_ptr(model)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetCreateUnidirectionalTreeLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(model);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::UnidirectionalTreeLSTMBuilder(
+      layers, input_dim, hidden_dim, *to_cpp_ptr(model)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetCreateBidirectionalTreeLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(model);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::BidirectionalTreeLSTMBuilder(
+      layers, input_dim, hidden_dim, *to_cpp_ptr(model)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetCreateGRUBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(model);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::GRUBuilder(
       layers, input_dim, hidden_dim, *to_cpp_ptr(model)));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS

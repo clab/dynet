@@ -379,4 +379,80 @@ DYNET_C_API DYNET_C_STATUS dynetCreateFastLSTMBuilder(
     uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
     dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj);
 
+/**
+ * Adds input with given children at position id.
+ * @param builder Pointer of a handler.
+ * @param id Index where `x` should be stored.
+ * @param children Indices of the children for x.
+ * @param n The number of children.
+ * @param x Input variable.
+ * @param newobj Pointer to receive the hidden representation.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetAddTreeLSTMBuilderInput(
+    dynetRNNBuilder_t *builder, int32_t id, int32_t *children, size_t n,
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Sets the number of nodes in the tree in advance.
+ * @param builder Pointer of a handler.
+ * @param num Desired size.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetSetTreeLSTMBuilderNumElements(
+    dynetRNNBuilder_t *builder, int32_t num);
+
+/**
+ * Creates a new NaryTreeLSTMBuilder object.
+ * @param N Max branching factor.
+ * @param layers Number of layers.
+ * @param input_dim Dimention of the input.
+ * @param hidden_dim Dimention of the hidden states.
+ * @param model ParameterCollection holding the parameters.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCreateNaryTreeLSTMBuilder(
+    uint32_t N, uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj);
+
+/**
+ * Creates a new UnidirectionalTreeLSTMBuilder object.
+ * @param layers Number of layers.
+ * @param input_dim Dimention of the input.
+ * @param hidden_dim Dimention of the hidden states.
+ * @param model ParameterCollection holding the parameters.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCreateUnidirectionalTreeLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj);
+
+/**
+ * Creates a new BidirectionalTreeLSTMBuilder object.
+ * @param layers Number of layers.
+ * @param input_dim Dimention of the input.
+ * @param hidden_dim Dimention of the hidden states.
+ * @param model ParameterCollection holding the parameters.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCreateBidirectionalTreeLSTMBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj);
+
+/**
+ * Creates a new GRUBuilder object.
+ * @param layers Number of layers.
+ * @param input_dim Dimention of the input.
+ * @param hidden_dim Dimention of the hidden states.
+ * @param model ParameterCollection holding the parameters.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCreateGRUBuilder(
+    uint32_t layers, uint32_t input_dim, uint32_t hidden_dim,
+    dynetParameterCollection_t *model, dynetRNNBuilder_t **newobj);
+
 #endif  // DYNET_C_RNN_BUILDER_H_
