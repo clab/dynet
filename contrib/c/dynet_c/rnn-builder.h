@@ -2,6 +2,7 @@
 #define DYNET_C_RNN_BUILDER_H_
 
 #include <dynet_c/define.h>
+#include <dynet_c/expr.h>
 #include <dynet_c/graph.h>
 #include <dynet_c/model.h>
 

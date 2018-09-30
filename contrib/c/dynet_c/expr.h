@@ -983,6 +983,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyRestrictedLogSoftmax(
  * Computes log, sum, and exp by dimension.
  * @param x Expression with respect to which to calculate the logsumexp.
  * @param d The dimension along which to do the logsumexp.
+ * @param newobj Pointer to receive an Expression.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyLogsumexpDim(
@@ -1002,6 +1003,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyLogsumexp(
  * Computes negative softmax log likelihood.
  * @param x A vector of scores.
  * @param v The element with which to calculate the loss.
+ * @param newobj Pointer to receive an Expression.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyPickneglogsoftmaxOne(
@@ -1013,6 +1015,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyPickneglogsoftmaxOne(
  * @param v A size-N vector indicating the index with respect to all the batch
  *          elements.
  * @param n Number of indices.
+ * @param newobj Pointer to receive an Expression.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyPickneglogsoftmax(
@@ -1023,7 +1026,8 @@ DYNET_C_API DYNET_C_STATUS dynetApplyPickneglogsoftmax(
  * Computes hinge loss.
  * @param x A vector of scores.
  * @param index The index of the correct candidate.
- * @param m The margin,
+ * @param m The margin.
+ * @param newobj Pointer to receive an Expression.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyHingeOne(
@@ -1035,7 +1039,8 @@ DYNET_C_API DYNET_C_STATUS dynetApplyHingeOne(
  * @param x A mini-batch of vectors of scores.
  * @param indices The indices of the correct candidates for each batch element.
  * @param n Number of indices.
- * @param m The margin,
+ * @param m The margin.
+ * @param newobj Pointer to receive an Expression.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyHinge(
@@ -1049,7 +1054,8 @@ DYNET_C_API DYNET_C_STATUS dynetApplyHinge(
  *                dimension not specified by "d").
  * @param n Number of indices.
  * @param d The dimension over which to calculate the loss (0 or 1).
- * @param m The margin
+ * @param m The margin.
+ * @param newobj Pointer to receive an Expression.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyHingeDimOne(
@@ -1062,7 +1068,8 @@ DYNET_C_API DYNET_C_STATUS dynetApplyHingeDimOne(
  * @param indices The indices of the correct candidates for each batch element.
  * @param n Number of indices.
  * @param d The dimension over which to calculate the loss (0 or 1).
- * @param m The margin
+ * @param m The margin.
+ * @param newobj Pointer to receive an Expression.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyHingeDim(

@@ -10,7 +10,7 @@ typedef struct dynetParameterInit dynetParameterInit_t;
 
 /**
  * Deletes the ParameterInit object.
- * @param shape Pointer of a handler.
+ * @param init Pointer of a handler.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetDeleteParameterInit(dynetParameterInit_t *init);
