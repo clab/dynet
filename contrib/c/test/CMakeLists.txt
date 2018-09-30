@@ -16,4 +16,5 @@ function(dynet_c_test name)
 endfunction()
 
 dynet_c_test(dim)
+dynet_c_test(exec)
 dynet_c_test(params)

@@ -12,7 +12,7 @@ struct CParamsTest {
 
 BOOST_FIXTURE_TEST_SUITE(c_params_test, CParamsTest);
 
-BOOST_AUTO_TEST_CASE (test_parameter_collection) {
+BOOST_AUTO_TEST_CASE(test_parameter_collection) {
   ::dynetParameterCollection_t *model;
   BOOST_CHECK_EQUAL(DYNET_C_OK, ::dynetCreateParameterCollection(&model));
   ::dynetParameter_t *a;

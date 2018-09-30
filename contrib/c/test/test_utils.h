@@ -10,7 +10,7 @@
 namespace test_utils {
 
 void init_dynet() {
-  const char *argv[] = {"ParamsTest", "--dynet-mem", "512"};
+  const char *argv[] = {"DynetCTest", "--dynet-mem", "512"};
   ::dynetDynetParams_t *params;
   ::dynetExtractDynetParams(3, const_cast<char**>(argv), false, &params);
   ::dynetInitialize(params);
