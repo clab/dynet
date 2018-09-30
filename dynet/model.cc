@@ -122,6 +122,7 @@ void ParameterStorage::set_value(const std::vector<float>& val) {
   TensorTools::set_elements(values, val);
 }
 
+
 bool valid_parameter(const std::string & s) {
   auto it = std::find_if(s.begin(), s.end(), [] (char ch) { return ch == '/' || ch == '_'; });
   return it == s.end();
@@ -239,6 +240,10 @@ void LookupParameter::zero() {
 
 void LookupParameter::initialize(unsigned index, const std::vector<float>& val) const {
   get_storage().initialize(index, val);
+}
+
+void LookupParameter::set_value(const std::vector<float>& val){
+  get_storage().set_value(val);
 }
 
 string LookupParameter::get_fullname() const {
@@ -802,6 +807,11 @@ void LookupParameterStorage::scale_gradient(float a) {
   else { throw std::runtime_error("Bad device type"); }
 }
 #endif
+
+
+void LookupParameterStorage::set_value(const std::vector<float>& val) {
+  TensorTools::set_elements(all_values, val);
+}
 
 template <class MyDevice>
 float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
