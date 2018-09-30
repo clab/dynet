@@ -1,11 +1,11 @@
 #include <dynet_c/config.h>
 
-#include <string>
-
 #include <dynet/devices.h>
 #include <dynet/model.h>
 #include <dynet_c/internal.h>
 #include <dynet_c/model.h>
+
+#include <string>
 
 using dynet_c::internal::to_c_ptr;
 using dynet_c::internal::to_cpp_ptr;

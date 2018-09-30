@@ -1,10 +1,9 @@
-
 #include <primitiv/config.h>
-
-#include <string>
 
 #include <dynet_c/internal.h>
 #include <dynet_c/status.h>
+
+#include <string>
 
 using dynet_c::internal::ErrorHandler;
 

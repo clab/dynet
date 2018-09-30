@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE C_DIM_TEST
 
-#include <boost/test/unit_test.hpp>
 #include <dynet_c/dim.h>
+#include <boost/test/unit_test.hpp>
 #include "test_utils.h"
 
 struct CDimTest {

@@ -1,8 +1,5 @@
 #define BOOST_TEST_MODULE C_EXEC_TEST
 
-#include <vector>
-
-#include <boost/test/unit_test.hpp>
 #include <dynet_c/init.h>
 #include <dynet_c/dim.h>
 #include <dynet_c/expr.h>
@@ -10,6 +7,8 @@
 #include <dynet_c/model.h>
 #include <dynet_c/rnn-builder.h>
 #include <dynet_c/tensor.h>
+#include <vector>
+#include <boost/test/unit_test.hpp>
 #include "test_utils.h"
 
 struct CExecTest {
@@ -67,7 +66,7 @@ BOOST_AUTO_TEST_CASE(autobatch_lstm_gradient) {
         BOOST_CHECK_EQUAL(DYNET_C_OK, ::dynetDeleteExpression(x));
       }
       std::size_t length = 0u;
-      BOOST_CHECK_EQUAL(DYNET_C_OK, 
+      BOOST_CHECK_EQUAL(DYNET_C_OK,
                         ::dynetGetRNNBuilderFinalHiddenState(
                             builder, nullptr, &length));
       ::dynetExpression_t *hs[length];

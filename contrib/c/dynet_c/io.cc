@@ -9,8 +9,8 @@ using dynet_c::internal::to_cpp_ptr;
 using dynet_c::internal::to_c_ptr_from_value;
 
 DYNET_C_STATUS dynetCreateTextFileSaver(
-    const char *filename, DYNET_C_BOOL append, dynetTextFileSaver_t **newobj
-    ) try {
+    const char *filename, DYNET_C_BOOL append,
+    dynetTextFileSaver_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(filename);
   DYNET_C_CHECK_NOT_NULL(newobj);
   *newobj = to_c_ptr(new dynet::TextFileSaver(filename, append));
@@ -63,8 +63,7 @@ DYNET_C_STATUS dynetSaveLookupParameter(
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetCreateTextFileLoader(
-    const char *filename, dynetTextFileLoader_t **newobj
-    ) try {
+    const char *filename, dynetTextFileLoader_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(filename);
   DYNET_C_CHECK_NOT_NULL(newobj);
   *newobj = to_c_ptr(new dynet::TextFileLoader(filename));

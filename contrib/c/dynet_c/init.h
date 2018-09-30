@@ -61,7 +61,7 @@ DYNET_C_API DYNET_C_STATUS dynetSetDynetParamsAutobatch(
 /**
  * Specifies whether to show autobatch debug info or not.
  * @param params Pointer of a handler.
- * @param autobatch Whether to show autobatch debug info or not.
+ * @param profiling Whether to show autobatch debug info or not.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetSetDynetParamsProfiling(
@@ -70,7 +70,7 @@ DYNET_C_API DYNET_C_STATUS dynetSetDynetParamsProfiling(
 /**
  * Specifies whether to share parameters or not.
  * @param params Pointer of a handler.
- * @param autobatch Whether to share parameters or not.
+ * @param shared_parameters Whether to share parameters or not.
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetSetDynetParamsSharedParameters(

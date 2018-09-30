@@ -1,10 +1,10 @@
 #include <dynet_c/config.h>
 
-#include <vector>
-
 #include <dynet/expr.h>
 #include <dynet_c/internal.h>
 #include <dynet_c/expr.h>
+
+#include <vector>
 
 using dynet_c::internal::to_c_ptr;
 using dynet_c::internal::to_cpp_ptr;
@@ -299,7 +299,7 @@ DYNET_C_STATUS dynetApplyNegative(
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetApplyAdd(
-    const dynetExpression_t *x, const dynetExpression_t *y, 
+    const dynetExpression_t *x, const dynetExpression_t *y,
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(x);
   DYNET_C_CHECK_NOT_NULL(y);
@@ -325,7 +325,7 @@ DYNET_C_STATUS dynetApplyAddExpr(
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetApplySubtract(
-    const dynetExpression_t *x, const dynetExpression_t *y, 
+    const dynetExpression_t *x, const dynetExpression_t *y,
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(x);
   DYNET_C_CHECK_NOT_NULL(y);
@@ -351,7 +351,7 @@ DYNET_C_STATUS dynetApplySubtractExpr(
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetApplyMultiply(
-    const dynetExpression_t *x, const dynetExpression_t *y, 
+    const dynetExpression_t *x, const dynetExpression_t *y,
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(x);
   DYNET_C_CHECK_NOT_NULL(y);
@@ -377,7 +377,7 @@ DYNET_C_STATUS dynetApplyMultiplyExpr(
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetApplyDivide(
-    const dynetExpression_t *x, const dynetExpression_t *y, 
+    const dynetExpression_t *x, const dynetExpression_t *y,
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(x);
   DYNET_C_CHECK_NOT_NULL(y);
@@ -745,8 +745,8 @@ DYNET_C_STATUS dynetApplyHingeDim(
   for (uint32_t i = 0; i < batch; i++) {
     std::vector<uint32_t> v;
     v.reserve(n_elems);
-  	for (uint32_t j = 0; j < n_elems; j++) {
-        v.push_back(*(indices + i * n_elems + j));
+    for (uint32_t j = 0; j < n_elems; j++) {
+      v.push_back(*(indices + i * n_elems + j));
     }
     indices_m.push_back(v);
   }

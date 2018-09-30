@@ -13,7 +13,8 @@ typedef struct dynetDevice dynetDevice_t;
  * @param newobj Pointer to receive a handler.
  * @return Status code.
  */
-DYNET_C_API DYNET_C_STATUS dynetGetGlobalDevice(const char *name, dynetDevice_t **newobj);
+DYNET_C_API DYNET_C_STATUS dynetGetGlobalDevice(
+    const char *name, dynetDevice_t **newobj);
 
 /**
  * Returns the number of global devices.

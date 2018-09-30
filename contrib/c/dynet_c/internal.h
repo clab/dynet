@@ -1,13 +1,6 @@
 #ifndef DYNET_C_INTERNAL_H_
 #define DYNET_C_INTERNAL_H_
 
-#include <algorithm>
-#include <cstdint>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-
 #include <dynet/init.h>
 #include <dynet/dim.h>
 #include <dynet/tensor.h>
@@ -22,6 +15,13 @@
 #include <dynet/cfsm-builder.h>
 
 #include <dynet_c/define.h>
+
+#include <algorithm>
+#include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #define DYNET_C_PTR_TO_PTR(cpp_name, c_name) \
 inline c_name *to_c_ptr(dynet::cpp_name *instance) { \
@@ -82,7 +82,7 @@ namespace internal {
 class Error : public std::exception {
   Error() = delete;
 
-public:
+ public:
   Error(const std::string &file, std::uint32_t line, const std::string &message)
   : file_(file), line_(line), msg_(message) {
     std::stringstream ss;
@@ -92,7 +92,7 @@ public:
 
   const char *what() const noexcept override { return full_msg_.c_str(); }
 
-private:
+ private:
   std::string file_;
   std::uint32_t line_;
   std::string msg_;
@@ -220,7 +220,7 @@ inline void copy_string_to_array(
     if (*size <= str.length()) {
       DYNET_C_THROW_ERROR("Size is not enough to copy a string.");
     }
-    std::strcpy(buffer, str.c_str());
+    std::snprintf(buffer, *size, "%s", str.c_str());
   } else {
     *size = str.length() + 1u;
   }

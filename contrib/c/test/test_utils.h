@@ -1,11 +1,11 @@
 #ifndef DYNET_C_TEST_UTILS_H_
 #define DYNET_C_TEST_UTILS_H_
 
-#include <iostream>
-#include <vector>
-
 #include <dynet_c/init.h>
 #include <dynet_c/status.h>
+
+#include <iostream>
+#include <vector>
 
 namespace test_utils {
 

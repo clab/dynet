@@ -73,7 +73,7 @@ DYNET_C_STATUS dynetCreateSimpleSGDTrainer(
     dynetTrainer_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(m);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  *newobj = 
+  *newobj =
       to_c_ptr(new dynet::SimpleSGDTrainer(*to_cpp_ptr(m), learning_rate));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS

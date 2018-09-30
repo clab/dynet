@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE C_PARAMS_TEST
 
-#include <boost/test/unit_test.hpp>
 #include <dynet_c/model.h>
+#include <boost/test/unit_test.hpp>
 #include "test_utils.h"
 
 struct CParamsTest {
