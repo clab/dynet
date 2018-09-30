@@ -63,7 +63,7 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
   // Handle hypothetical bias
   if (xs.size() == 3) {
     auto C = tb<2>(*xs[2]);
-    Eigen::array<int, 3> bcast_C = {1, 1, (int)(xs[2]->d.bd == 1 ? fx.d.bd : 1)};
+    Eigen::array<ptrdiff_t, 3> bcast_C = {1, 1, (xs[2]->d.bd == 1 ? fx.d.bd : 1)};
     tb<2>(fx).device(*dev.edevice) = C.broadcast(bcast_C);
   }
 #if defined(__CUDACC__) && !defined(DYNET_SKIP_CUDA_CONTRACTIONS)
@@ -81,7 +81,7 @@ void InnerProduct3D_1D::forward_dev_impl(const MyDevice & dev, const vector<cons
   // TODO : maybe on CPU broadcast is not as affective as looping?
   if (xs[0]->d.bd == 1) {
     // A is a 3 tensor
-    Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
+    Eigen::array<ptrdiff_t, 2> bcast_b = {1, (xs[1]->d.bd == 1 ? fx.d.bd : 1)};
     auto b = tb<1>(*xs[1]);
     auto A = t<3>(*xs[0]);
     tb<2>(fx).device(*dev.edevice) += A.contract(b.broadcast(bcast_b), dims);
@@ -149,14 +149,14 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
     if (xs[0]->d.bd == 1) { // A is a 3 tensor
       // tensor product
       auto b = tb<1>(*xs[1]);
-      Eigen::array<int, 2> bcast_b = {1, (int)(xs[1]->d.bd == 1 ? fx.d.bd : 1)};
+      Eigen::array<ptrdiff_t, 2> bcast_b = {1, (xs[1]->d.bd == 1 ? fx.d.bd : 1)};
       Eigen::array<DimPair, 1> dims({{DimPair(2, 1)}});
       t<3>(dEdxi).device(*dev.edevice) += tdEdf.contract(b.broadcast(bcast_b), dims);
     } else {
       // For now if A is batched the CUDA version is not implemented
       if (xs[1]->d.bd == 1) {
         // auto b = t<1>(*xs[1]);
-        // Eigen::array<int, 4> morph {dEdf.d[0], dEdf.d[1], xs[1]->d[0], dEdf.d.bd};
+        // Eigen::array<ptrdiff_t, 4> morph {dEdf.d[0], dEdf.d[1], xs[1]->d[0], dEdf.d.bd};
         // tb<3>(dEdxi).device(*dev.edevice) += tdEdf.contract(b, Eigen::array<DimPair, 0> {{}}).reshape(morph);
         auto b = t<1>(*xs[1]);
         for (unsigned i = 0; i < fx.d.bd; ++i) {
@@ -211,7 +211,7 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
     if (xs[1]->d.bd == 1) { // b is a 1 tensor
       if (xs[0]->d.bd == 1) {
         auto A = t<3>(*xs[0]);  // A is 3 tensor
-        Eigen::array<int, 1> red_axis; red_axis[0] = 0;
+        Eigen::array<ptrdiff_t, 1> red_axis = {0};
         Eigen::array<DimPair, 2> dims({{DimPair(0, 0), DimPair(1, 1)}});
         t<1>(dEdxi).device(*dev.edevice) += tdEdf.contract(A, dims).sum(red_axis);
       } else {
@@ -235,7 +235,7 @@ void InnerProduct3D_1D::backward_dev_impl(const MyDevice & dev,
 #endif
   } else if (i == 2) { // dEdC
     if (xs[2]->d.bd == 1) {
-      Eigen::array<int, 1> red_axis; red_axis[0] = 2;
+      Eigen::array<ptrdiff_t, 1> red_axis = {2};
       t<2>(dEdxi).device(*dev.edevice) += tdEdf.sum(red_axis);
     } else {
       tb<2>(dEdxi).device(*dev.edevice) += tdEdf;

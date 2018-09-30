@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
@@ -150,7 +151,12 @@ Expression CoupledLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
     Expression h_i = h_new[i];
-    Expression c_i = c[t - 1][i];
+    Expression c_i;
+      if (t == 0) {
+          c_i = dynet::zeros(*(h_new[i].pg), Dim({this->hid}));
+      } else {
+          c_i = c[t - 1][i];
+      }
     h[t][i] = h_i;
     c[t][i] = c_i;
   }
@@ -160,13 +166,27 @@ Expression CoupledLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
 Expression CoupledLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
   DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
-                          "LSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
+                          "CoupledLSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
   const unsigned t = c.size();
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
-    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    // Initialize h_i
+    Expression h_i;
+    if (only_c) {
+      // If we're not initializing h_i, copy from the previous timestep
+      // (or set to 0 if this is the first timestep)
+      if (t == 0) {
+        h_i = dynet::zeros(*(s_new[i].pg), Dim({this->hid}));
+      } else {
+        h_i = h[t - 1][i];
+      }
+    } else {
+      // Otherwise set h_i to the given value
+      h_i = s_new[i + layers];
+    }
+    // Initialize c_i
     Expression c_i = s_new[i];
     h[t][i] = h_i;
     c[t][i] = c_i;
@@ -293,6 +313,7 @@ void CoupledLSTMBuilder::disable_dropout() {
 enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
 enum { LN_GH, LN_BH, LN_GX, LN_BX, LN_GC, LN_BC};
 
+
 VanillaLSTMBuilder::VanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false), forget_bias(1.f), dropout_masks_valid(false) { }
 
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
@@ -328,6 +349,7 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
   dropout_rate = 0.f;
   dropout_rate_h = 0.f;
 }
+
 
 void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   param_vars.clear();
@@ -409,7 +431,12 @@ Expression VanillaLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
     Expression h_i = h_new[i];
-    Expression c_i = c[t - 1][i];
+    Expression c_i;
+      if (t == 0) {
+          c_i = dynet::zeros(*(h_new[i].pg), Dim({this->hid}));
+      } else {
+          c_i = c[t - 1][i];
+      }
     h[t][i] = h_i;
     c[t][i] = c_i;
   }
@@ -425,7 +452,21 @@ Expression VanillaLSTMBuilder::set_s_impl(int prev, const std::vector<Expression
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
-    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    // Initialize h_i
+    Expression h_i;
+    if (only_c) {
+      // If we're not initializing h_i, copy from the previous timestep
+      // (or set to 0 if this is the first timestep)
+      if (t == 0) {
+        h_i = dynet::zeros(*(s_new[i].pg), Dim({this->hid}));
+      } else {
+        h_i = h[t - 1][i];
+      }
+    } else {
+      // Otherwise set h_i to the given value
+      h_i = s_new[i + layers];
+    }
+    // Initialize c_i
     Expression c_i = s_new[i];
     h[t][i] = h_i;
     c[t][i] = c_i;
@@ -537,6 +578,327 @@ void VanillaLSTMBuilder::disable_dropout() {
 }
 
 
+SparseLSTMBuilder::SparseLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), ln_lstm(false), forget_bias(1.f), dropout_masks_valid(false) { }
+
+SparseLSTMBuilder::SparseLSTMBuilder(unsigned layers,
+                                       unsigned input_dim,
+                                       unsigned hidden_dim,
+                                       ParameterCollection& model,
+                                       bool ln_lstm, float forget_bias) : layers(layers), input_dim(input_dim), hid(hidden_dim), ln_lstm(ln_lstm), forget_bias(forget_bias), dropout_masks_valid(false) {
+  unsigned layer_input_dim = input_dim;
+  local_model = model.add_subcollection("vanilla-lstm-builder");
+  for (unsigned i = 0; i < layers; ++i) {
+    // i
+    Parameter p_x2i = local_model.add_parameters({hidden_dim * 4, layer_input_dim});
+    Parameter p_h2i = local_model.add_parameters({hidden_dim * 4, hidden_dim});
+    Parameter p_x2i_mask = local_model.add_parameters({hidden_dim * 4, layer_input_dim}, ParameterInitConst(1.0f));
+    Parameter p_h2i_mask = local_model.add_parameters({hidden_dim * 4, hidden_dim}, ParameterInitConst(1.0f));
+    //Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bi = local_model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
+
+    layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
+
+    vector<Parameter> ps = {p_x2i, p_h2i, /*p_c2i,*/ p_bi, p_x2i_mask, p_h2i_mask};
+    params.push_back(ps);
+
+    if (ln_lstm){
+      Parameter p_gh = model.add_parameters({hidden_dim * 4}, ParameterInitConst(1.f));
+      Parameter p_bh = model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
+      Parameter p_gx = model.add_parameters({hidden_dim * 4}, ParameterInitConst(1.f));
+      Parameter p_bx = model.add_parameters({hidden_dim * 4}, ParameterInitConst(0.f));
+      Parameter p_gc = model.add_parameters({hidden_dim}, ParameterInitConst(1.f));
+      Parameter p_bc = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
+      vector<Parameter> ln_ps = {p_gh, p_bh, p_gx, p_bx, p_gc, p_bc};
+      ln_params.push_back(ln_ps);
+    }
+  }  // layers
+  dropout_rate = 0.f;
+  dropout_rate_h = 0.f;
+}
+
+struct WEIGHT_MAGNITUDE{
+  float value;
+  int layer_index=0;
+  int params_ofs=0;
+  int index=0;
+} ;
+
+bool mag_compare(const WEIGHT_MAGNITUDE &a, const WEIGHT_MAGNITUDE &b) { return a.value < b.value; }
+
+void SparseLSTMBuilder::set_sparsity(float percent){
+    cout<<"Setting sparsity level at "<<percent<<"%\n";
+    int total_parameters=0;
+    for (unsigned i = 0; i < layers; ++i) {
+      const vector<Parameter>& vars = params[i];
+      total_parameters+=vars[_BI+1].dim().cols()*vars[_BI+1].dim().rows();
+      total_parameters+=vars[_BI+2].dim().cols()*vars[_BI+2].dim().rows();
+    }
+    cout<<"\tTotal number of parameters is "<<total_parameters<<"\n";
+    int prune_count=(int)(percent*total_parameters);
+    cout<<"\tDesired number of parameters is "<<total_parameters-prune_count<<"\n";
+
+    vector<WEIGHT_MAGNITUDE> magnitudes;
+
+    vector<vector<float>> new_mask_1;
+    vector<vector<float>> new_mask_2;
+
+    for (unsigned i = 0; i < layers; ++i) {
+
+      vector<float> tmp_mask_1;
+      vector<float> tmp_mask_2;
+
+      vector<Parameter>& vars = params[i];
+      for (int ofs=0; ofs<2; ofs++){
+        Tensor *weight_values_tensor=vars[_X2I+ofs].values();
+        Tensor *mask_values_tensor=vars[_BI+ofs+1].values();
+        vector<float> weight_values=as_vector(weight_values_tensor[0]);
+        vector<float> mask_values=as_vector(mask_values_tensor[0]);
+
+        WEIGHT_MAGNITUDE wm;
+        int size=vars[_BI+ofs+1].dim().cols()*vars[_BI+1+ofs].dim().rows();
+        for (int ii=0;ii<size;ii++){
+          wm.value=std::abs(weight_values[ii]*mask_values[ii]);
+          wm.layer_index=i;
+          wm.params_ofs=ofs;
+          wm.index=ii;
+          magnitudes.push_back(wm);
+          if (ofs==0){
+            tmp_mask_1.push_back(1.0f);
+          }else{
+            tmp_mask_2.push_back(1.0f);
+          }
+        }
+      }
+      new_mask_1.push_back(tmp_mask_1);
+      new_mask_2.push_back(tmp_mask_2);
+    }
+
+    std::sort(magnitudes.begin(), magnitudes.end(), mag_compare);
+
+    for (int ii=0;ii<prune_count;ii++){
+      if (magnitudes[ii].params_ofs ==0){
+        new_mask_1[magnitudes[ii].layer_index][magnitudes[ii].index]=0.0f;
+      }else{
+        new_mask_2[magnitudes[ii].layer_index][magnitudes[ii].index]=0.0f;
+      }
+    }
+
+    for (int i=0;i<layers;i++){
+      vector<Parameter>& vars = params[i];
+      vars[_BI+1].set_value(new_mask_1[i]);
+      vars[_BI+2].set_value(new_mask_2[i]);
+    }
+}
+
+void SparseLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
+  param_vars.clear();
+  if (ln_lstm)ln_param_vars.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    auto& p = params[i];
+    vector<Expression> vars;
+    for (unsigned j = 0; j < p.size(); ++j) { vars.push_back((update && j<=_BI) ? parameter(cg, p[j]) : const_parameter(cg, p[j])); }
+    param_vars.push_back(vars);
+    if (ln_lstm){
+      auto& ln_p = ln_params[i];
+      vector<Expression> ln_vars;
+      for (unsigned j = 0; j < ln_p.size(); ++j) { ln_vars.push_back(update ? parameter(cg, ln_p[j]) : const_parameter(cg, ln_p[j])); }
+      ln_param_vars.push_back(ln_vars);
+    }
+  }
+
+  _cg = &cg;
+}
+// layout: 0..layers = c
+//         layers+1..2*layers = h
+void SparseLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
+  h.clear();
+  c.clear();
+
+  if (hinit.size() > 0) {
+    DYNET_ARG_CHECK(layers * 2 == hinit.size(),
+                            "SparseLSTMBuilder must be initialized with 2 times as many expressions as layers "
+                            "(hidden state, and cell for each layer). However, for " << layers << " layers, " <<
+                            hinit.size() << " expressions were passed in");
+    h0.resize(layers);
+    c0.resize(layers);
+    for (unsigned i = 0; i < layers; ++i) {
+      c0[i] = hinit[i];
+      h0[i] = hinit[i + layers];
+    }
+    has_initial_state = true;
+  } else {
+    has_initial_state = false;
+  }
+
+  dropout_masks_valid = false;
+}
+
+void SparseLSTMBuilder::set_dropout_masks(unsigned batch_size) {
+  masks.clear();
+  for (unsigned i = 0; i < layers; ++i) {
+    std::vector<Expression> masks_i;
+    unsigned idim = (i == 0) ? input_dim : hid;
+    if (dropout_rate > 0.f || dropout_rate_h > 0.f) {
+      float retention_rate = 1.f - dropout_rate;
+      float retention_rate_h = 1.f - dropout_rate_h;
+      float scale = 1.f / retention_rate;
+      float scale_h = 1.f / retention_rate_h;
+      // in
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ idim}, batch_size), retention_rate, scale));
+      // h
+      masks_i.push_back(random_bernoulli(*_cg, Dim({ hid}, batch_size), retention_rate_h, scale_h));
+      masks.push_back(masks_i);
+    }
+  }
+  dropout_masks_valid = true;
+}
+
+ParameterCollection & SparseLSTMBuilder::get_parameter_collection() {
+  return local_model;
+}
+
+// TODO - Make this correct
+// Copied c from the previous step (otherwise c.size()< h.size())
+// Also is creating a new step something we want?
+// wouldn't overwriting the current one be better?
+Expression SparseLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
+                          "SparseLSTMBuilder::set_h expects as many inputs as layers, but got " <<
+                          h_new.size() << " inputs for " << layers << " layers");
+  const unsigned t = h.size();
+  h.push_back(vector<Expression>(layers));
+  c.push_back(vector<Expression>(layers));
+  for (unsigned i = 0; i < layers; ++i) {
+    Expression h_i = h_new[i];
+    Expression c_i = c[t - 1][i];
+    h[t][i] = h_i;
+    c[t][i] = c_i;
+  }
+  return h[t].back();
+}
+// Current implementation : s_new is either {new_c[0],...,new_c[n]}
+// or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
+Expression SparseLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
+  DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
+                          "SparseLSTMBuilder::set_s expects either as many inputs or twice as many inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
+  bool only_c = s_new.size() == layers;
+  const unsigned t = c.size();
+  h.push_back(vector<Expression>(layers));
+  c.push_back(vector<Expression>(layers));
+  for (unsigned i = 0; i < layers; ++i) {
+    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    Expression c_i = s_new[i];
+    h[t][i] = h_i;
+    c[t][i] = c_i;
+  }
+  return h[t].back();
+}
+
+Expression SparseLSTMBuilder::add_input_impl(int prev, const Expression& x) {
+  h.push_back(vector<Expression>(layers));
+  c.push_back(vector<Expression>(layers));
+  vector<Expression>& ht = h.back();
+  vector<Expression>& ct = c.back();
+  Expression in = x;
+  if ((dropout_rate > 0.f || dropout_rate_h > 0.f) && !dropout_masks_valid) set_dropout_masks(x.dim().bd);
+  for (unsigned i = 0; i < layers; ++i) {
+    const vector<Expression>& vars = param_vars[i];
+
+    Expression i_h_tm1, i_c_tm1;
+    bool has_prev_state = (prev >= 0 || has_initial_state);
+    if (prev < 0) {
+      if (has_initial_state) {
+        // intial value for h and c at timestep 0 in layer i
+        // defaults to zero matrix input if not set in add_parameter_edges
+        i_h_tm1 = h0[i];
+        i_c_tm1 = c0[i];
+      }
+    } else {  // t > 0
+      i_h_tm1 = h[prev][i];
+      i_c_tm1 = c[prev][i];
+    }
+    // apply dropout according to https://arxiv.org/abs/1512.05287 (tied weights)
+    if (dropout_rate > 0.f) {
+      in = cmult(in, masks[i][0]);
+    }
+    if (has_prev_state && dropout_rate_h > 0.f)
+      i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
+    // input
+    Expression tmp;
+    Expression i_ait;
+    Expression i_aft;
+    Expression i_aot;
+    Expression i_agt;
+    if (ln_lstm){
+      const vector<Expression>& ln_vars = ln_param_vars[i];
+      if (has_prev_state)
+        tmp = vars[_BI] + layer_norm(vars[_X2I] *in, ln_vars[LN_GX], ln_vars[LN_BX]) + layer_norm(vars[_H2I] * i_h_tm1, ln_vars[LN_GH], ln_vars[LN_BH]);
+      else
+        tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]);
+    }else{
+      if (has_prev_state)
+        tmp = affine_transform({vars[_BI], cmult(vars[_X2I], vars[_BI+1]), in, cmult(vars[_H2I], vars[_BI+2]), i_h_tm1});
+        //tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
+      else
+        tmp = affine_transform({vars[_BI], cmult(vars[_X2I], vars[_BI+1]), in});
+        //tmp = affine_transform({vars[_BI], vars[_X2I], in});
+    }
+    i_ait = pick_range(tmp, 0, hid);
+    i_aft = pick_range(tmp, hid, hid * 2);
+    i_aot = pick_range(tmp, hid * 2, hid * 3);
+    i_agt = pick_range(tmp, hid * 3, hid * 4);
+    Expression i_it = logistic(i_ait);
+    if (forget_bias != 0.0)
+        tmp = logistic(i_aft + forget_bias);
+    else
+        tmp= logistic(i_aft);
+
+    Expression i_ft = tmp;
+    Expression i_ot = logistic(i_aot);
+    Expression i_gt = tanh(i_agt);
+
+    ct[i] = has_prev_state ? (cmult(i_ft, i_c_tm1) + cmult(i_it, i_gt)) :  cmult(i_it, i_gt);
+    if (ln_lstm) {
+      const vector<Expression>& ln_vars = ln_param_vars[i];
+      in = ht[i] = cmult(i_ot, tanh(layer_norm(ct[i], ln_vars[LN_GC], ln_vars[LN_BC])));
+    } else
+      in = ht[i] = cmult(i_ot, tanh(ct[i]));
+  }
+  return ht.back();
+}
+
+void SparseLSTMBuilder::copy(const RNNBuilder & rnn) {
+  const SparseLSTMBuilder & rnn_lstm = (const SparseLSTMBuilder&)rnn;
+  DYNET_ARG_CHECK(params.size() == rnn_lstm.params.size(),
+                          "Attempt to copy SparseLSTMBuilder with different number of parameters "
+                          "(" << params.size() << " != " << rnn_lstm.params.size() << ")");
+  for (size_t i = 0; i < params.size(); ++i)
+    for (size_t j = 0; j < params[i].size(); ++j)
+      params[i][j] = rnn_lstm.params[i][j];
+  for (size_t i = 0; i < ln_params.size(); ++i)
+    for (size_t j = 0; j < ln_params[i].size(); ++j)
+      ln_params[i][j] = rnn_lstm.ln_params[i][j];
+}
+
+void SparseLSTMBuilder::set_dropout(float d) {
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = d;
+  dropout_rate_h = d;
+}
+
+void SparseLSTMBuilder::set_dropout(float d, float d_h) {
+  DYNET_ARG_CHECK(d >= 0.f && d <= 1.f && d_h >= 0.f && d_h <= 1.f,
+                          "dropout rate must be a probability (>=0 and <=1)");
+  dropout_rate = d;
+  dropout_rate_h = d_h;
+}
+
+void SparseLSTMBuilder::disable_dropout() {
+  dropout_rate = 0.f;
+  dropout_rate_h = 0.f;
+}
+
 CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder() : has_initial_state(false), layers(0), input_dim(0), hid(0), dropout_rate_h(0), weightnoise_std(0), dropout_masks_valid(false) { }
 
 CompactVanillaLSTMBuilder::CompactVanillaLSTMBuilder(unsigned layers,
@@ -635,7 +997,12 @@ Expression CompactVanillaLSTMBuilder::set_h_impl(int prev, const vector<Expressi
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
     Expression h_i = h_new[i];
-    Expression c_i = c[t - 1][i];
+    Expression c_i;
+      if (t == 0) {
+          c_i = dynet::zeros(*(h_new[i].pg), Dim({this->hid}));
+      } else {
+          c_i = c[t - 1][i];
+      }
     h[t][i] = h_i;
     c[t][i] = c_i;
   }
@@ -651,7 +1018,21 @@ Expression CompactVanillaLSTMBuilder::set_s_impl(int prev, const std::vector<Exp
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
-    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    // Initialize h_i
+    Expression h_i;
+    if (only_c) {
+      // If we're not initializing h_i, copy from the previous timestep
+      // (or set to 0 if this is the first timestep)
+      if (t == 0) {
+        h_i = dynet::zeros(*(s_new[i].pg), Dim({this->hid}));
+      } else {
+        h_i = h[t - 1][i];
+      }
+    } else {
+      // Otherwise set h_i to the given value
+      h_i = s_new[i + layers];
+    }
+    // Initialize c_i
     Expression c_i = s_new[i];
     h[t][i] = h_i;
     c[t][i] = c_i;

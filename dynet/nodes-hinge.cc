@@ -39,7 +39,7 @@ void Hinge::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& 
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in Hinge::forward");
   DYNET_ARG_CHECK(margin >= 0, "Hinge loss does not support negative margins (got " << margin << ")");
   Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
-  Eigen::array<int, 1> bcasts = {(int)xs[0]->d.rows()};
+  Eigen::array<ptrdiff_t, 1> bcasts = {xs[0]->d.rows()};
   if(pelement != nullptr) {
     DYNET_ARG_CHECK(fx.d.bd == 1,
                             "Hinge was passed a single index but the corresponding expression has multiple mini-batch elements (" << fx.d.bd << ")");
@@ -130,8 +130,8 @@ void HingeDim::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in HingeDim::forward");
   DYNET_ARG_CHECK(margin >= 0, "HingeDim loss does not support negative margins (got " << margin << ")");
   Tensor eloss(xs[0]->d, static_cast<float*>(aux_mem), fx.device, DeviceMempool::FXS);
-  Eigen::array<int, 1> bcasts = {(int)xs[0]->d[d]};
-  Eigen::array<int, 1> morph = {1};
+  Eigen::array<ptrdiff_t, 1> bcasts = {xs[0]->d[d]};
+  Eigen::array<ptrdiff_t, 1> morph = {1};
   DYNET_ASSERT(pelement != nullptr || pelements != nullptr, "HingeDim::forward has neither pointer to single element nor vector");
   DYNET_ARG_CHECK(pelements == nullptr || xs[0]->d.bd == pelements->size(),
                           "The list of indexes passed to HingeDim has a length (" << pelements->size() <<

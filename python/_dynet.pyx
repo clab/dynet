@@ -519,6 +519,8 @@ cdef class GlorotInitializer(PyInitializer):
     
     If the dimensions of the parameter matrix are :math:`m,n`, the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{m+n}},g\sqrt{\\frac{6}{m+n}}])`
     
+    In the case of 4d tensors (common in convolutional networks) of shape :math:`XH,XW,XC,N` the weights are sampled from :math:`\mathcal U([-g\sqrt{\\frac{6}{d}},g\sqrt{\\frac{6}{d}}])` where :math:`d = XC * (XH * XW) + N * (XH * XW)`
+
     The gain :math:`g` depends on the activation function : 
 
     * :math:`\\text{tanh}` : 1.0
@@ -898,6 +900,7 @@ cdef class Parameters(Expression): # {{{
     cdef Expression _const_expr
     def __cinit__(self):
         self._version = -1
+        self._const_version = -1
 
     # All creations MUST go through wrap_ptr
     @staticmethod
@@ -2130,10 +2133,10 @@ cdef class Tensor: #{{{
 #{{{ Expressions
 cdef ensure_freshness(Expression a):
     if a.cg_version != _cg.version():
-        if type(a) is Parameters:
+        if type(a) is Parameters or type(a) is LookupParameters:
             pass
         else:
-            raise ValueError("Attempt to use a stale expression.")
+            raise ValueError("Attempt to use a stale expression of type {}".format(type(a)))
 
 cdef _add(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_add(a.c(), b.c()))
 cdef _mul(Expression a, Expression b): ensure_freshness(b); return Expression.from_cexpr(a.cg_version, c_op_mul(a.c(), b.c()))
@@ -5255,6 +5258,11 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
             h_t & = \\tanh(c_t)\circ o_t\\\\
         \end{split}
 
+    The parameters are initialized as follow:
+    - :math:`W_{*x}` (input connections): Sampled from :math:`\mathcal U\left([\sqrt{\\frac{6}{4d_h + d_x}}]\\right)`
+    - :math:`W_{*h}` (recurrent connections): Sampled from :math:`\mathcal U\left([\sqrt{\frac{6}{4d_h + d_h}}]\right)`
+    - :math:`b_{h}` (biases): Set to :math:`0` except for :math:`d_f` which is set to :math:`1`
+
     Args:
         layers (int): Number of layers
         input_dim (int): Dimension of the input
@@ -5357,7 +5365,6 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
             exprs.append(layer_exprs)
         return exprs
 
-
     cpdef void set_dropouts(self, float d, float d_r):
         """Set the dropout rates
         
@@ -5400,6 +5407,168 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
 
     def whoami(self): return "VanillaLSTMBuilder"
 # VanillaLSTMBuilder }}}
+
+cdef class SparseLSTMBuilder(_RNNBuilder): # {{{
+    """VanillaLSTM allows to create an "standard" LSTM, ie with decoupled input and forget gate and no peepholes connections
+    
+    During training the sparsity of the LSTM has to be increased incrementally. 
+    Sparsity is controlled using the set_sparsity method. This works by sorting all the weights based on their magnitude and applying mask on the top x-percent weight with the lowest magnitude.
+    More details on the process can be found in `Narang et al., 2017 <https://arxiv.org/pdf/1704.05119.pdf>`. The rest of the implementation is identical to VanillaLSTM
+    DISCLAIMER: This is an experimental/untested module.
+
+    Args:
+        layers (int): Number of layers
+        input_dim (int): Dimension of the input
+        hidden_dim (int): Dimension of the recurrent units
+        model (dynet.ParameterCollection): ParameterCollection to hold the parameters
+        ln_lstm (bool): Whether to use layer normalization
+        forget_bias (float): value to use as forget gate bias(default 1.0)
+    """
+    cdef CSparseLSTMBuilder* thissparsevanillaptr
+    cdef tuple _spec
+    def __init__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, ParameterCollection model, ln_lstm=False, forget_bias=1.0):
+        self._spec = (layers, input_dim, hidden_dim, ln_lstm, forget_bias)
+        if layers > 0:
+            self.thissparsevanillaptr = self.thisptr = new CSparseLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr, ln_lstm, forget_bias)
+        else:
+            self.thissparsevanillaptr = self.thisptr = new CSparseLSTMBuilder()
+        self.cg_version = -1
+
+    @property
+    def spec(self): return self._spec
+
+    @classmethod
+    def from_spec(cls, spec, model):
+        layers, input_dim, hidden_dim, ln_lstm, forget_bias = spec
+        return SparseLSTMBuilder(layers, input_dim, hidden_dim, model, ln_lstm, forget_bias)
+
+# TODO rename to parameters()?
+    cpdef get_parameters(self):
+        """Retrieve the internal parameters of the VanillaLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+
+        .. code-block:: text
+
+                  h/x   
+                +------+
+                |      |
+            i   |      |
+                +------+
+                |      |
+            f   |      |
+                +------+
+                |      |
+            o   |      |
+                +------+
+                |      |
+            c   |      |
+                +------+
+
+        Returns:
+            List of parameters for each layer
+            list
+        """
+        params = []
+        for l in self.thissparsevanillaptr.params:
+            layer_params=[]
+            for w in l:
+                layer_params.append(Parameters.wrap_ptr(w))
+            params.append(layer_params)
+        return params
+
+# TODO rename to parameter_expressions()?
+    cpdef get_parameter_expressions(self):
+        """Retrieve the internal parameters expressions of the VanillaLSTM
+        
+        The output is a list with one item per layer. Each item is a list containing :math:`W_x,W_h,b` where :math:`W_x,W_h` are stacked version of the individual gates matrices:
+
+        .. code-block:: text
+
+                  h/x   
+                +------+
+                |      |
+            i   |      |
+                +------+
+                |      |
+            f   |      |
+                +------+
+                |      |
+            o   |      |
+                +------+
+                |      |
+            c   |      |
+                +------+
+        
+        Returns:
+            List of parameter expressions for each layer
+            list
+
+        Raises:
+            ValueError: This raises an expression if initial_state hasn't been called because it requires thr parameters to be loaded in the computation graph. However it prevents the parameters to be loaded twice in the computation graph (compared to :code:`dynet.parameter(rnn.get_parameters()[0][0])` for example).
+        """
+        if self.thissparsevanillaptr.param_vars.size() == 0 or self.thissparsevanillaptr.param_vars[0][0].is_stale():
+            raise ValueError("Attempt to use a stale expression, renew CG and/or call initial_state before accessing VanillaLSTMBuilder internal parameters expression")
+
+        exprs = []
+        for l in self.thissparsevanillaptr.param_vars:
+            layer_exprs=[]
+            for w in l:
+                layer_exprs.append(Expression.from_cexpr(_cg.version(),w))
+            exprs.append(layer_exprs)
+        return exprs
+
+
+    cpdef void set_sparsity(self, float sparsity):
+        """Set the sparsity rate
+        
+        Args:
+            sparsity (number): The relative number of weights that will be pruned
+        """
+        self.thissparsevanillaptr.set_sparsity(sparsity)
+
+    cpdef void set_dropouts(self, float d, float d_r):
+        """Set the dropout rates
+        
+        The dropout implemented here is the variational dropout with tied weights introduced in `Gal, 2016 <http://papers.nips.cc/paper/6241-a-theoretically-grounded-application-of-dropout-in-recurrent-neural-networks>`_
+
+        More specifically, dropout masks :math:`\mathbf{z_x}\sim \\text(1-d_x)`, :math:`\mathbf{z_h}\sim \\text{Bernoulli}(1-d_h)` are sampled at the start of each sequence.
+
+        The dynamics of the cell are then modified to :
+
+        .. math::
+
+            \\begin{split}
+                i_t & =\sigma(W_{ix}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ih}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_i)\\\\
+                f_t & = \sigma(W_{fx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{fh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_f)\\\\
+                o_t & = \sigma(W_{ox}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{oh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_o)\\\\
+                \\tilde{c_t} & = \tanh(W_{cx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ch}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_c)\\\\
+                c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
+                h_t & = \\tanh(c_t)\circ o_t\\\\
+            \end{split}
+
+        For more detail as to why scaling is applied, see the "Unorthodox" section of the documentation
+
+        Args:
+            d (number): Dropout rate :math:`d_x` for the input :math:`x_t`
+            d_r (number): Dropout rate :math:`d_x` for the output :math:`h_t`
+        """
+        self.thissparsevanillaptr.set_dropout(d, d_r)
+
+    cpdef void set_dropout_masks(self, unsigned batch_size=1):
+        """Set dropout masks at the beginning of a sequence for a specific batch size
+        
+        If this function is not called on batched input, the same mask will be applied across all batch elements. Use this to apply different masks to each batch element
+
+        You need to call this __AFTER__ calling `initial_state`
+        
+        Args:
+            batch_size (int): Batch size (default: {1})
+        """
+        self.thissparsevanillaptr.set_dropout_masks(batch_size)
+
+    def whoami(self): return "SparseLSTMBuilder"
+# SparseLSTMBuilder }}}
 
 
 # This is an alias for VanillaLSTMBuilder

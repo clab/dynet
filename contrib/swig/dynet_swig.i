@@ -626,6 +626,9 @@ inline Expression concatenate(const std::vector<Expression>& xs, unsigned d) {
 %}
 
 Expression concatenate_to_batch(const std::vector<Expression>& xs);
+
+Expression strided_select(const Expression& x, const std::vector<int>& strides, const std::vector<int>& from = {}, const std::vector<int>& to = {});
+
 Expression concatenate_cols(const std::vector<Expression>& xs);
 Expression concatenate(const std::vector<Expression>& xs, unsigned d = 0);
 

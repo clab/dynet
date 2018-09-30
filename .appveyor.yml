@@ -5,8 +5,8 @@ platform: x64
 environment:
   global:
     MSVC_DEFAULT_OPTIONS: ON
-    BOOST_ROOT: C:\Libraries\boost_1_59_0
-    BOOST_LIBRARYDIR: C:\Libraries\boost_1_59_0\lib64-msvc-14.0
+    BOOST_ROOT: C:\Libraries\boost_1_67_0
+    BOOST_LIBRARYDIR: C:\Libraries\boost_1_67_0\lib64-msvc-14.0
     MSVC: 1
     MINICONDA: "C:\\Miniconda36-x64"
     TWINE_USERNAME: danielh
@@ -15,6 +15,7 @@ environment:
   matrix:
     - PYTHON_VERSION: 3.5
     - PYTHON_VERSION: 3.6
+    - PYTHON_VERSION: 3.7
 
 configuration: Release
 

@@ -514,6 +514,16 @@ cdef extern from "dynet/lstm.h" namespace "dynet":
         vector[vector[CParameters]] params
         vector[vector[CExpression]] param_vars
 
+    cdef cppclass CSparseLSTMBuilder "dynet::SparseLSTMBuilder" (CRNNBuilder):
+        CSparseLSTMBuilder()
+        CSparseLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model, bool ln_lstm, float forget_bias)
+        void set_dropout(float d, float d_r)
+        void set_sparsity(float sparsity)
+        void set_dropout_masks(unsigned batch_size)
+
+        vector[vector[CParameters]] params
+        vector[vector[CExpression]] param_vars
+
     cdef cppclass CCoupledLSTMBuilder "dynet::CoupledLSTMBuilder" (CRNNBuilder):
         CCoupledLSTMBuilder()
         CCoupledLSTMBuilder(unsigned layers, unsigned input_dim, unsigned hidden_dim, CModel &model)

@@ -214,7 +214,7 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
     t<4>(HWCN_dEdxi).device(*dev.edevice) = t<4>(NCHW_dEdxi).shuffle(shuffles);
     t<4>(dEdxi).device(*dev.edevice) += t<4>(HWCN_dEdxi);
   } else { //backward w.r.t the bias
-    Eigen::array<int, 3> red_axis = {0, 1, 3};
+    Eigen::array<ptrdiff_t, 3> red_axis = {0, 1, 3};
     t<1>(dEdxi).device(*dev.edevice) += tb<3>(dEdf).sum(red_axis);
   }
 #endif

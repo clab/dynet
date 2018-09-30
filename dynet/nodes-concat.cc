@@ -84,7 +84,7 @@ void Concatenate::backward_dev_impl(const MyDevice & dev,
   if(dEdxi.d.bd == dEdf.d.bd) {
     tb<4>(dEdxi).device(*dev.edevice) += tb<4>(dEdf).slice(indices, sizes);
   } else {
-    Eigen::array<int, 1> red_axis; red_axis[0] = 4;
+    Eigen::array<ptrdiff_t, 1> red_axis = {4};
     t<4>(dEdxi).device(*dev.edevice) += tb<4>(dEdf).slice(indices, sizes).sum(red_axis);
   }
 }

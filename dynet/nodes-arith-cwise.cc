@@ -59,7 +59,7 @@ void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*
     } else {
       int greater = xs[0]->d.bd > xs[1]->d.bd ? 0 : 1;
 #ifdef __CUDACC__
-      Eigen::array<int, 2> bcast = {1,(int)xs[greater]->d.bd};
+      Eigen::array<ptrdiff_t, 2> bcast = {1, xs[greater]->d.bd};
       tbvec(fx).device(*dev.edevice) = tbvec(*xs[1-greater]).broadcast(bcast) + tbvec(*xs[greater]);
 #else
       for(size_t b = 0; b < fx.d.bd; ++b)
@@ -68,7 +68,7 @@ void CwiseSum::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*
     }
   // Broadcasting over dims as well
   } else {
-    Eigen::array<int, 5> bcast_left = {1,1,1,1,1}, bcast_right = {1,1,1,1,1};
+    Eigen::array<ptrdiff_t, 5> bcast_left = {1,1,1,1,1}, bcast_right = {1,1,1,1,1};
     bool has_left = false, has_right = false;
     for(; i < fx.d.nd; ++i){
       if(xs[0]->d[i] > xs[1]->d[i]) {
@@ -114,7 +114,7 @@ void CwiseSum::backward_dev_impl(const MyDevice & dev,
       tvec(dEdxi).device(*dev.edevice) += tvec(dEdf);
     } else {
 #ifdef __CUDACC__
-      Eigen::array<int, 1> red_axis = {1};
+      Eigen::array<ptrdiff_t, 1> red_axis = {1};
       tvec(dEdxi).device(*dev.edevice) += tbvec(dEdf).sum(red_axis);
 #else
       for(size_t b = 0; b < dEdf.d.bd; ++b)
@@ -140,10 +140,10 @@ void CwiseSum::backward_helper(const MyDevice & dev,
 		     const Tensor& dEdf,
 		     unsigned i,
 		     Tensor& dEdxi) const {
-  Eigen::array<int, ReductionOrder> red_axis;
+  Eigen::array<ptrdiff_t, ReductionOrder> red_axis;
   if(ReductionOrder>0) red_axis[ReductionOrder-1] = 4;
   int curr_red_axis = 0;
-  Eigen::array<int, 5> morph = {1,1,1,1,(int)xs[i]->d.bd};
+  Eigen::array<ptrdiff_t, 5> morph = {1,1,1,1,(int)xs[i]->d.bd};
   for(unsigned int di = 0; di < fx.d.nd; di++) {
     if((di >= xs[i]->d.nd && fx.d[di]>1) || xs[i]->d[di] != fx.d[di]) {
       red_axis[curr_red_axis] = di;
@@ -205,7 +205,7 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
     } else {
       int greater = xs[0]->d.bd > xs[1]->d.bd ? 0 : 1;
 #ifdef __CUDACC__
-      Eigen::array<int, 2> bcast = {1,(int)xs[greater]->d.bd};
+      Eigen::array<ptrdiff_t, 2> bcast = {1,(int)xs[greater]->d.bd};
       tbvec(fx).device(*dev.edevice) = tbvec(*xs[1-greater]).broadcast(bcast) * tbvec(*xs[greater]);
 #else
       for(size_t b = 0; b < fx.d.bd; ++b)
@@ -214,7 +214,7 @@ void CwiseMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Te
     }
   // Broadcasting over dims as well
   } else {
-    Eigen::array<int, 5> bcast_left = {1,1,1,1,1}, bcast_right = {1,1,1,1,1};
+    Eigen::array<ptrdiff_t, 5> bcast_left = {1,1,1,1,1}, bcast_right = {1,1,1,1,1};
     bool has_left = false, has_right = false;
     for(; i < fx.d.nd; ++i){
       if(xs[0]->d[i] > xs[1]->d[i]) {
@@ -263,10 +263,10 @@ void CwiseMultiply::backward_dev_impl(const MyDevice & dev,
       tvec(dEdxi).device(*dev.edevice) += tvec(dEdf) * tvec(*xs[1-i]);
     } else if(xs[1-i]->d.bd == 1) {
       // TODO: Make alternative code path for CPU?
-      Eigen::array<int, 2> bcast; bcast[0] = 1; bcast[1] = fx.d.bd;
+      Eigen::array<ptrdiff_t, 2> bcast = { 1, fx.d.bd };
       tbvec(dEdxi).device(*dev.edevice) += tbvec(dEdf) * tbvec(*xs[1-i]).broadcast(bcast);
     } else {
-      Eigen::array<int, 1> red_axis; red_axis[0] = 1;
+      Eigen::array<ptrdiff_t, 1> red_axis = {1};
       tvec(dEdxi).device(*dev.edevice) += (tbvec(dEdf) * tbvec(*xs[1-i])).sum(red_axis);
     }
   // Otherwise work with broadcasting, etc.
@@ -288,8 +288,8 @@ void CwiseMultiply::backward_helper(const MyDevice & dev,
 	                             const Tensor& dEdf,
 	                             unsigned i,
 	                             Tensor& dEdxi) const {
-  Eigen::array<int, ReductionOrder> red_axis;
-  Eigen::array<int, 5> morph = {1,1,1,1,(int)xs[i]->d.bd}, bcast_other = {1,1,1,1,1};
+  Eigen::array<ptrdiff_t, ReductionOrder> red_axis;
+  Eigen::array<ptrdiff_t, 5> morph = {1,1,1,1,(int)xs[i]->d.bd}, bcast_other = {1,1,1,1,1};
   if(ReductionOrder>0) red_axis[ReductionOrder-1] = 4;
   int curr_red_axis = 0;
   for(unsigned int di = 0; di < fx.d.nd; di++){
@@ -341,7 +341,7 @@ void CwiseQuotient::forward_dev_impl(const MyDevice & dev, const vector<const Te
   if(xs[0]->d.size() == xs[1]->d.size()){
     tb<4>(fx).device(*dev.edevice) = tb<4>(*xs[0]) / tb<4>(*xs[1]);
   } else {
-    Eigen::array<int, 5> bcast = {1,1,1,1,1};
+    Eigen::array<ptrdiff_t, 5> bcast = {1,1,1,1,1};
     for(unsigned int di = 0; di<xs[0]->d.nd; di++){
       if(xs[1]->d[di]==1) bcast[di] = xs[0]->d[di];
     }
@@ -362,7 +362,7 @@ void CwiseQuotient::backward_dev_impl(const MyDevice & dev,
     if(xs[0]->d.size() == xs[1]->d.size()){
       tb<4>(dEdxi).device(*dev.edevice) += tb<4>(dEdf) / tb<4>(*xs[1]);
     } else {
-      Eigen::array<int, 5> bcast = {1,1,1,1,1};
+      Eigen::array<ptrdiff_t, 5> bcast = {1,1,1,1,1};
       for(unsigned int di = 0; di<xs[0]->d.nd; di++){
         if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
       }
@@ -393,7 +393,7 @@ void CwiseQuotient::backward_helper(const MyDevice & dev,
 		       const Tensor& dEdf,
 		       unsigned i,
 		       Tensor& dEdxi) const {
-  Eigen::array<int, ReductionOrder> red_axis;
+  Eigen::array<ptrdiff_t, ReductionOrder> red_axis;
   if(ReductionOrder>0) red_axis[ReductionOrder-1] = 4;
   int curr_red_axis = 0;
   for(unsigned int di = 0; di < xs[0]->d.nd; di++){
@@ -402,12 +402,12 @@ void CwiseQuotient::backward_helper(const MyDevice & dev,
       curr_red_axis++;
     }
   }
-  Eigen::array<int, 5> morph = {1,1,1,1,1};
+  Eigen::array<ptrdiff_t, 5> morph = {1,1,1,1,1};
   for(unsigned int di = 0; di < xs[0]->d.nd; di++){
     morph[di] = xs[i]->d[di];
   }
   morph[4] = xs[i]->d.bd;
-    Eigen::array<int, 5> bcast = {1,1,1,1,1};
+    Eigen::array<ptrdiff_t, 5> bcast = {1,1,1,1,1};
     for(unsigned int di = 0; di < xs[0]->d.nd; di++){
       if(xs[0]->d[di]!=xs[1]->d[di]) bcast[di] = xs[0]->d[di];
     }

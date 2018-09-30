@@ -20,7 +20,7 @@ Namely: C2O, C2I.
 FastLSTMBuilder::FastLSTMBuilder(unsigned layers,
                                  unsigned input_dim,
                                  unsigned hidden_dim,
-                                 ParameterCollection& model) : layers(layers) {
+                                 ParameterCollection& model) : layers(layers), hid(hidden_dim) {
   unsigned layer_input_dim = input_dim;
   local_model = model.add_subcollection("fast-lstm-builder");
   for (unsigned i = 0; i < layers; ++i) {
@@ -101,7 +101,7 @@ void FastLSTMBuilder::start_new_sequence_impl(const vector<Expression>& hinit) {
 // Also is creating a new step something we want?
 // wouldn't overwriting the current one be better?
 Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new) {
-  DYNET_ARG_CHECK(!(h_new.size() && h_new.size() != layers),
+  DYNET_ARG_CHECK(h_new.empty() || h_new.size() == layers,
                           "FastLSTMBuilder::set_h expects as many inputs as layers, "
                           "but got " << h_new.size() << " inputs for " << layers << " layers");
   const unsigned t = h.size();
@@ -109,7 +109,12 @@ Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
     Expression h_i = h_new[i];
-    Expression c_i = c[t - 1][i];
+    Expression c_i;
+      if (t == 0) {
+          c_i = dynet::zeros(*(h_new[i].pg), Dim({this->hid}));
+      } else {
+          c_i = c[t - 1][i];
+      }
     h[t][i] = h_i;
     c[t][i] = c_i;
   }
@@ -118,7 +123,7 @@ Expression FastLSTMBuilder::set_h_impl(int prev, const vector<Expression>& h_new
 // Current implementation : s_new is either {new_c[0],...,new_c[n]}
 // or {new_c[0],...,new_c[n],new_h[0],...,new_h[n]}
 Expression FastLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& s_new) {
-  DYNET_ARG_CHECK(!(s_new.size() == layers || s_new.size() == 2 * layers),
+  DYNET_ARG_CHECK(s_new.size() == layers || s_new.size() == 2 * layers,
                           "FastLSTMBuilder::set_s expects either as many inputs or twice as many "
                           "inputs as layers, but got " << s_new.size() << " inputs for " << layers << " layers");
   bool only_c = s_new.size() == layers;
@@ -126,7 +131,21 @@ Expression FastLSTMBuilder::set_s_impl(int prev, const std::vector<Expression>& 
   h.push_back(vector<Expression>(layers));
   c.push_back(vector<Expression>(layers));
   for (unsigned i = 0; i < layers; ++i) {
-    Expression h_i = only_c ? h[t - 1][i] : s_new[i + layers];
+    // Initialize h_i
+    Expression h_i;
+    if (only_c) {
+      // If we're not initializing h_i, copy from the previous timestep
+      // (or set to 0 if this is the first timestep)
+      if (t == 0) {
+        h_i = dynet::zeros(*(s_new[i].pg), Dim({this->hid}));
+      } else {
+        h_i = h[t - 1][i];
+      }
+    } else {
+      // Otherwise set h_i to the given value
+      h_i = s_new[i + layers];
+    }
+    // Initialize c_i
     Expression c_i = s_new[i];
     h[t][i] = h_i;
     c[t][i] = c_i;
