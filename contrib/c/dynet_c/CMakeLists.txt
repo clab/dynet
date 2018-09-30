@@ -21,6 +21,7 @@ set(dynet_c_HDRS
   model.h
   param-init.h
   rnn-builder.h
+  softmax-builder.h
   status.h
   tensor.h
   training.h
@@ -37,6 +38,7 @@ set(
   model.cc
   param-init.cc
   rnn-builder.cc
+  softmax-builder.cc
   status.cc
   tensor.cc
   training.cc

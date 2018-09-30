@@ -11,6 +11,7 @@
 #include <dynet_c/io.h>
 #include <dynet_c/param-init.h>
 #include <dynet_c/graph.h>
+#include <dynet_c/softmax-builder.h>
 #include <dynet_c/training.h>
 #include <dynet_c/devices.h>
 #include <dynet_c/expr.h>
