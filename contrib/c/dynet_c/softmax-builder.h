@@ -17,7 +17,7 @@ typedef struct dynetSoftmaxBuilder dynetSoftmaxBuilder_t;
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetDeleteSoftmaxBuilder(
-    dynetSoftmaxBuilder *builder);
+    dynetSoftmaxBuilder_t *builder);
 
 /**
  * Resets the builder for a new sequence.

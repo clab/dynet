@@ -10,7 +10,7 @@ using dynet_c::internal::to_c_ptr;
 using dynet_c::internal::to_cpp_ptr;
 using dynet_c::internal::to_c_ptr_from_value;
 
-DYNET_C_STATUS dynetDeleteSoftmaxBuilder(dynetSoftmaxBuilder *builder) try {
+DYNET_C_STATUS dynetDeleteSoftmaxBuilder(dynetSoftmaxBuilder_t *builder) try {
   DYNET_C_CHECK_NOT_NULL(builder);
   delete to_cpp_ptr(builder);
   return DYNET_C_OK;
