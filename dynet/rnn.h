@@ -341,7 +341,7 @@ public:
   virtual void disable_dropout() override;
 
   /**
-   * \brief Set dropout masks at the beginning of a sequence for a specific bathc size
+   * \brief Set dropout masks at the beginning of a sequence for a specific batch size
    * \details If this function is not called on batched input, the same mask will be applied across
    * all batch elements. Use this to apply different masks to each batch element
    *
