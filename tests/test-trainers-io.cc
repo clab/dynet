@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE(name)                                      \
     {                                                           \
         public:                                                 \
             using TRAINER_TYPE::SP_NAME;                        \
-            Trainer(ParameterCollection& m) : \
+            explicit Trainer(ParameterCollection& m) : \
                 TRAINER_TYPE::TRAINER_TYPE(m) \
                 {} \
     };                                                          \

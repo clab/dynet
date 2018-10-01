@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <boost/test/unit_test.hpp>
 #include <dynet/model.h>
+#include <dynet/shadow-params.h>
 
 #define TOL 1e-3
 #define DYNET_CHECK_EQUAL(a, b) equal_check(a, b)
