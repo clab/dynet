@@ -69,13 +69,17 @@ struct Trainer {
 
   /**
    * @brief Restarts the optimizer
-   * @details Clears all momentum values and assimilate (if applicable)
+   * @details Clears all momentum values and assimilate (if applicable).
+   *        This method does not update the current hyperparameters
+   *.       (for example the bias parameter of the AdadeltaTrainer is left unchanged).
    */
   virtual void restart() = 0;
 
   /**
    * @brief Restarts the optimizer with a new learning rate
-   * @details Clears all momentum values and assimilate (if applicable) and resets the learning rate
+   * @details Clears all momentum values and assimilate (if applicable) and resets the learning rate.
+   *        This method does not update the current hyperparameters
+   *.       (for example the bias parameter of the AdadeltaTrainer is left unchanged).
    *
    * \param learning_rate New learning rate
    */
