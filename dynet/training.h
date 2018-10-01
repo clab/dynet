@@ -84,20 +84,28 @@ struct Trainer {
 
   /**
    * @brief Save the optimizer state
-   * @details Write all hyperparameters, momentum values and assimilate (if applicable) to stream;
+   * @details Write all hyperparameters, momentum values and assimilate (if applicable) to stream.
    *
    * \param os Output stream
    */
-  virtual void save_state(std::ostream& os);
+  virtual void save(std::ostream& os);
 
   /**
    * @brief Load the optimizer state
-   * @details Read all hyperparameters, momentum values and assimilate (if applicable) from stream;
+   * @details Read all hyperparameters, momentum values and assimilate (if applicable) from stream.
    *
    * \param os Input stream
-   * \param restore_hyperparams Wether to load hyperparameters
    */
-  virtual void load_state(std::istream& is, bool restore_hyperparams=true);
+  virtual void populate(std::istream& is);
+
+  /**
+   * @brief Load the optimizer state
+   * @details Read all hyperparameters, momentum values and assimilate (if applicable) from stream.
+   *
+   * \param os Input stream
+   * \param lr New learning rate
+   */
+  void populate(std::istream& is, real lr);
 
   /**
    * \brief Clip gradient
@@ -255,8 +263,6 @@ struct CyclicalSGDTrainer : public Trainer {
    */
   explicit CyclicalSGDTrainer(ParameterCollection& m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 1.0, float edecay = 0.0) : Trainer(m, learning_rate_min), e_min(learning_rate_min), e_max(learning_rate_max), step_size(step_size), gamma(gamma), it(0) {}
   void restart() override {};
-  void save_state(std::ostream& os) override;
-  void load_state(std::istream& is, bool restore_hyperparams=true) override;
 
   using Trainer::restart;
   void update() override {
@@ -303,9 +309,11 @@ struct MomentumSGDTrainer : public Trainer {
     Trainer(m, learning_rate), momentum(mom) {}
 
   void restart() override;
-  void save_state(std::ostream& os) override;
-  void load_state(std::istream& is, bool restore_hyperparams=true) override;
   using Trainer::restart;
+
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 
   // the following represent the current velocity
   // The shadow parameters are made public for testing, ideally they shouldn't be
@@ -344,9 +352,11 @@ struct AdagradTrainer : public Trainer {
     Trainer(m, learning_rate), epsilon(eps) {}
 
   void restart() override;
-  void save_state(std::ostream& os) override;
-  void load_state(std::istream& is, bool restore_hyperparams=true) override;
   using Trainer::restart;
+
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -383,9 +393,11 @@ struct AdadeltaTrainer : public Trainer {
     Trainer(m, 1.0), epsilon(eps), rho(rho) {}
 
   void restart() override;
-  void save_state(std::ostream& os) override;
-  void load_state(std::istream& is, bool restore_hyperparams=true) override;
   using Trainer::restart;
+
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -423,9 +435,11 @@ struct RMSPropTrainer : public Trainer {
     Trainer(m, learning_rate), epsilon(eps), rho(rho) {}
 
   void restart() override;
-  void save_state(std::ostream& os) override;
-  void load_state(std::istream& is, bool restore_hyperparams=true) override;
   using Trainer::restart;
+
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -463,10 +477,11 @@ struct AdamTrainer : public Trainer {
     Trainer(m, learning_rate), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
   void restart() override;
-  void save_state(std::ostream& os) override;
-  void load_state(std::istream& is, bool restore_hyperparams=true) override;
   using Trainer::restart;
 
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -508,10 +523,11 @@ struct AmsgradTrainer : public Trainer {
     Trainer(m, learning_rate), beta_1(beta_1), beta_2(beta_2), epsilon(eps) {}
 
   void restart() override;
-  void save_state(std::ostream& os) override;
-  void load_state(std::istream& is, bool restore_hyperparams=true) override;
   using Trainer::restart;
 
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -559,9 +575,11 @@ struct EGTrainer : public Trainer {
 //-----------------------------------------------------------------------------------------
 
   void restart() override;
-  void save_state(std::ostream& os) override;
-  void load_state(std::istream& is, bool restore_hyperparams=true) override;
   using Trainer::restart;
+
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
