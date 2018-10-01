@@ -46,6 +46,31 @@ void equal_check(Tensor & v1, Tensor & v2) {
   }
 }
 
+void equal_check(ShadowParameters& sp1, ShadowParameters& sp2)
+{
+    DYNET_CHECK_EQUAL(sp1.h, sp2.h);
+}
+
+void equal_check(std::vector<ShadowParameters>& vsp1, std::vector<ShadowParameters>& vsp2)
+{
+    BOOST_CHECK_EQUAL(vsp1.size(), vsp2.size());
+    for (size_t i = 0 ; i < vsp1.size() ; ++i)
+        DYNET_CHECK_EQUAL(vsp1[i], vsp2[i]);
+}
+
+void equal_check(ShadowLookupParameters& slp1, ShadowLookupParameters& slp2)
+{
+    BOOST_CHECK_EQUAL(slp1.h.size(), slp2.h.size());
+    DYNET_CHECK_EQUAL(slp1.all_h, slp2.all_h);
+}
+
+void equal_check(std::vector<ShadowLookupParameters>& vlsp1, std::vector<ShadowLookupParameters>& vlsp2)
+{
+    BOOST_CHECK_EQUAL(vlsp1.size(), vlsp2.size());
+    for (size_t i = 0 ; i < vlsp1.size() ; ++i)
+        DYNET_CHECK_EQUAL(vlsp1[i], vlsp2[i]);
+}
+
 template <class T>
 void equal_check(std::vector<T> & a,
                  std::vector<T> & b) {
