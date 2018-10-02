@@ -47,15 +47,6 @@ struct TrainerIOTest {
     for (auto x : av) free(x);
   }
 
-  template <class T>
-  std::string print_vec(const std::vector<T> vec) {
-    ostringstream oss;
-    if(vec.size()) oss << vec[0];
-    for(size_t i = 1; i < vec.size(); i++)
-      oss << ' ' << vec[i];
-    return oss.str();
-  }
-
     Parameter build_pc(ParameterCollection& pc)
     {
         auto p = pc.add_parameters({3});
@@ -81,7 +72,7 @@ struct TrainerIOTest {
         return loss;
     }
 
-  std::vector<float> ones_vals, param_vals, param2_vals;
+  std::vector<float> ones_vals, param_vals;
   std::vector<char*> av;
 };
 
