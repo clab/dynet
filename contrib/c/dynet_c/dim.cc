@@ -20,7 +20,7 @@ DYNET_C_STATUS dynetCreateDimWithDimensions(
     const uint32_t *dims, size_t n, dynetDim_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(dims);
   DYNET_C_CHECK_NOT_NULL(newobj);
-  *newobj = to_c_ptr(new dynet::Dim(std::vector<int64_t>(dims, dims + n)));
+  *newobj = to_c_ptr(new dynet::Dim(std::vector<long>(dims, dims + n)));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -29,7 +29,7 @@ DYNET_C_STATUS dynetCreateDimWithDimensionsAndBatch(
   DYNET_C_CHECK_NOT_NULL(dims);
   DYNET_C_CHECK_NOT_NULL(newobj);
   *newobj = to_c_ptr(
-      new dynet::Dim(std::vector<int64_t>(dims, dims + n), batch));
+      new dynet::Dim(std::vector<long>(dims, dims + n), batch));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
