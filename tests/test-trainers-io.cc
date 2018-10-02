@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE(name) {                                    \
     /* do a second update and check that the loss where different */ \
     /* i.e. that the params of the model are actually different */ \
     auto loss2 = optimize(p, trainer);                          \
-    BOOST_TEST(loss1 != loss2, TOL);                            \
+    BOOST_CHECK(!(abs(loss1 - loss2)/abs(loss1) <= TOL && abs(loss1 - loss2)/abs(loss2) <= TOL)); \
     /*create a new model, load the save state+trainer params, */ \
     /* do one update and check that everything match */         \
     ParameterCollection m2;                                     \
