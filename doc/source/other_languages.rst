@@ -4,6 +4,11 @@ Installing/Using in Other Languages
 DyNet mainly supports the C++ and Python bindings, but there are also bindings for
 other languages that have been contributed by the community.
 
+C APIs
+----------
+
+DyNet provides the `C APIs <https://github.com/clab/dynet/tree/master/contrib/c>` that can be used to build bindings for other languages. Please see the README linked above for details.
+
 Scala/Java
 ----------
 
