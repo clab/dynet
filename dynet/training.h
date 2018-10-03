@@ -13,6 +13,7 @@
 #define DYNET_TRAINING_H_
 
 #include <vector>
+#include <iostream>
 
 #include "dynet/model.h"
 #include "dynet/shadow-params.h"
@@ -84,6 +85,31 @@ struct Trainer {
    * \param learning_rate New learning rate
    */
   void restart(real lr);
+
+  /**
+   * @brief Save the optimizer state
+   * @details Write all hyperparameters, momentum values and assimilate (if applicable) to stream.
+   *
+   * \param os Output stream
+   */
+  virtual void save(std::ostream& os);
+
+  /**
+   * @brief Load the optimizer state
+   * @details Read all hyperparameters, momentum values and assimilate (if applicable) from stream.
+   *
+   * \param os Input stream
+   */
+  virtual void populate(std::istream& is);
+
+  /**
+   * @brief Load the optimizer state
+   * @details Read all hyperparameters, momentum values and assimilate (if applicable) from stream.
+   *
+   * \param os Input stream
+   * \param lr New learning rate
+   */
+  void populate(std::istream& is, real lr);
 
   /**
    * \brief Clip gradient
@@ -198,6 +224,7 @@ struct SimpleSGDTrainer : public Trainer {
    */
   explicit SimpleSGDTrainer(ParameterCollection& m, real learning_rate = 0.1) : Trainer(m, learning_rate) {}
   void restart() override {};
+
   using Trainer::restart;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
@@ -240,6 +267,7 @@ struct CyclicalSGDTrainer : public Trainer {
    */
   explicit CyclicalSGDTrainer(ParameterCollection& m, float learning_rate_min = 0.01, float learning_rate_max = 0.1, float step_size = 2000, float gamma = 1.0, float edecay = 0.0) : Trainer(m, learning_rate_min), e_min(learning_rate_min), e_max(learning_rate_max), step_size(step_size), gamma(gamma), it(0) {}
   void restart() override {};
+
   using Trainer::restart;
   void update() override {
     Trainer::update();
@@ -287,6 +315,10 @@ struct MomentumSGDTrainer : public Trainer {
   void restart() override;
   using Trainer::restart;
 
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
+
   // the following represent the current velocity
   // The shadow parameters are made public for testing, ideally they shouldn't be
   std::vector<ShadowParameters> vp;
@@ -325,6 +357,10 @@ struct AdagradTrainer : public Trainer {
 
   void restart() override;
   using Trainer::restart;
+
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -362,6 +398,10 @@ struct AdadeltaTrainer : public Trainer {
 
   void restart() override;
   using Trainer::restart;
+
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -400,6 +440,10 @@ struct RMSPropTrainer : public Trainer {
 
   void restart() override;
   using Trainer::restart;
+
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -439,6 +483,9 @@ struct AdamTrainer : public Trainer {
   void restart() override;
   using Trainer::restart;
 
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -482,6 +529,9 @@ struct AmsgradTrainer : public Trainer {
   void restart() override;
   using Trainer::restart;
 
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -530,6 +580,10 @@ struct EGTrainer : public Trainer {
 
   void restart() override;
   using Trainer::restart;
+
+  void save(std::ostream& os) override;
+  void populate(std::istream& is) override;
+  using Trainer::populate;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
