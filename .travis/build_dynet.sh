@@ -10,7 +10,7 @@ fi
 if [[ "$PYTHON_INSTALL" == manual ]]; then
   mkdir build
   cd build
-  cmake .. $BACKEND_OPTION -DEIGEN3_INCLUDE_DIR="$EIGEN3_INCLUDE_DIR" -DENABLE_BOOST=ON -DENABLE_CPP_EXAMPLES=ON -DPYTHON=$(which python) -DCMAKE_INSTALL_PREFIX=$(dirname $(which python))/..
+  cmake .. $BACKEND_OPTION -DEIGEN3_INCLUDE_DIR="$EIGEN3_INCLUDE_DIR" -DENABLE_BOOST=ON -DENABLE_CPP_EXAMPLES=ON -DENABLE_C=ON -DPYTHON=$(which python) -DCMAKE_INSTALL_PREFIX=$(dirname $(which python))/..
 else  # pip
   .travis/fix_version.sh
   if [[ "$TRAVIS_OS_NAME" == linux ]]; then
