@@ -322,7 +322,7 @@ to use them.
 Using the GPU from Python
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The preferred way to make dynet use the GPU under Python is to import
+The preferred way to make DyNet use the GPU under Python is to import
 dynet as usual:
 
 ::

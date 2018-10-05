@@ -4,7 +4,7 @@ Core functionalities
 Computation Graph
 ~~~~~~~~~~~~~~~~~
 
-The ComputationGraph is the workhorse of dynet. From the `Dynet technical report <https://arxiv.org/abs/1701.03980>`_ :
+The ComputationGraph is the workhorse of DyNet. From the `DyNet technical report <https://arxiv.org/abs/1701.03980>`_ :
 
     [The] computation graph represents symbolic computation, and the results of the computation are evaluated lazily: the computation is only performed once the user explicitly asks for it (at which point a “forward” computation is triggered).
     Expressions that evaluate to scalars (i.e. loss values) can also be used to trigger a “backward” computation, computing the gradients of the computation with respect to the parameters.
@@ -47,7 +47,7 @@ Tensor objects provide a bridge between C++ data structures and Eigen Tensors fo
 
 Concretely, as an end user you will obtain a tensor object after calling ``.value()`` on an expression. You can then use functions described below to convert these tensors to ``float`` s, arrays of ``float`` s, to save and load the values, etc...
 
-Conversely, when implementing low level nodes (e.g. for new operations), you will need to retrieve Eigen tensors from dynet tensors in order to perform efficient computation.
+Conversely, when implementing low level nodes (e.g. for new operations), you will need to retrieve Eigen tensors from DyNet tensors in order to perform efficient computation.
 
 .. doxygengroup:: tensor
     :members:
