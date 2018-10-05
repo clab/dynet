@@ -232,7 +232,7 @@ in the generated solution**
 
 The Windows build also supports MKL and CUDA with the latest version of Eigen. If you build with 
 CUDA and/or cuDNN, ensure their respective DLLs are in your PATH environment variable when you use
-dynet (whether in native C++ or Python). For example:
+DyNet (whether in native C++ or Python). For example:
 
 ::
 

@@ -1,6 +1,6 @@
 .. _contributing:
 
-Contributing to Dynet
+Contributing to DyNet
 ====================
 
 DyNet is an open source project that is only possible because of contributions from users like you!

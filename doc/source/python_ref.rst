@@ -2,7 +2,7 @@ Python Reference Manual
 =======================
 
 
-Dynet global parameters
+DyNet global parameters
 -----------------------
 
 DynetParams
