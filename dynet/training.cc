@@ -86,9 +86,11 @@ void Trainer::update() {
 
   // Allocate if necessary
   if(aux_allocated < params.size()) {
+    allocate_shadow_parameters(*model, ema_p.size(), ema_p);
     aux_allocated = alloc_impl();
   }
   if(aux_allocated_lookup < lparams.size()) {
+    allocate_shadow_lookup_parameters(*model, ema_lp.size(), ema_lp);
     aux_allocated_lookup = alloc_lookup_impl();
   }
 
@@ -112,6 +114,26 @@ void Trainer::update() {
       p->clear();
     }
   }
+
+  // EMA
+  if (ema() && static_cast<unsigned int>(updates) % ema_update_freq == 0u)
+  {
+    swap_params_to_weights();
+    for(size_t i = 0; i < params.size(); ++i)
+    {
+        Tensor& weights = params[i]->values;
+        Tensor& ema = ema_p[i].h;
+        update_ema_rule(&ema, &weights);
+    }
+    for(size_t i = 0; i < lparams.size(); ++i)
+    {
+        Tensor& weights = lparams[i]->all_values;
+        Tensor& ema = ema_lp[i].all_h;
+        update_ema_rule(&ema, &weights);
+    }
+    ++ ema_updates;
+  }
+
   ++updates;
   ++updates_since_status;
 
@@ -125,8 +147,207 @@ void Trainer::restart(real lr) {
     this->learning_rate = lr;
     this->restart();
 }
+#endif
+
+// EMA
+
+#ifdef __CUDACC__
+    template void Trainer::update_ema_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ema, Tensor* p);
+    template void Trainer::swap_params_to_ema_rule_dev<Device_GPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+    template void Trainer::swap_params_to_weights_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* p, Tensor* mem);
+#elif defined(HAVE_CUDA)
+    extern template void Trainer::update_ema_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ema, Tensor* p);
+    template void Trainer::update_ema_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* ema, Tensor* p);
+    void Trainer::update_ema_rule(Tensor* ema, Tensor* p)
+    {
+        if(ema->device->type == DeviceType::CPU)
+            update_ema_rule_dev(*(Device_CPU*)ema->device, ema, p);
+        else if(ema->device->type == DeviceType::GPU)
+        {
+            cudaSetDevice(((Device_GPU*) ema->device)->cuda_device_id);
+            update_rule_rule_dev(*(Device_GPU*) ema->device, ema, p);
+        }
+        else
+            throw std::runtime_error("Bad device in MyTrainer::update_ema_rule");
+    }
+
+    extern template void Trainer::swap_params_to_ema_rule_dev<Device_GPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+    template void Trainer::swap_params_to_ema_rule_dev<Device_CPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+    void Trainer::swap_params_to_ema_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema)
+    {
+        if(ema->device->type == DeviceType::CPU)
+            swap_params_to_ema_rule_dev(*(Device_CPU*)ema->device, bias_correction, save_weights, p, mem, ema);
+        else if(ema->device->type == DeviceType::GPU)
+        {
+            cudaSetDevice(((Device_GPU*) ema->device)->cuda_device_id);
+            swap_params_to_ema_rule_dev(*(Device_GPU*)ema->device, bias_correction, save_weights, p, mem, ema);
+        }
+        else
+            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_ema_rule");
+    }
 
 
+    extern template void Trainer::swap_params_to_weights_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* p, Tensor* mem);
+    template void Trainer::swap_params_to_weights_rule_dev<Device_CPU>(const Device_GPU& dev, Tensor* p, Tensor* mem);
+    void Trainer::swap_params_to_weights_rule(const Device_GPU& dev, Tensor* p, Tensor* mem)
+    {
+        if(p->device->type == DeviceType::CPU)
+            swap_params_to_weights_rule_dev(*(Device_CPU*)ema->device, p, mem);
+        else if(ema->device->type == DeviceType::GPU)
+        {
+            cudaSetDevice(((Device_GPU*) p->device)->cuda_device_id);
+            swap_params_to_weights_rule_dev(*(Device_GPU*)p->device, p, mem);
+        }
+        else
+            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_weights_rule");
+    }
+#else
+    template void Trainer::update_ema_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* ema, Tensor* p);
+    void Trainer::update_ema_rule(Tensor* ema, Tensor* p)
+    {
+        if(ema->device->type == DeviceType::CPU)
+            update_ema_rule_dev(*(Device_CPU*) ema->device, ema, p);
+        else
+            throw std::runtime_error("Bad device in MyTrainer::update_ema_rule");
+    }
+
+    template void Trainer::swap_params_to_ema_rule_dev<Device_CPU>(const Device_CPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+    void Trainer::swap_params_to_ema_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema)
+    {
+        if(ema->device->type == DeviceType::CPU)
+            swap_params_to_ema_rule_dev(*(Device_CPU*)ema->device, bias_correction, save_weights, p, mem, ema);
+        else
+            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_ema_rule");
+    }
+
+    template void Trainer::swap_params_to_weights_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* p, Tensor* mem);
+    void Trainer::swap_params_to_weights_rule(Tensor* p, Tensor* mem)
+    {
+        if(p->device->type == DeviceType::CPU)
+            swap_params_to_weights_rule_dev(*(Device_CPU*) p->device, p, mem);
+        else
+            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_weights_rule");
+    }
+#endif
+
+template<class MyDevice>
+void Trainer::update_ema_rule_dev(const MyDevice& dev, Tensor* ema, Tensor* p)
+{
+    tvec(*ema).device(*dev.edevice) = ema_beta * tvec(*ema) + (1-ema_beta) * tvec(*p);
+}
+
+template<class MyDevice>
+void Trainer::swap_params_to_ema_rule_dev(
+    const MyDevice& dev,
+    bool bias_correction, bool save_weights,
+    Tensor* p, Tensor* mem, Tensor* ema
+)
+{
+    if (save_weights)
+        tvec(*mem).device(*dev.edevice) = tvec(*p);
+
+    if (bias_correction)
+    {
+        const real pow_beta = pow(ema_beta, ema_updates);
+        const real scale = 1.f / (1.f - pow_beta);
+        tvec(*p).device(*dev.edevice) = scale * tvec(*ema);
+    }
+    else
+        tvec(*p).device(*dev.edevice) = tvec(*ema);
+}
+
+template<class MyDevice>
+void Trainer::swap_params_to_weights_rule_dev(const MyDevice& dev, Tensor* p, Tensor* mem)
+{
+    tvec(*p).device(*dev.edevice) = tvec(*mem);
+}
+
+#ifndef __CUDACC__
+
+bool Trainer::ema()
+{
+    return ema_beta > 0.f;
+}
+
+void Trainer::ema(float beta, unsigned update_freq)
+{
+    DYNET_ASSERT(updates == 0u, "This function must be called before any update");
+    DYNET_ASSERT(update_freq > 0u, "The update frequency cannot be null");
+
+    ema_beta = beta;
+    ema_update_freq = update_freq;
+}
+
+void Trainer::swap_params_to_ema(bool bias_correction, bool save_weights)
+{
+    DYNET_ASSERT(ema(), "EMA is not enabled")
+    DYNET_ASSERT(ema_updates > 0u, "EMA has not been set yet")
+
+    if (ema_params_swapped)
+        return; // nothing to do
+    ema_params_swapped = true;
+    ema_params_saved = save_weights;
+
+    const auto& params = model->parameters_list();
+    const auto& lparams = model->lookup_parameters_list();
+
+    // check memory (shadow params are automatically initialized to zero)
+    if (ema_p.size() < params.size())
+        allocate_shadow_parameters(*model, ema_p.size(), ema_p);
+    if (ema_lp.size() < lparams.size())
+        allocate_shadow_lookup_parameters(*model, ema_lp.size(), ema_lp);
+
+    if (save_weights)
+    {
+        if (ema_saved_p.size() < params.size())
+            allocate_shadow_parameters(*model, ema_saved_p.size(), ema_saved_p);
+        if (ema_saved_lp.size() < lparams.size())
+            allocate_shadow_lookup_parameters(*model, ema_saved_lp.size(), ema_saved_lp);
+    }
+
+    for(size_t i = 0; i < params.size(); ++i)
+    {
+        Tensor& weights = params[i]->values;
+        Tensor& mem = ema_saved_p[i].h;
+        Tensor& ema = ema_p[i].h;
+
+        swap_params_to_ema_rule(bias_correction, save_weights, &weights, &mem, &ema);
+    }
+    for(size_t i = 0; i < lparams.size(); ++i)
+    {
+        Tensor& weights = lparams[i]->all_values;
+        Tensor& mem = ema_saved_lp[i].all_h;
+        Tensor& ema = ema_lp[i].all_h;
+
+        swap_params_to_ema_rule(bias_correction, save_weights, &weights, &mem, &ema);
+    }
+}
+
+void Trainer::swap_params_to_weights()
+{
+    DYNET_ASSERT(ema_params_swapped, "Cannot swap params to weights.")
+    DYNET_ASSERT(ema_params_saved, "Weights have not been save.")
+
+    const auto& params = model->parameters_list();
+    const auto& lparams = model->lookup_parameters_list();
+
+    // if the number of the parameters has changed,
+    // they are ignored.
+    // Setting them to 0 would not be a good strategy
+    // (i.e. we want to keep their init value, e.g. glorot)
+    for(size_t i = 0; i < ema_saved_p.size(); ++i)
+    {
+        Tensor& weights = params[i]->values;
+        Tensor& mem = ema_saved_p[i].h;
+        swap_params_to_weights_rule(&weights, &mem);
+    }
+    for(size_t i = 0; i < ema_saved_lp.size(); ++i)
+    {
+        Tensor& weights = lparams[i]->all_values;
+        Tensor& mem = ema_saved_lp[i].all_h;
+        swap_params_to_weights_rule(&weights, &mem);
+    }
+}
 #endif
 
 // --- SimpleSGDTrainer

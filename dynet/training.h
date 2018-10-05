@@ -42,8 +42,23 @@ struct Trainer {
    * \param learning_rate Initial learning rate
    */
   explicit Trainer(ParameterCollection& m, real learning_rate) :
-    learning_rate(learning_rate), clipping_enabled(true), clip_threshold(5),
-    clips(), updates(), clips_since_status(), updates_since_status(), sparse_updates_enabled(true), aux_allocated(0), aux_allocated_lookup(0), model(&m) {}
+    learning_rate(learning_rate),
+    clipping_enabled(true),
+    clip_threshold(5),
+    clips(),
+    updates(),
+    clips_since_status(),
+    updates_since_status(),
+    sparse_updates_enabled(true),
+    aux_allocated(0),
+    aux_allocated_lookup(0),
+    ema_beta(0.f),
+    ema_params_swapped(false),
+    ema_params_saved(false),
+    ema_update_freq(1u),
+    ema_updates(0u),
+    model(&m)
+  {}
   virtual ~Trainer();
 
   /**
@@ -124,6 +139,49 @@ struct Trainer {
   unsigned aux_allocated;
   unsigned aux_allocated_lookup;
 
+  // Exponential Moving Average
+  real ema_beta; // 
+  bool ema_params_swapped; // true is params and EMA have been swapped
+  bool ema_params_saved; // true if params have been saved when swapping
+  unsigned ema_update_freq; // the EMA will be updated each ema_update_frequency updates
+  unsigned ema_updates; // number of times the EMA has been updated, used for bias correction
+  // Shadow parameters used for EMA 
+  std::vector<ShadowParameters> ema_p;
+  std::vector<ShadowLookupParameters> ema_lp;
+  std::vector<ShadowParameters> ema_saved_p;
+  std::vector<ShadowLookupParameters> ema_saved_lp;
+
+  /**
+   * Whether the exponential moving average is enabled
+   *
+   * \return True if the Exponential Moving Average is enabled
+   */
+  bool ema();
+
+  /**
+   * Enable the computation of the exponential moving average of parameters.
+   * \details This function must be called before any update.
+   *
+   * \param beta The degree of weighting decrease
+   * \param update_freq Frequency of update of the EMA
+   */
+  void ema(float beta, unsigned update_freq=1u);
+
+  /**
+   * Set the network parameters to their exponential moving average
+   * \details If the current weights are not save, the optimizer cannot be used
+   *          anymore (e.g. the update() function will throw an exception)
+   *
+   * \param bias_bias_correction Whether to apply bias correction
+   * \param save_weights Whether to save the current weights.
+   */
+    void swap_params_to_ema(bool bias_correction=false, bool save_weights=true);
+
+  /**
+   * Restore the parameters of the model if they are set to their EMA
+   */
+  void swap_params_to_weights();
+
   void status() {
     std::cerr << "[lr=" << learning_rate << " clips=" << clips_since_status << " updates=" << updates_since_status << "] ";
     updates_since_status = clips_since_status = 0;
@@ -173,6 +231,14 @@ protected:
    */
   virtual void update_lookup_params(real gscale, size_t idx) = 0;
 
+  template <class MyDevice> void update_ema_rule_dev(const MyDevice& dev, Tensor* ema, Tensor* p);
+  void update_ema_rule(Tensor* ema, Tensor* p);
+
+  template <class MyDevice> void swap_params_to_ema_rule_dev(const MyDevice& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+  void swap_params_to_ema_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+
+  template <class MyDevice> void swap_params_to_weights_rule_dev(const MyDevice& dev, Tensor* p, Tensor* mem);
+  void swap_params_to_weights_rule(Tensor* p, Tensor* mem);
 };
 
 /**
