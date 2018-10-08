@@ -257,44 +257,6 @@ void Trainer::restart(real lr) {
     this->learning_rate = lr;
     this->restart();
 }
-#endif
-
-// EMA
-
-#ifdef __CUDACC__
-    template void Trainer::update_ema_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ema, Tensor* p);
-    template void Trainer::swap_params_to_ema_rule_dev<Device_GPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
-    template void Trainer::swap_params_to_weights_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* p, Tensor* mem);
-#elif defined(HAVE_CUDA)
-    extern template void Trainer::update_ema_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ema, Tensor* p);
-    template void Trainer::update_ema_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* ema, Tensor* p);
-    void Trainer::update_ema_rule(Tensor* ema, Tensor* p)
-    {
-        if(ema->device->type == DeviceType::CPU)
-            update_ema_rule_dev(*(Device_CPU*)ema->device, ema, p);
-        else if(ema->device->type == DeviceType::GPU)
-        {
-            cudaSetDevice(((Device_GPU*) ema->device)->cuda_device_id);
-            update_rule_rule_dev(*(Device_GPU*) ema->device, ema, p);
-        }
-        else
-            throw std::runtime_error("Bad device in MyTrainer::update_ema_rule");
-    }
-
-    extern template void Trainer::swap_params_to_ema_rule_dev<Device_GPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
-    template void Trainer::swap_params_to_ema_rule_dev<Device_CPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
-    void Trainer::swap_params_to_ema_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema)
-    {
-        if(ema->device->type == DeviceType::CPU)
-            swap_params_to_ema_rule_dev(*(Device_CPU*)ema->device, bias_correction, save_weights, p, mem, ema);
-        else if(ema->device->type == DeviceType::GPU)
-        {
-            cudaSetDevice(((Device_GPU*) ema->device)->cuda_device_id);
-            swap_params_to_ema_rule_dev(*(Device_GPU*)ema->device, bias_correction, save_weights, p, mem, ema);
-        }
-        else
-            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_ema_rule");
-    }
 
 void Trainer::save(std::ostream& os)
 {
@@ -338,6 +300,45 @@ void Trainer::populate(std::istream& is, real lr)
     this->populate(is);
     this->learning_rate = lr;
 }
+
+#endif
+
+// EMA
+
+#ifdef __CUDACC__
+    template void Trainer::update_ema_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ema, Tensor* p);
+    template void Trainer::swap_params_to_ema_rule_dev<Device_GPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+    template void Trainer::swap_params_to_weights_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* p, Tensor* mem);
+#elif defined(HAVE_CUDA)
+    extern template void Trainer::update_ema_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ema, Tensor* p);
+    template void Trainer::update_ema_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* ema, Tensor* p);
+    void Trainer::update_ema_rule(Tensor* ema, Tensor* p)
+    {
+        if(ema->device->type == DeviceType::CPU)
+            update_ema_rule_dev(*(Device_CPU*)ema->device, ema, p);
+        else if(ema->device->type == DeviceType::GPU)
+        {
+            cudaSetDevice(((Device_GPU*) ema->device)->cuda_device_id);
+            update_rule_rule_dev(*(Device_GPU*) ema->device, ema, p);
+        }
+        else
+            throw std::runtime_error("Bad device in MyTrainer::update_ema_rule");
+    }
+
+    extern template void Trainer::swap_params_to_ema_rule_dev<Device_GPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+    template void Trainer::swap_params_to_ema_rule_dev<Device_CPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+    void Trainer::swap_params_to_ema_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema)
+    {
+        if(ema->device->type == DeviceType::CPU)
+            swap_params_to_ema_rule_dev(*(Device_CPU*)ema->device, bias_correction, save_weights, p, mem, ema);
+        else if(ema->device->type == DeviceType::GPU)
+        {
+            cudaSetDevice(((Device_GPU*) ema->device)->cuda_device_id);
+            swap_params_to_ema_rule_dev(*(Device_GPU*)ema->device, bias_correction, save_weights, p, mem, ema);
+        }
+        else
+            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_ema_rule");
+    }
 
 
     extern template void Trainer::swap_params_to_weights_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* p, Tensor* mem);
