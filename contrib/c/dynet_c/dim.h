@@ -37,6 +37,15 @@ DYNET_C_API DYNET_C_STATUS dynetCreateDimWithDimensionsAndBatch(
     const uint32_t *dims, size_t n, uint32_t batch, dynetDim_t **newobj);
 
 /**
+ * Creates a clone of the existing Dim object.
+ * @param src Pointer to a source Dim.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCloneDim(
+    const dynetDim_t *src, dynetDim_t **newobj);
+
+/**
  * Deletes the Dim object.
  * @param shape Pointer of a handler.
  * @return Status code.
@@ -50,6 +59,15 @@ DYNET_C_API DYNET_C_STATUS dynetDeleteDim(dynetDim_t *dim);
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetGetDimTotalSize(
+    const dynetDim_t *dim, uint32_t *retval);
+
+/**
+ * Returns the number of elements within a batch.
+ * @param dim Pointer of a handler.
+ * @param retval Pointer to receive the product of all dimensions of the dim.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetGetDimBatchSize(
     const dynetDim_t *dim, uint32_t *retval);
 
 /**
@@ -142,5 +160,37 @@ DYNET_C_API DYNET_C_STATUS dynetSetDimDimensionSize(
  */
 DYNET_C_API DYNET_C_STATUS dynetTransposeDim(
     const dynetDim_t *dim, dynetDim_t **new_dim);
+
+/**
+ * Compares a dim and another dim.
+ * @param dim Pointer of a handler.
+ * @param other Dim object to compare.
+ * @param retval Pointer to receive a result: true if `dim` and `other` are
+ *               same, false otherwise.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetIsDimEqualTo(
+    const dynetDim_t *dim, const dynetDim_t *other, DYNET_C_BOOL *retval);
+
+/**
+ * Compares a dim and another dim.
+ * @param dim Pointer of a handler.
+ * @param other Dim object to compare.
+ * @param retval Pointer to receive a result: true if `dim` and `other` are not
+ *               same, false otherwise.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetIsNotDimEqualTo(
+    const dynetDim_t *dim, const dynetDim_t *other, DYNET_C_BOOL *retval);
+
+/**
+ * Returns a string representation of the dim.
+ * @param dim Pointer of a handler.
+ * @param retval Pointer to receive the encoded string.
+ * @param size Pointer to receive a length of the char sequence.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetRepresentDimAsString(
+    const dynetDim_t *dim, char *retval, size_t *size);
 
 #endif  // DYNET_C_DIM_H_
