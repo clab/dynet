@@ -23,3 +23,5 @@ pub use util::*;
 
 mod dim;
 pub use dim::Dim;
+mod init;
+pub use init::{initialize, reset_rng, DynetParams};
