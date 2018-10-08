@@ -16,7 +16,7 @@ macro_rules! impl_initializer {
     };
 }
 
-/// A implementation of `ParameterInit` trait that initializes parameters with samples from a
+/// An implementation of `ParameterInit` trait that initializes parameters with samples from a
 /// normal distribution.
 #[derive(Debug)]
 pub struct ParameterInitNormal {
@@ -51,7 +51,7 @@ impl Default for ParameterInitNormal {
     }
 }
 
-/// A implementation of `ParameterInit` trait that initializes parameters with samples from a
+/// An implementation of `ParameterInit` trait that initializes parameters with samples from a
 /// uniform distribution.
 #[derive(Debug)]
 pub struct ParameterInitUniform {
@@ -84,7 +84,7 @@ impl ParameterInitUniform {
     }
 }
 
-/// A implementation of `ParameterInit` trait that initializes parameters with a constant value.
+/// An implementation of `ParameterInit` trait that initializes parameters with a constant value.
 #[derive(Debug)]
 pub struct ParameterInitConst {
     inner: NonNull<dynet_sys::dynetParameterInit_t>,
@@ -103,7 +103,7 @@ impl ParameterInitConst {
     }
 }
 
-/// A implementation of `ParameterInit` trait that initializes parameters as the identity.
+/// An implementation of `ParameterInit` trait that initializes parameters as the identity.
 ///
 /// This will cause panics if used on non square matrices.
 #[derive(Debug)]
@@ -130,7 +130,7 @@ impl Default for ParameterInitIdentity {
     }
 }
 
-/// A implementation of `ParameterInit` trait that initializes parameters by the Glorot
+/// An implementation of `ParameterInit` trait that initializes parameters by the Glorot
 /// (uniform) initialization.
 ///
 /// This initializes parameters with the methods described in [Glorot, 2010](http://www.jmlr.org/proceedings/papers/v9/glorot10a/glorot10a.pdf?hc_location=ufi).
@@ -167,7 +167,7 @@ impl Default for ParameterInitGlorot {
     }
 }
 
-/// A implementation of `ParameterInit` trait that initializes parameters by the Saxe
+/// An implementation of `ParameterInit` trait that initializes parameters by the Saxe
 /// initialization.
 ///
 /// This initializes parameters with the methods described in [Saxe et al., 2014](https://arxiv.org/abs/1312.6120).
@@ -202,7 +202,7 @@ impl Default for ParameterInitSaxe {
     }
 }
 
-/// A implementation of `ParameterInit` trait that initializes parameters from a file.
+/// An implementation of `ParameterInit` trait that initializes parameters from a file.
 #[derive(Debug)]
 pub struct ParameterInitFromFile {
     inner: NonNull<dynet_sys::dynetParameterInit_t>,
@@ -225,7 +225,7 @@ impl ParameterInitFromFile {
     }
 }
 
-/// A implementation of `ParameterInit` trait that initializes parameters from a slice.
+/// An implementation of `ParameterInit` trait that initializes parameters from a slice.
 #[derive(Debug)]
 pub struct ParameterInitFromSlice {
     inner: NonNull<dynet_sys::dynetParameterInit_t>,
