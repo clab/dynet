@@ -696,7 +696,9 @@ void SparseLSTMBuilder::new_graph_impl(ComputationGraph& cg, bool update) {
   for (unsigned i = 0; i < layers; ++i) {
     auto& p = params[i];
     vector<Expression> vars;
-    for (unsigned j = 0; j < p.size(); ++j) { vars.push_back((update && j<=_BI) ? parameter(cg, p[j]) : const_parameter(cg, p[j])); }
+    vars.push_back(update ? cmult(parameter(cg, p[0]), const_parameter(cg, p[3])) : cmult(const_parameter(cg, p[0]), const_parameter(cg, p[3])));
+    vars.push_back(update ? cmult(parameter(cg, p[1]), const_parameter(cg, p[4])) : cmult(const_parameter(cg, p[1]), const_parameter(cg, p[4])));
+    vars.push_back(update ? parameter(cg, p[2]): const_parameter(cg, p[2]));
     param_vars.push_back(vars);
     if (ln_lstm){
       auto& ln_p = ln_params[i];
@@ -836,12 +838,11 @@ Expression SparseLSTMBuilder::add_input_impl(int prev, const Expression& x) {
       else
         tmp = vars[_BI] + layer_norm(vars[_X2I] * in, ln_vars[LN_GX], ln_vars[LN_BX]);
     }else{
-      if (has_prev_state)
-        tmp = affine_transform({vars[_BI], cmult(vars[_X2I], vars[_BI+1]), in, cmult(vars[_H2I], vars[_BI+2]), i_h_tm1});
-        //tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
-      else
-        tmp = affine_transform({vars[_BI], cmult(vars[_X2I], vars[_BI+1]), in});
-        //tmp = affine_transform({vars[_BI], vars[_X2I], in});
+      if (has_prev_state){
+        tmp = affine_transform({vars[_BI], vars[_X2I], in, vars[_H2I], i_h_tm1});
+      }else{
+        tmp = affine_transform({vars[_BI], vars[_X2I], in});
+      }
     }
     i_ait = pick_range(tmp, 0, hid);
     i_aft = pick_range(tmp, hid, hid * 2);

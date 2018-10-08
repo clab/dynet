@@ -197,6 +197,11 @@ if(PYTHON)
   add_subdirectory(python)
 endif(PYTHON)
 
+if(ENABLE_C)
+  message("-- Enabling C")
+  add_subdirectory(contrib/c)
+endif(ENABLE_C)
+
 if(ENABLE_SWIG)
   message("-- Enabling SWIG")
   add_subdirectory(contrib/swig)

@@ -1,7 +1,7 @@
 Documentation
 =============
 
-Dynet uses Doxygen_ for commenting the code and Sphinx_ for the general documentation. 
+DyNet uses Doxygen_ for commenting the code and Sphinx_ for the general documentation. 
 
 If you're only documenting features you don't need to concern yourself with Sphinx, your doxygen comments will be integrated in the documentation automatically.
 

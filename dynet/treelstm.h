@@ -25,10 +25,10 @@ public:
 
   /**
    *
-   * \brief add input with given children at position id \details if
-   * you did not call `set_num_elems` before, each successive id must
-   * be the previous id plus one and the children must all be smaller
-   * than id.
+   * \brief add input with given children at position id
+   * \details if you did not call `set_num_elems` before, each successive id
+   * must be the previous id plus one and the children must all be smaller than
+   * id.
    * If you used `set_num_elems`, id must be smaller than the number
    * of elements and the children must have been already provided.
    *

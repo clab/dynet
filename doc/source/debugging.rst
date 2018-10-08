@@ -17,7 +17,7 @@ It is possible to create visualizations of the computation graph by calling the 
 Immediate Computation
 ~~~~~~~~~~~~~~~~~~~~~
 
-In general, DyNet performs symbolic execution. This means that you first create the computation graph, then the computation will actually be performed when you request a value using functions such as ``forward()`` or ``value()``. However, if an error occurs during calculation, this can be hard to debug because the error doesn't occur immediately where the offending graph node is created. To make debugging simpler, you can use immediate computing mode in dynet. In this mode, every computation gets executed immediately, just like imperative programming, so that you can find exactly where goes wrong. 
+In general, DyNet performs symbolic execution. This means that you first create the computation graph, then the computation will actually be performed when you request a value using functions such as ``forward()`` or ``value()``. However, if an error occurs during calculation, this can be hard to debug because the error doesn't occur immediately where the offending graph node is created. To make debugging simpler, you can use immediate computing mode in DyNet. In this mode, every computation gets executed immediately, just like imperative programming, so that you can find exactly where goes wrong. 
 
 In C++, you can switch to the immediate computing mode by calling ComputationGraph::set_immediate_compute as follows:
 
@@ -26,7 +26,7 @@ In C++, you can switch to the immediate computing mode by calling ComputationGra
     ComputationGraph cg;
     cg.set_immediate_compute(true);
 
-Further, dynet can automatically check validity of your model, i.e., detecting Inf/NaN, if it is in immediate computing mode. To activate checking validity, you can add the following code after switching to immediate computing mode.
+Further, DyNet can automatically check validity of your model, i.e., detecting Inf/NaN, if it is in immediate computing mode. To activate checking validity, you can add the following code after switching to immediate computing mode.
 
 .. code:: cpp
 
