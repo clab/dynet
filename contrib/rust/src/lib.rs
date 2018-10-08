@@ -21,6 +21,8 @@ pub(crate) use status::*;
 mod util;
 pub use util::*;
 
+mod device;
+pub use device::Device;
 mod dim;
 pub use dim::Dim;
 mod init;
