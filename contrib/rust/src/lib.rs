@@ -27,6 +27,8 @@ mod dim;
 pub use dim::Dim;
 mod init;
 pub use init::{initialize, reset_rng, DynetParams};
+mod model;
+pub use model::{LookupParameter, Parameter, ParameterCollection};
 mod param_init;
 pub use param_init::*;
 mod tensor;

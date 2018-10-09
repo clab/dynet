@@ -17,7 +17,7 @@ use super::{ApiResult, Dim, Result, Wrap};
 /// let mut m = ParameterCollection::new();
 ///
 /// let initializer = ParameterInitGlorot::default();
-/// let mut p_W = m.add_parameters([8, 2], &initializer, "");
+/// let mut p_W = m.add_parameters([8, 2], &initializer);
 /// let t_W = p_W.values();
 /// println!("parameter W: dim={}, values=\n[\n{}\n]", t_W.dim(), t_W);
 /// let v_W = t_W.as_vector();
