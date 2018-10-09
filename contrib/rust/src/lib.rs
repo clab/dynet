@@ -29,3 +29,5 @@ mod init;
 pub use init::{initialize, reset_rng, DynetParams};
 mod param_init;
 pub use param_init::*;
+mod tensor;
+pub use tensor::Tensor;
