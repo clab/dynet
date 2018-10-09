@@ -183,11 +183,14 @@ int main(int argc, char** argv) {
 
   ParameterCollection model;
   bool use_momentum = true;
+  bool use_ema = true;
   std::unique_ptr<Trainer> trainer;
   if (use_momentum)
     trainer.reset(new MomentumSGDTrainer(model));
   else
     trainer.reset(new SimpleSGDTrainer(model));
+  if (use_ema)
+    trainer->ema(0.999);
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
