@@ -56,7 +56,7 @@ impl Dim {
                 x.as_ptr(),
                 x.len(),
                 b,
-                &mut dim_ptr
+                &mut dim_ptr,
             ));
             Dim::from_raw(dim_ptr, true)
         }

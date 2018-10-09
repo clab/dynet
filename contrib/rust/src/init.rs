@@ -48,7 +48,7 @@ impl DynetParams {
                 arg_ptrs.len() as i32,
                 arg_ptrs.as_mut_ptr(),
                 enabled_shared_parameters as u32,
-                &mut params_ptr
+                &mut params_ptr,
             ));
             DynetParams::from_raw(params_ptr, true)
         }
@@ -61,7 +61,7 @@ impl DynetParams {
         unsafe {
             check_api_status!(dynet_sys::dynetSetDynetParamsRandomSeed(
                 self.as_mut_ptr(),
-                seed
+                seed,
             ));
         }
         self
@@ -75,7 +75,7 @@ impl DynetParams {
             let mem_descriptor_c = CString::new(mem_descriptor).unwrap();
             check_api_status!(dynet_sys::dynetSetDynetParamsMemDescriptor(
                 self.as_mut_ptr(),
-                mem_descriptor_c.as_ptr()
+                mem_descriptor_c.as_ptr(),
             ));
         }
         self
@@ -88,7 +88,7 @@ impl DynetParams {
         unsafe {
             check_api_status!(dynet_sys::dynetSetDynetParamsWeightDecay(
                 self.as_mut_ptr(),
-                weight_decay
+                weight_decay,
             ));
         }
         self
@@ -101,7 +101,7 @@ impl DynetParams {
         unsafe {
             check_api_status!(dynet_sys::dynetSetDynetParamsAutobatch(
                 self.as_mut_ptr(),
-                autobatch
+                autobatch,
             ));
         }
         self
@@ -114,7 +114,7 @@ impl DynetParams {
         unsafe {
             check_api_status!(dynet_sys::dynetSetDynetParamsProfiling(
                 self.as_mut_ptr(),
-                profiling
+                profiling,
             ));
         }
         self
@@ -127,7 +127,7 @@ impl DynetParams {
         unsafe {
             check_api_status!(dynet_sys::dynetSetDynetParamsSharedParameters(
                 self.as_mut_ptr(),
-                enabled as u32
+                enabled as u32,
             ));
         }
         self
@@ -140,7 +140,7 @@ impl DynetParams {
         unsafe {
             check_api_status!(dynet_sys::dynetSetDynetParamsRequestedGpus(
                 self.as_mut_ptr(),
-                requested_gpus
+                requested_gpus,
             ));
         }
         self
