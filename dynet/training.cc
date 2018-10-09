@@ -196,11 +196,9 @@ void Trainer::update() {
 
   // Allocate if necessary
   if(aux_allocated < params.size()) {
-    allocate_shadow_parameters(*model, ema_p.size(), ema_p);
     aux_allocated = alloc_impl();
   }
   if(aux_allocated_lookup < lparams.size()) {
-    allocate_shadow_lookup_parameters(*model, ema_lp.size(), ema_lp);
     aux_allocated_lookup = alloc_lookup_impl();
   }
 
@@ -228,6 +226,17 @@ void Trainer::update() {
   // EMA
   if (ema() && static_cast<unsigned int>(updates) % ema_update_freq == 0u)
   {
+    if (ema_aux_allocated < params.size())
+    {
+        allocate_shadow_parameters(*model, ema_aux_allocated, ema_p);
+        ema_aux_allocated = ema_p.size();
+    }
+    if (ema_aux_allocated_lookup < lparams.size())
+    {
+        allocate_shadow_lookup_parameters(*model, ema_aux_allocated_lookup, ema_lp);
+        ema_aux_allocated_lookup = ema_lp.size();
+    }
+
     swap_params_to_weights();
     for(size_t i = 0; i < params.size(); ++i)
     {
@@ -260,6 +269,7 @@ void Trainer::restart(real lr) {
 
 void Trainer::save(std::ostream& os)
 {
+    DYNET_ASSERT(!ema_params_swapped, "Trainer cannot be saved: parameters are swapped with their exponential moving averaged weights");
     os.precision(FLOAT32_PRECISION);
     os << std::scientific << std::showpos;
     write_trainer_header(os, "#Trainer#", aux_allocated, aux_allocated_lookup);
@@ -268,31 +278,87 @@ void Trainer::save(std::ostream& os)
         << clipping_enabled << ' '
         << clip_threshold << ' '
         << updates << ' '
+        << ema_beta << ' '
+        << ema_params_swapped << ' '
+        << ema_params_saved << ' '
+        << ema_update_freq << ' '
+        << ema_updates 
         << std::endl
     ;
+
+
+    // save EMA state
+    if (ema())
+    {
+        os << "[EMA:TRUE]\n";
+        write_trainer_header(os, "#EMA#", ema_aux_allocated, ema_aux_allocated_lookup);
+        write_trainer_params(os, ema_p);
+        write_trainer_params(os, ema_lp);
+    }
+    else
+    {
+        os << "[EMA:FALSE]\n";
+    }
 }
 
 void Trainer::populate(std::istream& is)
 {
+    const auto& params = model->parameters_list();
+    const auto& lparams = model->lookup_parameters_list();
     // Allocate if necessary
-    if(aux_allocated < model->parameters_list().size())
+    if(aux_allocated < params.size())
         aux_allocated = alloc_impl();
-    if(aux_allocated_lookup < model->lookup_parameters_list().size())
+    if(aux_allocated_lookup < lparams.size())
         aux_allocated_lookup = alloc_lookup_impl();
 
     unsigned np, nlp;
     read_trainer_header(is, "#Trainer#", &np, &nlp);
 
-    if (np > model->parameters_list().size())
+    if (np > params.size())
         DYNET_RUNTIME_ERR("Size mismatch")
 
-    if (nlp > model->lookup_parameters_list().size())
+    if (nlp > lparams.size())
         DYNET_RUNTIME_ERR("Size mismatch")
 
     std::string line;
     std::getline(is, line);
     std::istringstream iss(line);
-    iss >> learning_rate >> clipping_enabled >> clip_threshold >> updates;
+    iss
+        >> learning_rate >> clipping_enabled >> clip_threshold >> updates
+        >> ema_beta >> ema_params_swapped >> ema_params_saved >> ema_update_freq >> ema_updates
+    ;
+
+    std::string ema_status;
+    std::getline(is, ema_status);
+    if (ema_status == "[EMA:TRUE]")
+    {
+        if (ema_aux_allocated < params.size())
+        {
+            allocate_shadow_parameters(*model, ema_aux_allocated, ema_p);
+            ema_aux_allocated = ema_p.size();
+        }
+        if (ema_aux_allocated_lookup < lparams.size())
+        {
+            allocate_shadow_lookup_parameters(*model, ema_aux_allocated_lookup, ema_lp);
+            ema_aux_allocated_lookup = ema_lp.size();
+        }
+
+        unsigned ema_np, ema_nlp;
+        read_trainer_header(is, "#EMA#", &ema_np, &ema_nlp);
+        if (ema_np > model->parameters_list().size())
+            DYNET_RUNTIME_ERR("Size mismatch")
+
+        if (ema_nlp > model->lookup_parameters_list().size())
+            DYNET_RUNTIME_ERR("Size mismatch")
+
+        read_trainer_params(is, ema_p, ema_np);
+        read_trainer_params(is, ema_lp, ema_nlp);
+
+    }
+    else if (ema_status != "[EMA:FALSE]")
+    {
+        DYNET_RUNTIME_ERR("Invalid EMA status");
+    }
 }
 
 void Trainer::populate(std::istream& is, real lr)

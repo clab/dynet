@@ -78,26 +78,28 @@ struct TrainerIOTest {
 
 BOOST_FIXTURE_TEST_SUITE(trainer_io_test, TrainerIOTest);
 
-#define DYNET_TRAINER_IO_TEST_CASE(name, TRAINER_TYPE)          \
+#define DYNET_TRAINER_IO_TEST_CASE(name, TRAINER_TYPE, USE_EMA) \
 BOOST_AUTO_TEST_CASE(name) {                                    \
     /* build model */                                           \
     ParameterCollection m;                                      \
-    TRAINER_TYPE trainer(m);                                    \
+    TRAINER_TYPE trainer1(m);                                   \
+    if (USE_EMA)                                                \
+        trainer1.ema(0.999);                                    \
     auto p = build_pc(m);                                       \
     /* do one update and save params */                         \
     float loss1;                                                \
-    loss1 = optimize(p, trainer);                               \
+    loss1 = optimize(p, trainer1);                              \
     {                                                           \
         dynet::TextFileSaver s("test.model");                   \
         s.save(m);                                              \
         std::ofstream f;                                        \
         f.open("test.optimizer");                               \
-        trainer.save(f);                                        \
+        trainer1.save(f);                                       \
         f.close();                                              \
     }                                                           \
     /* do a second update and check that the loss where different */ \
     /* i.e. that the params of the model are actually different */ \
-    auto loss2 = optimize(p, trainer);                          \
+    auto loss2 = optimize(p, trainer1);                          \
     BOOST_CHECK(!(abs(loss1 - loss2)/abs(loss1) <= TOL && abs(loss1 - loss2)/abs(loss2) <= TOL)); \
     /*create a new model, load the save state+trainer params, */ \
     /* do one update and check that everything match */         \
@@ -115,9 +117,20 @@ BOOST_AUTO_TEST_CASE(name) {                                    \
     auto loss3 = optimize(p2, trainer2);                        \
     DYNET_CHECK_EQUAL(loss2, loss3);                            \
     DYNET_CHECK_EQUAL(m2, m);                                   \
+    if (USE_EMA)                                                \
+    {                                                           \
+        trainer1.swap_params_to_ema();                  \
+        trainer2.swap_params_to_ema();                  \
+        DYNET_CHECK_EQUAL(m2, m);                               \
+        trainer1.swap_params_to_weights();                      \
+        trainer2.swap_params_to_weights();                      \
+        trainer2.swap_params_to_ema(true);              \
+        trainer2.swap_params_to_ema(true);              \
+        DYNET_CHECK_EQUAL(m2, m);                               \
+    }                                                           \
 }                                                               \
 
-#define DYNET_TRAINER_IO_PARAM_TEST_CASE(name, TRAINER_TYPE, SP_NAME) \
+#define DYNET_TRAINER_IO_PARAM_TEST_CASE(name, TRAINER_TYPE, SP_NAME, USE_EMA) \
 BOOST_AUTO_TEST_CASE(name)                                      \
 {                                                               \
     class Trainer : public TRAINER_TYPE                         \
@@ -130,7 +143,9 @@ BOOST_AUTO_TEST_CASE(name)                                      \
     };                                                          \
     /* build model */                                           \
     ParameterCollection m;                                      \
-    Trainer trainer(m);                                    \
+    Trainer trainer(m);                                         \
+    if (USE_EMA)                                                \
+        trainer.ema(0.99);                                      \
     auto p = build_pc(m);                                       \
     /* do one update and save params */                         \
     optimize(p, trainer);                                       \
@@ -153,45 +168,68 @@ BOOST_AUTO_TEST_CASE(name)                                      \
     DYNET_CHECK_EQUAL(trainer2.SP_NAME, trainer.SP_NAME);                 \
 }                                                               \
 
-DYNET_TRAINER_IO_PARAM_TEST_CASE(momentum_sgd_io_param_vp, MomentumSGDTrainer, vp)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(momentum_sgd_io_param_vlp, MomentumSGDTrainer, vlp)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(momentum_sgd_io_param_vp, MomentumSGDTrainer, vp, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(momentum_sgd_io_param_vlp, MomentumSGDTrainer, vlp, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(momentum_sgd_io_param_ema_p, MomentumSGDTrainer, ema_p, true)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(momentum_sgd_io_param_ema_lp, MomentumSGDTrainer, ema_lp, true)
 
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adagrad_io_param_vp, AdagradTrainer, vp)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adagrad_io_param_vlp, AdagradTrainer, vlp)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adagrad_io_param_vp, AdagradTrainer, vp, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adagrad_io_param_vlp, AdagradTrainer, vlp, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adagrad_io_param_ema_p, AdagradTrainer, ema_p, true)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adagrad_io_param_ema_lp, AdagradTrainer, ema_lp, true)
 
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_hg, AdadeltaTrainer, hg)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_hlg, AdadeltaTrainer, hlg)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_hd, AdadeltaTrainer, hd)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_hld, AdadeltaTrainer, hld)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_hg, AdadeltaTrainer, hg, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_hlg, AdadeltaTrainer, hlg, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_hd, AdadeltaTrainer, hd, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_hld, AdadeltaTrainer, hld, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_ema_p, AdadeltaTrainer, ema_p, true)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adadelta_io_param_ema_lp, AdadeltaTrainer, ema_lp, true)
 
-DYNET_TRAINER_IO_PARAM_TEST_CASE(rmsprop_io_param_hmsg, RMSPropTrainer, hmsg)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(rmsprop_io_param_hlmsg, RMSPropTrainer, hlmsg)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(rmsprop_io_param_hmsg, RMSPropTrainer, hmsg, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(rmsprop_io_param_hlmsg, RMSPropTrainer, hlmsg, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(rmsprop_io_param_ema_p, RMSPropTrainer, ema_p, true)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(rmsprop_io_param_ema_lp, RMSPropTrainer, ema_lp, true)
 
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_m, AdamTrainer, m)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_lm, AdamTrainer, lm)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_v, AdamTrainer, v)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_lv, AdamTrainer, lv)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_m, AdamTrainer, m, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_lm, AdamTrainer, lm, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_v, AdamTrainer, v, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_lv, AdamTrainer, lv, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_ema_p, AdamTrainer, ema_p, true)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(adam_io_param_ema_lp, AdamTrainer, ema_lp, true)
 
-DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_m, AmsgradTrainer, m)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_lm, AmsgradTrainer, lm)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_v, AmsgradTrainer, v)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_lv, AmsgradTrainer, lv)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_vhat, AmsgradTrainer, vhat)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_lvhat, AmsgradTrainer, lvhat)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_m, AmsgradTrainer, m, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_lm, AmsgradTrainer, lm, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_v, AmsgradTrainer, v, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_lv, AmsgradTrainer, lv, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_vhat, AmsgradTrainer, vhat, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_lvhat, AmsgradTrainer, lvhat, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_ema_p, AmsgradTrainer, ema_p, true)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(amsgrad_io_param_ema_lp, AmsgradTrainer, ema_lp, true)
 
-DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_hp, EGTrainer, hp)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_hlp, EGTrainer, hlp)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_zeg, EGTrainer, zeg)
-DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_meg, EGTrainer, meg)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_hp, EGTrainer, hp, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_hlp, EGTrainer, hlp, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_zeg, EGTrainer, zeg, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_meg, EGTrainer, meg, false)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_ema_p, EGTrainer, ema_p, true)
+DYNET_TRAINER_IO_PARAM_TEST_CASE(eg_io_param_ema_lp, EGTrainer, ema_lp, true)
 
-DYNET_TRAINER_IO_TEST_CASE(simple_sgd_io, SimpleSGDTrainer)
-DYNET_TRAINER_IO_TEST_CASE(cyclical_sgd_io, CyclicalSGDTrainer)
-DYNET_TRAINER_IO_TEST_CASE(momentum_sgd_io, MomentumSGDTrainer)
-DYNET_TRAINER_IO_TEST_CASE(adagrad_io, AdagradTrainer)
-DYNET_TRAINER_IO_TEST_CASE(adadelta_io, AdadeltaTrainer)
-DYNET_TRAINER_IO_TEST_CASE(rmsprop_io, RMSPropTrainer)
-DYNET_TRAINER_IO_TEST_CASE(adam_io, AdamTrainer)
-DYNET_TRAINER_IO_TEST_CASE(amsgrad_io, AmsgradTrainer)
-//DYNET_TRAINER_IO_TEST_CASE(eg_io, EGTrainer)
+DYNET_TRAINER_IO_TEST_CASE(simple_sgd_io, SimpleSGDTrainer, false)
+DYNET_TRAINER_IO_TEST_CASE(simple_sgd_io_ema, SimpleSGDTrainer, true)
+DYNET_TRAINER_IO_TEST_CASE(cyclical_sgd_io, CyclicalSGDTrainer, false)
+DYNET_TRAINER_IO_TEST_CASE(cyclical_sgd_io_ema, CyclicalSGDTrainer, true)
+DYNET_TRAINER_IO_TEST_CASE(momentum_sgd_io, MomentumSGDTrainer, false)
+DYNET_TRAINER_IO_TEST_CASE(momentum_sgd_io_ema, MomentumSGDTrainer, true)
+DYNET_TRAINER_IO_TEST_CASE(adagrad_io, AdagradTrainer, false)
+DYNET_TRAINER_IO_TEST_CASE(adagrad_io_ema, AdagradTrainer, true)
+DYNET_TRAINER_IO_TEST_CASE(adadelta_io, AdadeltaTrainer, false)
+DYNET_TRAINER_IO_TEST_CASE(adadelta_io_ema, AdadeltaTrainer, true)
+DYNET_TRAINER_IO_TEST_CASE(rmsprop_io, RMSPropTrainer, false)
+DYNET_TRAINER_IO_TEST_CASE(rmsprop_io_ema, RMSPropTrainer, true)
+DYNET_TRAINER_IO_TEST_CASE(adam_io, AdamTrainer, false)
+DYNET_TRAINER_IO_TEST_CASE(adam_io_ema, AdamTrainer, true)
+DYNET_TRAINER_IO_TEST_CASE(amsgrad_io, AmsgradTrainer, false)
+DYNET_TRAINER_IO_TEST_CASE(amsgrad_io_ema, AmsgradTrainer, true)
+//DYNET_TRAINER_IO_TEST_CASE(eg_io, EGTrainer, false)
+//DYNET_TRAINER_IO_TEST_CASE(eg_io_ema, EGTrainer, true)
 
 BOOST_AUTO_TEST_SUITE_END()

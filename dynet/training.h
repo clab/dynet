@@ -58,6 +58,8 @@ struct Trainer {
     ema_params_saved(false),
     ema_update_freq(1u),
     ema_updates(0u),
+    ema_aux_allocated(0),
+    ema_aux_allocated_lookup(0),
     model(&m)
   {}
   virtual ~Trainer();
@@ -175,6 +177,8 @@ struct Trainer {
   bool ema_params_saved; // true if params have been saved when swapping
   unsigned ema_update_freq; // the EMA will be updated each ema_update_frequency updates
   unsigned ema_updates; // number of times the EMA has been updated, used for bias correction
+  unsigned ema_aux_allocated;
+  unsigned ema_aux_allocated_lookup;
   // Shadow parameters used for EMA 
   std::vector<ShadowParameters> ema_p;
   std::vector<ShadowLookupParameters> ema_lp;
