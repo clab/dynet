@@ -106,7 +106,8 @@ void read_trainer_params(std::istream& is, std::vector<ShadowParameters>& vp, co
         std::istringstream iss(line);
 
         iss >> type >> s;
-        DYNET_ASSERT(type == "#Parameter#", "Expected parameter");
+        if (type != "#Parameter#")
+            DYNET_RUNTIME_ERR("Expected parameter");
         if (s != values.size())
             DYNET_RUNTIME_ERR("Dimension mismatch")
         iss >> values;
@@ -134,7 +135,8 @@ void read_trainer_params(std::istream& is, std::vector<ShadowLookupParameters> v
         std::istringstream iss(line);
 
         iss >> type >> s;
-        DYNET_ASSERT(type == "#LookupParameter#", "Expected parameter");
+        if (type != "#LookupParameter#")
+            DYNET_RUNTIME_ERR("Expected parameter");
         if (s != values.size())
             DYNET_RUNTIME_ERR("Dimension mismatch")
         iss >> values;
@@ -269,7 +271,8 @@ void Trainer::restart(real lr) {
 
 void Trainer::save(std::ostream& os)
 {
-    DYNET_ASSERT(!ema_params_swapped, "Trainer cannot be saved: parameters are swapped with their exponential moving averaged weights");
+    if (ema_params_swapped)
+        DYNET_RUNTIME_ERR("Trainer cannot be saved: parameters are swapped with their exponential moving averaged weights");
     os.precision(FLOAT32_PRECISION);
     os << std::scientific << std::showpos;
     write_trainer_header(os, "#Trainer#", aux_allocated, aux_allocated_lookup);
@@ -491,8 +494,10 @@ bool Trainer::ema()
 
 void Trainer::ema(float beta, unsigned update_freq)
 {
-    DYNET_ASSERT(updates == 0u, "This function must be called before any update");
-    DYNET_ASSERT(update_freq > 0u, "The update frequency cannot be null");
+    if (updates > 0)
+        DYNET_RUNTIME_ERR("This function must be called before any update");
+    if (update_freq == 0u)
+        DYNET_RUNTIME_ERR("The update frequency cannot be null");
 
     ema_beta = beta;
     ema_update_freq = update_freq;
@@ -500,8 +505,10 @@ void Trainer::ema(float beta, unsigned update_freq)
 
 void Trainer::swap_params_to_ema(bool bias_correction, bool save_weights)
 {
-    DYNET_ASSERT(ema(), "EMA is not enabled")
-    DYNET_ASSERT(ema_updates > 0u, "EMA has not been set yet")
+    if (!ema())
+        DYNET_RUNTIME_ERR("EMA is not enabled");
+    if (ema_updates == 0u)
+        DYNET_RUNTIME_ERR("EMA has not been set yet");
 
     if (ema_params_swapped)
         return; // nothing to do
@@ -545,8 +552,10 @@ void Trainer::swap_params_to_ema(bool bias_correction, bool save_weights)
 
 void Trainer::swap_params_to_weights()
 {
-    DYNET_ASSERT(ema_params_swapped, "Cannot swap params to weights.")
-    DYNET_ASSERT(ema_params_saved, "Weights have not been save.")
+    if (!ema_params_swapped)
+        return;
+    if (!ema_params_saved)
+        DYNET_RUNTIME_ERR("Weights have not been save.")
 
     const auto& params = model->parameters_list();
     const auto& lparams = model->lookup_parameters_list();
