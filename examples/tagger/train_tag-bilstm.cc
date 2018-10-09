@@ -24,6 +24,9 @@ unsigned TAG_DIM = 32;
 unsigned TAG_SIZE = 0;
 unsigned VOCAB_SIZE = 0;
 
+bool use_momentum = true;
+bool use_ema = false;
+
 bool eval = false;
 dynet::Dict d;
 dynet::Dict td;
@@ -176,14 +179,15 @@ int main(int argc, char** argv) {
      << '_' << LAYERS
      << '_' << INPUT_DIM
      << '_' << HIDDEN_DIM
-     << "-pid" << getpid() << ".params";
+     << (use_momentum ? "-momentum" : "")
+     << (use_ema ? "-ema" : "")
+     << "-pid" << getpid()
+     << ".params";
   const string fname = os.str();
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
   ParameterCollection model;
-  bool use_momentum = true;
-  bool use_ema = true;
   std::unique_ptr<Trainer> trainer;
   if (use_momentum)
     trainer.reset(new MomentumSGDTrainer(model));
@@ -236,6 +240,8 @@ int main(int argc, char** argv) {
     // show score on dev data?
     report++;
     if (report % dev_every_i_reports == 0) {
+      if (use_ema)
+        trainer->swap_params_to_ema(true);
       double dloss = 0;
       unsigned dtags = 0;
       double dcorr = 0;
@@ -254,6 +260,8 @@ int main(int argc, char** argv) {
         saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / dtags) << ' ';
+      if (use_ema)
+        trainer->swap_params_to_weights();
     }
   }
 }
