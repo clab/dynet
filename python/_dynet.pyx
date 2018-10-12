@@ -4993,7 +4993,7 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     .. math::
 
         \\begin{split}
-            h_t & =\tanh(W_{x}x_t+W_{h}h_{t-1}+b)\\\\
+            h_t & = \\tanh(W_{x}x_t+W_{h}h_{t-1}+b)\\\\
         \end{split}
 
     Args:
@@ -5380,7 +5380,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
                 i_t & =\sigma(W_{ix}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ih}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_i)\\\\
                 f_t & = \sigma(W_{fx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{fh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_f)\\\\
                 o_t & = \sigma(W_{ox}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{oh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_o)\\\\
-                \\tilde{c_t} & = \tanh(W_{cx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ch}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_c)\\\\
+                \\tilde{c_t} & = \\tanh(W_{cx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ch}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_c)\\\\
                 c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
                 h_t & = \\tanh(c_t)\circ o_t\\\\
             \end{split}
