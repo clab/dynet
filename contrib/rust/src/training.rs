@@ -31,7 +31,7 @@ pub trait Trainer: Wrap<dynet_sys::dynetTrainer_t> {
     }
 
     /// Prints information about the trainer.
-    fn status(&mut self) {
+    fn print_status(&mut self) {
         unsafe {
             check_api_status!(dynet_sys::dynetPrintTrainerStatus(self.as_mut_ptr()));
         }
@@ -146,7 +146,8 @@ impl CyclicalSGDTrainer {
                 m.as_mut_ptr(),
                 learning_rate_min,
                 learning_rate_max,
-                step_size.gamma,
+                step_size,
+                gamma,
                 &mut trainer_ptr
             ));
             CyclicalSGDTrainer::from_raw(trainer_ptr, true)
