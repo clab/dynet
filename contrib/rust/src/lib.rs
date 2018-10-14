@@ -33,3 +33,5 @@ mod param_init;
 pub use param_init::*;
 mod tensor;
 pub use tensor::Tensor;
+mod training;
+pub use training::*;
