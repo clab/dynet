@@ -27,6 +27,8 @@ mod dim;
 pub use dim::Dim;
 mod expr;
 pub use expr::*;
+mod graph;
+pub use graph::*;
 mod init;
 pub use init::{initialize, reset_rng, DynetParams};
 mod model;
