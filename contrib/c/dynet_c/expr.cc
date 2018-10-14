@@ -146,7 +146,7 @@ DYNET_C_STATUS dynetApplyLookupParameter(
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetApplyConstParameter(
-    dynetComputationGraph_t *g, dynetParameter_t *p,
+    dynetComputationGraph_t *g, const dynetParameter_t *p,
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(g);
   DYNET_C_CHECK_NOT_NULL(p);
@@ -157,7 +157,7 @@ DYNET_C_STATUS dynetApplyConstParameter(
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetApplyConstLookupParameter(
-    dynetComputationGraph_t *g, dynetLookupParameter_t *lp,
+    dynetComputationGraph_t *g, const dynetLookupParameter_t *lp,
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(g);
   DYNET_C_CHECK_NOT_NULL(lp);
@@ -192,8 +192,8 @@ DYNET_C_STATUS dynetApplyLookup(
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetApplyConstLookupOne(
-    dynetComputationGraph_t *g, dynetLookupParameter_t *p, uint32_t index,
-    dynetExpression_t **newobj) try {
+    dynetComputationGraph_t *g, const dynetLookupParameter_t *p,
+    uint32_t index, dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(g);
   DYNET_C_CHECK_NOT_NULL(p);
   DYNET_C_CHECK_NOT_NULL(newobj);
@@ -203,7 +203,7 @@ DYNET_C_STATUS dynetApplyConstLookupOne(
 } DYNET_C_HANDLE_EXCEPTIONS
 
 DYNET_C_STATUS dynetApplyConstLookup(
-    dynetComputationGraph_t *g, dynetLookupParameter_t *p,
+    dynetComputationGraph_t *g, const dynetLookupParameter_t *p,
     const uint32_t *indices, size_t n, dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(g);
   DYNET_C_CHECK_NOT_NULL(p);
