@@ -1,3 +1,4 @@
+use std::ops;
 use std::ptr::{self, NonNull};
 
 use dynet_sys;
@@ -330,5 +331,469 @@ pub fn random_gumbel<D: Into<Dim>>(
         d.into().as_ptr(),
         mu,
         beta
+    )
+}
+
+macro_rules! impl_expr_unary_func {
+    ($name:ident, $api_fn:ident, $doc:expr) => {
+        #[doc = $doc]
+        pub fn $name<E: AsRef<Expression>>(x: E) -> Expression {
+            expr_func_body!($api_fn, x.as_ref().as_ptr())
+        }
+    };
+}
+
+impl_expr_unary_func!(negative, dynetApplyNegative, "Applies negation operation.");
+
+impl ops::Neg for Expression {
+    type Output = Expression;
+
+    fn neg(self) -> Expression {
+        expr_func_body!(dynetApplyNegative, self.as_ptr())
+    }
+}
+
+macro_rules! impl_expr_binary_func {
+    (
+        $name:ident,
+        $api_fn:ident,
+        $name_xc:ident,
+        $api_fn_xc:ident,
+        $name_cx:ident,
+        $api_fn_cx:ident,
+        $doc:expr
+    ) => {
+        impl_expr_binary_func!($name, $api_fn, $name_xc, $api_fn_xc, $doc);
+
+        #[doc = $doc]
+        pub fn $name_cx<E: AsRef<Expression>>(x: f32, y: E) -> Expression {
+            expr_func_body!($api_fn_cx, x, y.as_ref().as_ptr())
+        }
+    };
+    ($name:ident, $api_fn:ident, $name_xc:ident, $api_fn_xc:ident, $doc:expr) => {
+        impl_expr_binary_func!($name, $api_fn, $doc);
+
+        #[doc = $doc]
+        pub fn $name_xc<E: AsRef<Expression>>(x: E, y: f32) -> Expression {
+            expr_func_body!($api_fn_xc, x.as_ref().as_ptr(), y)
+        }
+    };
+    ($name:ident, $api_fn:ident, $doc:expr) => {
+        #[doc = $doc]
+        pub fn $name<E1: AsRef<Expression>, E2: AsRef<Expression>>(x: E1, y: E2) -> Expression {
+            expr_func_body!($api_fn, x.as_ref().as_ptr(), y.as_ref().as_ptr())
+        }
+    };
+}
+
+macro_rules! impl_expr_binary_with_constant_op {
+    ($scalar:ty, $name:ident, $op_fn:ident, $api_fn_xc:ident, $api_fn_cx:ident) => {
+        impl_expr_binary_with_constant_op!($scalar, $name, $op_fn, $api_fn_xc);
+
+        impl ops::$name<Expression> for $scalar {
+            type Output = Expression;
+
+            fn $op_fn(self, rhs: Expression) -> Expression {
+                expr_func_body!($api_fn_cx, self as f32, rhs.as_ptr())
+            }
+        }
+
+        impl<'a> ops::$name<&'a Expression> for $scalar {
+            type Output = Expression;
+
+            fn $op_fn(self, rhs: &'a Expression) -> Expression {
+                expr_func_body!($api_fn_cx, self as f32, rhs.as_ptr())
+            }
+        }
+    };
+    ($scalar:ty, $name:ident, $op_fn:ident, $api_fn_xc:ident) => {
+        impl ops::$name<$scalar> for Expression {
+            type Output = Expression;
+
+            fn $op_fn(self, rhs: $scalar) -> Expression {
+                expr_func_body!($api_fn_xc, self.as_ptr(), rhs as f32)
+            }
+        }
+
+        impl<'a> ops::$name<$scalar> for &'a Expression {
+            type Output = Expression;
+
+            fn $op_fn(self, rhs: $scalar) -> Expression {
+                expr_func_body!($api_fn_xc, self.as_ptr(), rhs as f32)
+            }
+        }
+    };
+}
+
+macro_rules! impl_expr_binary_op {
+    ($name:ident, $op_fn:ident, $api_fn:ident, $api_fn_xc:ident, $api_fn_cx:ident) => {
+        impl_expr_binary_with_constant_op!(i8, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+        impl_expr_binary_with_constant_op!(u8, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+        impl_expr_binary_with_constant_op!(i16, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+        impl_expr_binary_with_constant_op!(u16, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+        impl_expr_binary_with_constant_op!(i32, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+        impl_expr_binary_with_constant_op!(u32, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+        impl_expr_binary_with_constant_op!(i64, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+        impl_expr_binary_with_constant_op!(u64, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+        impl_expr_binary_with_constant_op!(f32, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+        impl_expr_binary_with_constant_op!(f64, $name, $op_fn, $api_fn_xc, $api_fn_cx);
+
+        impl_expr_binary_op!($name, $op_fn, $api_fn);
+    };
+    ($name:ident, $op_fn:ident, $api_fn:ident, $api_fn_xc:ident) => {
+        impl_expr_binary_with_constant_op!(i8, $name, $op_fn, $api_fn_xc);
+        impl_expr_binary_with_constant_op!(u8, $name, $op_fn, $api_fn_xc);
+        impl_expr_binary_with_constant_op!(i16, $name, $op_fn, $api_fn_xc);
+        impl_expr_binary_with_constant_op!(u16, $name, $op_fn, $api_fn_xc);
+        impl_expr_binary_with_constant_op!(i32, $name, $op_fn, $api_fn_xc);
+        impl_expr_binary_with_constant_op!(u32, $name, $op_fn, $api_fn_xc);
+        impl_expr_binary_with_constant_op!(i64, $name, $op_fn, $api_fn_xc);
+        impl_expr_binary_with_constant_op!(u64, $name, $op_fn, $api_fn_xc);
+        impl_expr_binary_with_constant_op!(f32, $name, $op_fn, $api_fn_xc);
+        impl_expr_binary_with_constant_op!(f64, $name, $op_fn, $api_fn_xc);
+
+        impl_expr_binary_op!($name, $op_fn, $api_fn);
+    };
+    ($name:ident, $op_fn:ident, $api_fn:ident) => {
+        impl ops::$name for Expression {
+            type Output = Expression;
+
+            fn $op_fn(self, rhs: Expression) -> Expression {
+                expr_func_body!($api_fn, self.as_ptr(), rhs.as_ptr())
+            }
+        }
+
+        impl<'a> ops::$name<Expression> for &'a Expression {
+            type Output = Expression;
+
+            fn $op_fn(self, rhs: Expression) -> Expression {
+                expr_func_body!($api_fn, self.as_ptr(), rhs.as_ptr())
+            }
+        }
+
+        impl<'a> ops::$name<&'a Expression> for Expression {
+            type Output = Expression;
+
+            fn $op_fn(self, rhs: &'a Expression) -> Expression {
+                expr_func_body!($api_fn, self.as_ptr(), rhs.as_ptr())
+            }
+        }
+
+        impl<'a, 'b> ops::$name<&'a Expression> for &'b Expression {
+            type Output = Expression;
+
+            fn $op_fn(self, rhs: &'a Expression) -> Expression {
+                expr_func_body!($api_fn, self.as_ptr(), rhs.as_ptr())
+            }
+        }
+    };
+}
+
+impl_expr_binary_func!(
+    add,
+    dynetApplyAdd,
+    add_const,
+    dynetApplyAddConst,
+    add_expr,
+    dynetApplyAddExpr,
+    "Applies addition operation."
+);
+impl_expr_binary_op!(
+    Add,
+    add,
+    dynetApplyAdd,
+    dynetApplyAddConst,
+    dynetApplyAddExpr
+);
+impl_expr_binary_func!(
+    subtract,
+    dynetApplySubtract,
+    subtract_const,
+    dynetApplySubtractConst,
+    subtract_expr,
+    dynetApplySubtractExpr,
+    "Applies subtraction operation."
+);
+impl_expr_binary_op!(
+    Sub,
+    sub,
+    dynetApplySubtract,
+    dynetApplySubtractConst,
+    dynetApplySubtractExpr
+);
+impl_expr_binary_func!(
+    multiply,
+    dynetApplyMultiply,
+    multiply_const,
+    dynetApplyMultiplyConst,
+    multiply_expr,
+    dynetApplyMultiplyExpr,
+    "Applies multiplication operation."
+);
+impl_expr_binary_op!(
+    Mul,
+    mul,
+    dynetApplyMultiply,
+    dynetApplyMultiplyConst,
+    dynetApplyMultiplyExpr
+);
+impl_expr_binary_func!(
+    divide,
+    dynetApplyDivide,
+    divide_const,
+    dynetApplyDivideConst,
+    "Applies division operation."
+);
+impl_expr_binary_op!(Div, div, dynetApplyDivide, dynetApplyDivideConst);
+
+macro_rules! impl_expr_nary_func {
+    ($name:ident, $api_fn:ident, $doc:expr) => {
+        #[doc = $doc]
+        pub fn $name<ES: AsRef<[E]>, E: AsRef<Expression>>(xs: ES) -> Expression {
+            let x_ptrs: Vec<_> = xs.as_ref().iter().map(|x| x.as_ref().as_ptr()).collect();
+            expr_func_body!($api_fn, x_ptrs.as_ptr(), x_ptrs.len())
+        }
+    };
+}
+
+impl_expr_nary_func!(
+    affine_transform,
+    dynetApplyAffineTransform,
+    "
+Applies affine transform operation.\n
+\n
+This performs an affine transform over an arbitrary (odd) number of expressions held in the input
+initializer list xs. The first expression is the \"bias,\" which is added to the expression as-is.
+The remaining expressions are multiplied together in pairs, then added. A very common usage case is
+the calculation of the score for a neural network layer (e.g. b + Wz) where b is the bias, W is the
+weight matrix, and z is the input. In this case xs[0] = b, xs[1] = W, and xs[2] = z."
+);
+impl_expr_nary_func!(
+    sum,
+    dynetApplySum,
+    "
+Applies sum operation.\n 
+\n
+This returns an expression where the ith element is equal to xs[0][i] + xs[1][i] + ... ."
+);
+
+impl_expr_unary_func!(sum_elems, dynetApplySumElems, "Sums all elements.");
+
+/// Computes moment over all elements.
+///
+/// # Arguments
+///
+/// * x - Input mini-batched expression.
+/// * r - Order of the moment.
+pub fn moment_elems<E: AsRef<Expression>>(x: E, r: u32) -> Expression {
+    expr_func_body!(dynetApplyMomentElems, x.as_ref().as_ptr(), r)
+}
+
+impl_expr_unary_func!(
+    mean_elems,
+    dynetApplyMeanElems,
+    "Computes mean over all elements."
+);
+impl_expr_unary_func!(
+    std_elems,
+    dynetApplyStdElems,
+    "Computes standard deviation over all elements."
+);
+impl_expr_unary_func!(sum_batches, dynetApplySumBatches, "Sums up mini-batches.");
+
+/// Computes moment over mini-batches.
+///
+/// # Arguments
+///
+/// * x - Input mini-batched expression.
+/// * r - Order of the moment.
+pub fn moment_batches<E: AsRef<Expression>>(x: E, r: u32) -> Expression {
+    expr_func_body!(dynetApplyMomentBatches, x.as_ref().as_ptr(), r)
+}
+
+impl_expr_unary_func!(
+    mean_batches,
+    dynetApplyMeanBatches,
+    "Computes mean over over mini-batches."
+);
+impl_expr_unary_func!(
+    std_batches,
+    dynetApplyStdBatches,
+    "Computes standard deviation over over mini-batches."
+);
+
+/// Computes sum along a specific dimension(s).
+///
+/// # Arguments
+///
+/// * x - Input mini-batched expression.
+/// * dims - Dimensions along which to reduce.
+/// * b - Whether to include batch dimension.
+pub fn sum_dim<E: AsRef<Expression>>(x: E, dims: &[u32], b: bool) -> Expression {
+    expr_func_body!(
+        dynetApplySumDim,
+        x.as_ref().as_ptr(),
+        dims.as_ptr(),
+        dims.len(),
+        b as u32
+    )
+}
+
+/// Computes cumulative sum along a specific dimension.
+///
+/// # Arguments
+///
+/// * x - Input mini-batched expression.
+/// * d - Dimension along which to compute the cumulative sum.
+pub fn cumsum<E: AsRef<Expression>>(x: E, d: u32) -> Expression {
+    expr_func_body!(dynetApplyCumsum, x.as_ref().as_ptr(), d)
+}
+
+/// Computes moment along a specific dimension.
+///
+/// # Arguments
+///
+/// * x - Input mini-batched expression.
+/// * dims - Dimensions along which to reduce.
+/// * r - Order of the moment.
+/// * b - Whether to include batch dimension.
+/// * n - If > 0, overwrite the `n` in the equation by this value, useful for masking.
+pub fn moment_dim<E: AsRef<Expression>>(x: E, dims: &[u32], r: u32, b: bool, n: u32) -> Expression {
+    expr_func_body!(
+        dynetApplyMomentDim,
+        x.as_ref().as_ptr(),
+        dims.as_ptr(),
+        dims.len(),
+        r,
+        b as u32,
+        n
+    )
+}
+
+/// Computes mean along a specific dimension.
+///
+/// # Arguments
+///
+/// * x - Input mini-batched expression.
+/// * dims - Dimensions along which to reduce.
+/// * b - Whether to include batch dimension.
+/// * n - If > 0, overwrite the `n` in the equation by this value, useful for masking.
+pub fn mean_dim<E: AsRef<Expression>>(x: E, dims: &[u32], b: bool, n: u32) -> Expression {
+    expr_func_body!(
+        dynetApplyMeanDim,
+        x.as_ref().as_ptr(),
+        dims.as_ptr(),
+        dims.len(),
+        b as u32,
+        n
+    )
+}
+
+/// Computes standard deviation along a specific dimension.
+///
+/// # Arguments
+///
+/// * x - Input mini-batched expression.
+/// * dims - Dimensions along which to reduce.
+/// * b - Whether to include batch dimension.
+/// * n - If > 0, overwrite the `n` in the equation by this value, useful for masking.
+pub fn std_dim<E: AsRef<Expression>>(x: E, dims: &[u32], b: bool, n: u32) -> Expression {
+    expr_func_body!(
+        dynetApplyStdDim,
+        x.as_ref().as_ptr(),
+        dims.as_ptr(),
+        dims.len(),
+        b as u32,
+        n
+    )
+}
+
+impl_expr_nary_func!(
+    average,
+    dynetApplyAverage,
+    "Computes element-wise average over all expressions."
+);
+impl_expr_unary_func!(sqrt, dynetApplySqrt, "Computes square root.");
+impl_expr_unary_func!(abs, dynetApplyAbs, "Computes absolute value.");
+impl_expr_unary_func!(
+    erf,
+    dynetApplyErf,
+    "Computes the value of the Gaussian error function."
+);
+impl_expr_unary_func!(asin, dynetApplyAsin, "Computes inverse sine.");
+impl_expr_unary_func!(acos, dynetApplyAcos, "Computes inverse cosine.");
+impl_expr_unary_func!(atan, dynetApplyAtan, "Computes inverse tangent.");
+impl_expr_unary_func!(sin, dynetApplySin, "Computes sine.");
+impl_expr_unary_func!(cos, dynetApplyCos, "Computes cosine.");
+impl_expr_unary_func!(tan, dynetApplyTan, "Computes tangent.");
+impl_expr_unary_func!(sinh, dynetApplySinh, "Computes hyperbolic sine.");
+impl_expr_unary_func!(cosh, dynetApplyCosh, "Computes hyperbolic cosine.");
+impl_expr_unary_func!(tanh, dynetApplyTanh, "Computes hyperbolic tangent.");
+impl_expr_unary_func!(asinh, dynetApplyAsinh, "Computes inverse hyperbolic sine.");
+impl_expr_unary_func!(
+    acosh,
+    dynetApplyAcosh,
+    "Computes inverse hyperbolic cosine."
+);
+impl_expr_unary_func!(
+    atanh,
+    dynetApplyAtanh,
+    "Computes inverse hyperbolic tangent."
+);
+impl_expr_unary_func!(exp, dynetApplyExp, "Computes natural exponent.");
+impl_expr_unary_func!(square, dynetApplySquare, "Computes square.");
+impl_expr_unary_func!(cube, dynetApplyCube, "Computes cube.");
+impl_expr_unary_func!(log_sigmoid, dynetApplyLogSigmoid, "Computes log sigmoid.");
+impl_expr_unary_func!(lgamma, dynetApplyLgamma, "Computes log gamma.");
+impl_expr_unary_func!(log, dynetApplyLog, "Computes logarithm.");
+impl_expr_unary_func!(logistic, dynetApplyLogistic, "Computes logistic sigmoid.");
+impl_expr_unary_func!(rectify, dynetApplyRectify, "Computes rectifier.");
+
+/// Computes exponential linear unit.
+pub fn elu<E: AsRef<Expression>>(x: E, alpha: f32) -> Expression {
+    expr_func_body!(dynetApplyElu, x.as_ref().as_ptr(), alpha)
+}
+
+impl_expr_unary_func!(
+    selu,
+    dynetApplySelu,
+    "Computes scaled exponential linear unit."
+);
+
+/// Computes SILU / SiL / Swish.
+pub fn silu<E: AsRef<Expression>>(x: E, beta: f32) -> Expression {
+    expr_func_body!(dynetApplySilu, x.as_ref().as_ptr(), beta)
+}
+
+impl_expr_unary_func!(softsign, dynetApplySoftsign, "Computes soft sign.");
+impl_expr_binary_func!(pow, dynetApplyPow, "Computes power.");
+impl_expr_binary_func!(bmin, dynetApplyBmin, "Computes binary minimum.");
+impl_expr_binary_func!(bmax, dynetApplyBmax, "Computes binary maximum.");
+impl_expr_nary_func!(max, dynetApplyMax, "Computes maximum over all expressions.");
+impl_expr_binary_func!(dot_product, dynetApplyDotProduct, "Computes dot product.");
+
+/// Computes circular convolution.
+pub fn circ_conv<E1: AsRef<Expression>, E2: AsRef<Expression>>(u: E1, v: E2) -> Expression {
+    expr_func_body!(dynetApplyCircConv, u.as_ref().as_ptr(), v.as_ref().as_ptr())
+}
+
+/// Computes circular correlation.
+pub fn circ_corr<E1: AsRef<Expression>, E2: AsRef<Expression>>(u: E1, v: E2) -> Expression {
+    expr_func_body!(dynetApplyCircCorr, u.as_ref().as_ptr(), v.as_ref().as_ptr())
+}
+
+impl_expr_binary_func!(
+    cmult,
+    dynetApplyCmult,
+    "Computes componentwise multiplication."
+);
+impl_expr_binary_func!(cdiv, dynetApplyCdiv, "Computes componentwise division.");
+
+/// Computes columnwise addition.
+pub fn colwise_add<E1: AsRef<Expression>, E2: AsRef<Expression>>(x: E1, bias: E2) -> Expression {
+    expr_func_body!(
+        dynetApplyColwiseAdd,
+        x.as_ref().as_ptr(),
+        bias.as_ref().as_ptr()
     )
 }
