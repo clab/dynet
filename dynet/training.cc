@@ -388,14 +388,14 @@ void Trainer::populate(std::istream& is, real lr)
         else if(ema->device->type == DeviceType::GPU)
         {
             cudaSetDevice(((Device_GPU*) ema->device)->cuda_device_id);
-            update_rule_rule_dev(*(Device_GPU*) ema->device, ema, p);
+            update_ema_rule_dev(*(Device_GPU*) ema->device, ema, p);
         }
         else
             throw std::runtime_error("Bad device in MyTrainer::update_ema_rule");
     }
 
     extern template void Trainer::swap_params_to_ema_rule_dev<Device_GPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
-    template void Trainer::swap_params_to_ema_rule_dev<Device_CPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+    template void Trainer::swap_params_to_ema_rule_dev<Device_CPU>(const Device_CPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
     void Trainer::swap_params_to_ema_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema)
     {
         if(ema->device->type == DeviceType::CPU)
@@ -411,12 +411,12 @@ void Trainer::populate(std::istream& is, real lr)
 
 
     extern template void Trainer::swap_params_to_weights_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* p, Tensor* mem);
-    template void Trainer::swap_params_to_weights_rule_dev<Device_CPU>(const Device_GPU& dev, Tensor* p, Tensor* mem);
-    void Trainer::swap_params_to_weights_rule(const Device_GPU& dev, Tensor* p, Tensor* mem)
+    template void Trainer::swap_params_to_weights_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* p, Tensor* mem);
+    void Trainer::swap_params_to_weights_rule(Tensor* p, Tensor* mem)
     {
         if(p->device->type == DeviceType::CPU)
-            swap_params_to_weights_rule_dev(*(Device_CPU*)ema->device, p, mem);
-        else if(ema->device->type == DeviceType::GPU)
+            swap_params_to_weights_rule_dev(*(Device_CPU*)p->device, p, mem);
+        else if(p->device->type == DeviceType::GPU)
         {
             cudaSetDevice(((Device_GPU*) p->device)->cuda_device_id);
             swap_params_to_weights_rule_dev(*(Device_GPU*)p->device, p, mem);
@@ -556,6 +556,7 @@ void Trainer::swap_params_to_weights()
         return;
     if (!ema_params_saved)
         DYNET_RUNTIME_ERR("Weights have not been save.")
+    ema_params_swapped = false;
 
     const auto& params = model->parameters_list();
     const auto& lparams = model->lookup_parameters_list();
