@@ -24,8 +24,8 @@ unsigned TAG_DIM = 32;
 unsigned TAG_SIZE = 0;
 unsigned VOCAB_SIZE = 0;
 
-bool use_momentum = true;
-bool use_ema = false;
+bool use_momentum = false;
+bool use_ema = true;
 
 bool eval = false;
 dynet::Dict d;
@@ -194,7 +194,7 @@ int main(int argc, char** argv) {
   else
     trainer.reset(new SimpleSGDTrainer(model));
   if (use_ema)
-    trainer->ema(0.999);
+    trainer->exponential_moving_average(0.999);
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
     report++;
     if (report % dev_every_i_reports == 0) {
       if (use_ema)
-        trainer->swap_params_to_ema(true);
+        trainer->swap_params_to_moving_average(true, true);
       double dloss = 0;
       unsigned dtags = 0;
       double dcorr = 0;

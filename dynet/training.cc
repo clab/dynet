@@ -226,33 +226,33 @@ void Trainer::update() {
   }
 
   // EMA
-  if (ema() && static_cast<unsigned int>(updates) % ema_update_freq == 0u)
+  if (moving_average() != MovingAverage::None && static_cast<unsigned int>(updates) % ma_update_freq == 0u)
   {
-    if (ema_aux_allocated < params.size())
+    if (ma_aux_allocated < params.size())
     {
-        allocate_shadow_parameters(*model, ema_aux_allocated, ema_p);
-        ema_aux_allocated = ema_p.size();
+        allocate_shadow_parameters(*model, ma_aux_allocated, ma_p);
+        ma_aux_allocated = ma_p.size();
     }
-    if (ema_aux_allocated_lookup < lparams.size())
+    if (ma_aux_allocated_lookup < lparams.size())
     {
-        allocate_shadow_lookup_parameters(*model, ema_aux_allocated_lookup, ema_lp);
-        ema_aux_allocated_lookup = ema_lp.size();
+        allocate_shadow_lookup_parameters(*model, ma_aux_allocated_lookup, ma_lp);
+        ma_aux_allocated_lookup = ma_lp.size();
     }
 
     swap_params_to_weights();
     for(size_t i = 0; i < params.size(); ++i)
     {
         Tensor& weights = params[i]->values;
-        Tensor& ema = ema_p[i].h;
-        update_ema_rule(&ema, &weights);
+        Tensor& ma = ma_p[i].h;
+        update_ma_rule(&ma, &weights);
     }
     for(size_t i = 0; i < lparams.size(); ++i)
     {
         Tensor& weights = lparams[i]->all_values;
-        Tensor& ema = ema_lp[i].all_h;
-        update_ema_rule(&ema, &weights);
+        Tensor& ma = ma_lp[i].all_h;
+        update_ma_rule(&ma, &weights);
     }
-    ++ ema_updates;
+    ++ ma_updates;
   }
 
   ++updates;
@@ -271,7 +271,7 @@ void Trainer::restart(real lr) {
 
 void Trainer::save(std::ostream& os)
 {
-    if (ema_params_swapped)
+    if (ma_params_swapped)
         DYNET_RUNTIME_ERR("Trainer cannot be saved: parameters are swapped with their exponential moving averaged weights");
     os.precision(FLOAT32_PRECISION);
     os << std::scientific << std::showpos;
@@ -282,25 +282,26 @@ void Trainer::save(std::ostream& os)
         << clip_threshold << ' '
         << updates << ' '
         << ema_beta << ' '
-        << ema_params_swapped << ' '
-        << ema_params_saved << ' '
-        << ema_update_freq << ' '
-        << ema_updates 
+        << ma_mode << ' '
+        << ma_params_swapped << ' '
+        << ma_params_saved << ' '
+        << ma_update_freq << ' '
+        << ma_updates 
         << std::endl
     ;
 
 
     // save EMA state
-    if (ema())
+    if (ma_mode != MovingAverage::None)
     {
-        os << "[EMA:TRUE]\n";
-        write_trainer_header(os, "#EMA#", ema_aux_allocated, ema_aux_allocated_lookup);
-        write_trainer_params(os, ema_p);
-        write_trainer_params(os, ema_lp);
+        os << "[MA:TRUE]\n";
+        write_trainer_header(os, "#MA#", ma_aux_allocated, ma_aux_allocated_lookup);
+        write_trainer_params(os, ma_p);
+        write_trainer_params(os, ma_lp);
     }
     else
     {
-        os << "[EMA:FALSE]\n";
+        os << "[MA:FALSE]\n";
     }
 }
 
@@ -328,39 +329,39 @@ void Trainer::populate(std::istream& is)
     std::istringstream iss(line);
     iss
         >> learning_rate >> clipping_enabled >> clip_threshold >> updates
-        >> ema_beta >> ema_params_swapped >> ema_params_saved >> ema_update_freq >> ema_updates
+        >> ema_beta >> ma_mode >> ma_params_swapped >> ma_params_saved >> ma_update_freq >> ma_updates
     ;
 
-    std::string ema_status;
-    std::getline(is, ema_status);
-    if (ema_status == "[EMA:TRUE]")
+    std::string ma_status;
+    std::getline(is, ma_status);
+    if (ma_status == "[MA:TRUE]")
     {
-        if (ema_aux_allocated < params.size())
+        if (ma_aux_allocated < params.size())
         {
-            allocate_shadow_parameters(*model, ema_aux_allocated, ema_p);
-            ema_aux_allocated = ema_p.size();
+            allocate_shadow_parameters(*model, ma_aux_allocated, ma_p);
+            ma_aux_allocated = ma_p.size();
         }
-        if (ema_aux_allocated_lookup < lparams.size())
+        if (ma_aux_allocated_lookup < lparams.size())
         {
-            allocate_shadow_lookup_parameters(*model, ema_aux_allocated_lookup, ema_lp);
-            ema_aux_allocated_lookup = ema_lp.size();
+            allocate_shadow_lookup_parameters(*model, ma_aux_allocated_lookup, ma_lp);
+            ma_aux_allocated_lookup = ma_lp.size();
         }
 
-        unsigned ema_np, ema_nlp;
-        read_trainer_header(is, "#EMA#", &ema_np, &ema_nlp);
-        if (ema_np > model->parameters_list().size())
+        unsigned ma_np, ma_nlp;
+        read_trainer_header(is, "#MA#", &ma_np, &ma_nlp);
+        if (ma_np > model->parameters_list().size())
             DYNET_RUNTIME_ERR("Size mismatch")
 
-        if (ema_nlp > model->lookup_parameters_list().size())
+        if (ma_nlp > model->lookup_parameters_list().size())
             DYNET_RUNTIME_ERR("Size mismatch")
 
-        read_trainer_params(is, ema_p, ema_np);
-        read_trainer_params(is, ema_lp, ema_nlp);
+        read_trainer_params(is, ma_p, ma_np);
+        read_trainer_params(is, ma_lp, ma_nlp);
 
     }
-    else if (ema_status != "[EMA:FALSE]")
+    else if (ma_status != "[MA:FALSE]")
     {
-        DYNET_RUNTIME_ERR("Invalid EMA status");
+        DYNET_RUNTIME_ERR("Invalid moving averaged status");
     }
 }
 
@@ -372,41 +373,41 @@ void Trainer::populate(std::istream& is, real lr)
 
 #endif
 
-// EMA
+// Moving Average
 
 #ifdef __CUDACC__
-    template void Trainer::update_ema_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ema, Tensor* p);
-    template void Trainer::swap_params_to_ema_rule_dev<Device_GPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+    template void Trainer::update_ma_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ma, Tensor* p);
+    template void Trainer::swap_params_to_ma_rule_dev<Device_GPU>(const Device_GPU& dev, bool save_weights, bool bias_correction, Tensor* p, Tensor* mem, Tensor* ma);
     template void Trainer::swap_params_to_weights_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* p, Tensor* mem);
 #elif defined(HAVE_CUDA)
-    extern template void Trainer::update_ema_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ema, Tensor* p);
-    template void Trainer::update_ema_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* ema, Tensor* p);
-    void Trainer::update_ema_rule(Tensor* ema, Tensor* p)
+    extern template void Trainer::update_ma_rule_dev<Device_GPU>(const Device_GPU& dev, Tensor* ma, Tensor* p);
+    template void Trainer::update_ma_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* ma, Tensor* p);
+    void Trainer::update_ma_rule(Tensor* ma, Tensor* p)
     {
-        if(ema->device->type == DeviceType::CPU)
-            update_ema_rule_dev(*(Device_CPU*)ema->device, ema, p);
-        else if(ema->device->type == DeviceType::GPU)
+        if(ma->device->type == DeviceType::CPU)
+            update_ma_rule_dev(*(Device_CPU*)ma->device, ma, p);
+        else if(ma->device->type == DeviceType::GPU)
         {
-            cudaSetDevice(((Device_GPU*) ema->device)->cuda_device_id);
-            update_ema_rule_dev(*(Device_GPU*) ema->device, ema, p);
+            cudaSetDevice(((Device_GPU*) ma->device)->cuda_device_id);
+            update_ma_rule_dev(*(Device_GPU*) ma->device, ma, p);
         }
         else
-            throw std::runtime_error("Bad device in MyTrainer::update_ema_rule");
+            throw std::runtime_error("Bad device in MyTrainer::update_ma_rule");
     }
 
-    extern template void Trainer::swap_params_to_ema_rule_dev<Device_GPU>(const Device_GPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
-    template void Trainer::swap_params_to_ema_rule_dev<Device_CPU>(const Device_CPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
-    void Trainer::swap_params_to_ema_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema)
+    extern template void Trainer::swap_params_to_ma_rule_dev<Device_GPU>(const Device_GPU& dev, bool save_weights, bool bias_correction, Tensor* p, Tensor* mem, Tensor* ma);
+    template void Trainer::swap_params_to_ma_rule_dev<Device_CPU>(const Device_CPU& dev, bool save_weights, bool bias_correction, Tensor* p, Tensor* mem, Tensor* ma);
+    void Trainer::swap_params_to_ma_rule(bool save_weights, bool bias_correction, Tensor* p, Tensor* mem, Tensor* ma)
     {
-        if(ema->device->type == DeviceType::CPU)
-            swap_params_to_ema_rule_dev(*(Device_CPU*)ema->device, bias_correction, save_weights, p, mem, ema);
-        else if(ema->device->type == DeviceType::GPU)
+        if(ma->device->type == DeviceType::CPU)
+            swap_params_to_ma_rule_dev(*(Device_CPU*)ma->device, save_weights, bias_correction, p, mem, ma);
+        else if(ma->device->type == DeviceType::GPU)
         {
-            cudaSetDevice(((Device_GPU*) ema->device)->cuda_device_id);
-            swap_params_to_ema_rule_dev(*(Device_GPU*)ema->device, bias_correction, save_weights, p, mem, ema);
+            cudaSetDevice(((Device_GPU*) ma->device)->cuda_device_id);
+            swap_params_to_ma_rule_dev(*(Device_GPU*)ma->device, save_weights, bias_correction, p, mem, ma);
         }
         else
-            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_ema_rule");
+            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_ma_rule");
     }
 
 
@@ -425,22 +426,22 @@ void Trainer::populate(std::istream& is, real lr)
             throw std::runtime_error("Bad device in MyTrainer::swap_params_to_weights_rule");
     }
 #else
-    template void Trainer::update_ema_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* ema, Tensor* p);
-    void Trainer::update_ema_rule(Tensor* ema, Tensor* p)
+    template void Trainer::update_ma_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* ma, Tensor* p);
+    void Trainer::update_ma_rule(Tensor* ma, Tensor* p)
     {
-        if(ema->device->type == DeviceType::CPU)
-            update_ema_rule_dev(*(Device_CPU*) ema->device, ema, p);
+        if(ma->device->type == DeviceType::CPU)
+            update_ma_rule_dev(*(Device_CPU*) ma->device, ma, p);
         else
-            throw std::runtime_error("Bad device in MyTrainer::update_ema_rule");
+            throw std::runtime_error("Bad device in MyTrainer::update_ma_rule");
     }
 
-    template void Trainer::swap_params_to_ema_rule_dev<Device_CPU>(const Device_CPU& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
-    void Trainer::swap_params_to_ema_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema)
+    template void Trainer::swap_params_to_ma_rule_dev<Device_CPU>(const Device_CPU& dev, bool save_weights, bool bias_correction, Tensor* p, Tensor* mem, Tensor* ma);
+    void Trainer::swap_params_to_ma_rule(bool save_weights, bool bias_correction, Tensor* p, Tensor* mem, Tensor* ma)
     {
-        if(ema->device->type == DeviceType::CPU)
-            swap_params_to_ema_rule_dev(*(Device_CPU*)ema->device, bias_correction, save_weights, p, mem, ema);
+        if(ma->device->type == DeviceType::CPU)
+            swap_params_to_ma_rule_dev(*(Device_CPU*)ma->device, save_weights, bias_correction, p, mem, ma);
         else
-            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_ema_rule");
+            throw std::runtime_error("Bad device in MyTrainer::swap_params_to_ma_rule");
     }
 
     template void Trainer::swap_params_to_weights_rule_dev<Device_CPU>(const Device_CPU& dev, Tensor* p, Tensor* mem);
@@ -454,29 +455,51 @@ void Trainer::populate(std::istream& is, real lr)
 #endif
 
 template<class MyDevice>
-void Trainer::update_ema_rule_dev(const MyDevice& dev, Tensor* ema, Tensor* p)
+void Trainer::update_ma_rule_dev(const MyDevice& dev, Tensor* ma, Tensor* p)
 {
-    tvec(*ema).device(*dev.edevice) = ema_beta * tvec(*ema) + (1-ema_beta) * tvec(*p);
+    switch (moving_average())
+    {
+        case MovingAverage::Cumulative:
+            tvec(*ma).device(*dev.edevice) = (real(ma_updates) * tvec(*ma) + tvec(*p)) / (real(ma_updates)+1);
+            break;
+        case MovingAverage::Exponential:
+            tvec(*ma).device(*dev.edevice) = ema_beta * tvec(*ma) + (1-ema_beta) * tvec(*p);
+            break;
+        case MovingAverage::None:
+            // should not happen
+            break;
+    }
 }
 
 template<class MyDevice>
-void Trainer::swap_params_to_ema_rule_dev(
+void Trainer::swap_params_to_ma_rule_dev(
     const MyDevice& dev,
-    bool bias_correction, bool save_weights,
-    Tensor* p, Tensor* mem, Tensor* ema
+    bool save_weights, bool bias_correction,
+    Tensor* p, Tensor* mem, Tensor* ma
 )
 {
     if (save_weights)
         tvec(*mem).device(*dev.edevice) = tvec(*p);
 
-    if (bias_correction)
+    switch (moving_average())
     {
-        const real pow_beta = pow(ema_beta, ema_updates);
-        const real scale = 1.f / (1.f - pow_beta);
-        tvec(*p).device(*dev.edevice) = scale * tvec(*ema);
+        case MovingAverage::Cumulative:
+            tvec(*p).device(*dev.edevice) = tvec(*ma);
+            break;
+        case MovingAverage::Exponential:
+            if (bias_correction)
+            {
+                const real pow_beta = pow(ema_beta, ma_updates);
+                const real scale = 1.f / (1.f - pow_beta);
+                tvec(*p).device(*dev.edevice) = scale * tvec(*ma);
+            }
+            else
+                tvec(*p).device(*dev.edevice) = tvec(*ma);
+            break;
+        case MovingAverage::None:
+            // should not happen
+            break;
     }
-    else
-        tvec(*p).device(*dev.edevice) = tvec(*ema);
 }
 
 template<class MyDevice>
@@ -487,12 +510,12 @@ void Trainer::swap_params_to_weights_rule_dev(const MyDevice& dev, Tensor* p, Te
 
 #ifndef __CUDACC__
 
-bool Trainer::ema()
+MovingAverage Trainer::moving_average()
 {
-    return ema_beta > 0.f;
+    return ma_mode;
 }
 
-void Trainer::ema(float beta, unsigned update_freq)
+void Trainer::exponential_moving_average(float beta, unsigned update_freq)
 {
     if (updates > 0)
         DYNET_RUNTIME_ERR("This function must be called before any update");
@@ -500,63 +523,75 @@ void Trainer::ema(float beta, unsigned update_freq)
         DYNET_RUNTIME_ERR("The update frequency cannot be null");
 
     ema_beta = beta;
-    ema_update_freq = update_freq;
+    ma_update_freq = update_freq;
+    ma_mode = MovingAverage::Exponential;
 }
 
-void Trainer::swap_params_to_ema(bool bias_correction, bool save_weights)
+void Trainer::cumulative_moving_average(unsigned update_freq)
 {
-    if (!ema())
-        DYNET_RUNTIME_ERR("EMA is not enabled");
-    if (ema_updates == 0u)
-        DYNET_RUNTIME_ERR("EMA has not been set yet");
+    if (updates > 0)
+        DYNET_RUNTIME_ERR("This function must be called before any update");
+    if (update_freq == 0u)
+        DYNET_RUNTIME_ERR("The update frequency cannot be null");
 
-    if (ema_params_swapped)
+    ma_update_freq = update_freq;
+    ma_mode = MovingAverage::Cumulative;
+}
+
+void Trainer::swap_params_to_moving_average(bool save_weights, bool bias_correction)
+{
+    if (moving_average() == MovingAverage::None)
+        DYNET_RUNTIME_ERR("Moving average is not enabled");
+    if (ma_updates == 0u)
+        DYNET_RUNTIME_ERR("Moving average has not been set yet");
+
+    if (ma_params_swapped)
         return; // nothing to do
-    ema_params_swapped = true;
-    ema_params_saved = save_weights;
+    ma_params_swapped = true;
+    ma_params_saved = save_weights;
 
     const auto& params = model->parameters_list();
     const auto& lparams = model->lookup_parameters_list();
 
     // check memory (shadow params are automatically initialized to zero)
-    if (ema_p.size() < params.size())
-        allocate_shadow_parameters(*model, ema_p.size(), ema_p);
-    if (ema_lp.size() < lparams.size())
-        allocate_shadow_lookup_parameters(*model, ema_lp.size(), ema_lp);
+    if (ma_p.size() < params.size())
+        allocate_shadow_parameters(*model, ma_p.size(), ma_p);
+    if (ma_lp.size() < lparams.size())
+        allocate_shadow_lookup_parameters(*model, ma_lp.size(), ma_lp);
 
     if (save_weights)
     {
-        if (ema_saved_p.size() < params.size())
-            allocate_shadow_parameters(*model, ema_saved_p.size(), ema_saved_p);
-        if (ema_saved_lp.size() < lparams.size())
-            allocate_shadow_lookup_parameters(*model, ema_saved_lp.size(), ema_saved_lp);
+        if (ma_saved_p.size() < params.size())
+            allocate_shadow_parameters(*model, ma_saved_p.size(), ma_saved_p);
+        if (ma_saved_lp.size() < lparams.size())
+            allocate_shadow_lookup_parameters(*model, ma_saved_lp.size(), ma_saved_lp);
     }
 
     for(size_t i = 0; i < params.size(); ++i)
     {
         Tensor& weights = params[i]->values;
-        Tensor& mem = ema_saved_p[i].h;
-        Tensor& ema = ema_p[i].h;
+        Tensor& mem = ma_saved_p[i].h;
+        Tensor& ma = ma_p[i].h;
 
-        swap_params_to_ema_rule(bias_correction, save_weights, &weights, &mem, &ema);
+        swap_params_to_ma_rule(save_weights, bias_correction, &weights, &mem, &ma);
     }
     for(size_t i = 0; i < lparams.size(); ++i)
     {
         Tensor& weights = lparams[i]->all_values;
-        Tensor& mem = ema_saved_lp[i].all_h;
-        Tensor& ema = ema_lp[i].all_h;
+        Tensor& mem = ma_saved_lp[i].all_h;
+        Tensor& ma = ma_lp[i].all_h;
 
-        swap_params_to_ema_rule(bias_correction, save_weights, &weights, &mem, &ema);
+        swap_params_to_ma_rule(save_weights, bias_correction, &weights, &mem, &ma);
     }
 }
 
 void Trainer::swap_params_to_weights()
 {
-    if (!ema_params_swapped)
+    if (!ma_params_swapped)
         return;
-    if (!ema_params_saved)
+    if (!ma_params_saved)
         DYNET_RUNTIME_ERR("Weights have not been save.")
-    ema_params_swapped = false;
+    ma_params_swapped = false;
 
     const auto& params = model->parameters_list();
     const auto& lparams = model->lookup_parameters_list();
@@ -565,16 +600,16 @@ void Trainer::swap_params_to_weights()
     // they are ignored.
     // Setting them to 0 would not be a good strategy
     // (i.e. we want to keep their init value, e.g. glorot)
-    for(size_t i = 0; i < ema_saved_p.size(); ++i)
+    for(size_t i = 0; i < ma_saved_p.size(); ++i)
     {
         Tensor& weights = params[i]->values;
-        Tensor& mem = ema_saved_p[i].h;
+        Tensor& mem = ma_saved_p[i].h;
         swap_params_to_weights_rule(&weights, &mem);
     }
-    for(size_t i = 0; i < ema_saved_lp.size(); ++i)
+    for(size_t i = 0; i < ma_saved_lp.size(); ++i)
     {
         Tensor& weights = lparams[i]->all_values;
-        Tensor& mem = ema_saved_lp[i].all_h;
+        Tensor& mem = ma_saved_lp[i].all_h;
         swap_params_to_weights_rule(&weights, &mem);
     }
 }
@@ -1168,6 +1203,38 @@ void EGTrainer::populate(std::istream& is)
     iss >> f_zeg >> f_meg >> momentum >> e_min >> e_max >> step_size >> gamma >> it >> isCyclical;
     TensorTools::set_element(zeg, 0u, f_zeg);
     TensorTools::set_element(meg, 0u, f_meg);
+}
+
+
+ostream& operator<<(std::ostream& os, const MovingAverage& o)
+{
+    switch (o)
+    {
+        case MovingAverage::None:
+            os << "None";
+            break;
+        case MovingAverage::Cumulative:
+            os << "Cumulative";
+            break;
+        case MovingAverage::Exponential:
+            os << "Exponential";
+            break;
+    }
+    return os;
+}
+istream& operator>>(std::istream& is, MovingAverage& o)
+{
+    std::string v;
+    is >> v;
+    if (v == "None")
+        o = MovingAverage::None;
+    else if (v == "Cumulative")
+        o = MovingAverage::Cumulative;
+    else if (v == "Exponential")
+        o = MovingAverage::Exponential;
+    else
+        DYNET_RUNTIME_ERR("Invalid moving average mode: " << v);
+    return is;
 }
 
 #endif

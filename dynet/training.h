@@ -28,6 +28,17 @@
 
 namespace dynet {
 
+enum struct MovingAverage
+{
+    None,
+    Cumulative,
+    Exponential
+};
+
+std::ostream& operator<<(std::ostream& os, const MovingAverage& o);
+std::istream& operator>>(std::istream& is, MovingAverage& o);
+
+
 /**
  * \ingroup optimizers
  *
@@ -54,12 +65,13 @@ struct Trainer {
     aux_allocated(0),
     aux_allocated_lookup(0),
     ema_beta(0.f),
-    ema_params_swapped(false),
-    ema_params_saved(false),
-    ema_update_freq(1u),
-    ema_updates(0u),
-    ema_aux_allocated(0),
-    ema_aux_allocated_lookup(0),
+    ma_mode(MovingAverage::None),
+    ma_params_swapped(false),
+    ma_params_saved(false),
+    ma_update_freq(1u),
+    ma_updates(0u),
+    ma_aux_allocated(0),
+    ma_aux_allocated_lookup(0),
     model(&m)
   {}
   virtual ~Trainer();
@@ -171,26 +183,28 @@ struct Trainer {
   unsigned aux_allocated;
   unsigned aux_allocated_lookup;
 
-  // Exponential Moving Average
-  real ema_beta; // 
-  bool ema_params_swapped; // true is params and EMA have been swapped
-  bool ema_params_saved; // true if params have been saved when swapping
-  unsigned ema_update_freq; // the EMA will be updated each ema_update_frequency updates
-  unsigned ema_updates; // number of times the EMA has been updated, used for bias correction
-  unsigned ema_aux_allocated;
-  unsigned ema_aux_allocated_lookup;
-  // Shadow parameters used for EMA 
-  std::vector<ShadowParameters> ema_p;
-  std::vector<ShadowLookupParameters> ema_lp;
-  std::vector<ShadowParameters> ema_saved_p;
-  std::vector<ShadowLookupParameters> ema_saved_lp;
+protected:
+  real ema_beta; // Exponential Moving Averaged only
+  MovingAverage ma_mode;
+  bool ma_params_swapped; // true if params and moving av. of params have been swapped
+  bool ma_params_saved; // true if params have been saved when swapping
+  unsigned ma_update_freq; // the moving average will be updated each ema_update_frequency updates
+  unsigned ma_updates; // number of times the moving av. has been updated
+  unsigned ma_aux_allocated;
+  unsigned ma_aux_allocated_lookup;
+  // Shadow parameters used for moving average
+  std::vector<ShadowParameters> ma_p;
+  std::vector<ShadowLookupParameters> ma_lp;
+  std::vector<ShadowParameters> ma_saved_p;
+  std::vector<ShadowLookupParameters> ma_saved_lp;
 
+public:
   /**
-   * Whether the exponential moving average is enabled
+   * Whether the the trainer is storing the moving average of parameters
    *
-   * \return True if the Exponential Moving Average is enabled
+   * \return The moving average mode
    */
-  bool ema();
+  MovingAverage moving_average();
 
   /**
    * Enable the computation of the exponential moving average of parameters.
@@ -199,20 +213,28 @@ struct Trainer {
    * \param beta The degree of weighting decrease
    * \param update_freq Frequency of update of the EMA
    */
-  void ema(float beta, unsigned update_freq=1u);
+  void exponential_moving_average(float beta, unsigned update_freq=1u);
 
   /**
-   * Set the network parameters to their exponential moving average
-   * \details If the current weights are not save, the optimizer cannot be used
+   * Enable the computation of the cumulative moving average of parameters.
+   * \details This function must be called before any update.
+   *
+   * \param update_freq Frequency of update of the moving average
+   */
+  void cumulative_moving_average(unsigned update_freq=1u);
+
+  /**
+   * Set the network parameters to their moving average
+   * \details If the current weights are not saved, the optimizer cannot be used
    *          anymore (e.g. the update() function will throw an exception)
    *
-   * \param bias_bias_correction Whether to apply bias correction
    * \param save_weights Whether to save the current weights.
+   * \param bias_bias_correction Whether to apply bias correction (used for exponential moving average only)
    */
-    void swap_params_to_ema(bool bias_correction=false, bool save_weights=true);
+    void swap_params_to_moving_average(bool save_weights=true, bool bias_correction=false);
 
   /**
-   * Restore the parameters of the model if they are set to their EMA
+   * Restore the parameters of the model if they are set to their moving average
    */
   void swap_params_to_weights();
 
@@ -265,11 +287,11 @@ protected:
    */
   virtual void update_lookup_params(real gscale, size_t idx) = 0;
 
-  template <class MyDevice> void update_ema_rule_dev(const MyDevice& dev, Tensor* ema, Tensor* p);
-  void update_ema_rule(Tensor* ema, Tensor* p);
+  template <class MyDevice> void update_ma_rule_dev(const MyDevice& dev, Tensor* ma, Tensor* p);
+  void update_ma_rule(Tensor* ma, Tensor* p);
 
-  template <class MyDevice> void swap_params_to_ema_rule_dev(const MyDevice& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
-  void swap_params_to_ema_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ema);
+  template <class MyDevice> void swap_params_to_ma_rule_dev(const MyDevice& dev, bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ma);
+  void swap_params_to_ma_rule(bool bias_correction, bool save_weights, Tensor* p, Tensor* mem, Tensor* ma);
 
   template <class MyDevice> void swap_params_to_weights_rule_dev(const MyDevice& dev, Tensor* p, Tensor* mem);
   void swap_params_to_weights_rule(Tensor* p, Tensor* mem);
