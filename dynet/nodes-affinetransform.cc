@@ -148,9 +148,9 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
 
   // Left argument of matrix multiply
   } else if (i % 2 == 1) {
-    MatrixTranspMultiplyAcc(dev, dEdf, *xs[i+1], dEdxi);
+    MatrixMultiplyTranspAcc(dev, dEdf, *xs[i+1], dEdxi);
   } else {  // right argument of matrix multiply
-    MatrixMultiplyTranspAcc(dev, *xs[i-1], dEdf, dEdxi);
+    MatrixTranspMultiplyAcc(dev, *xs[i-1], dEdf, dEdxi);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(AffineTransform)
