@@ -124,13 +124,17 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
     } else {
       DYNET_ARG_CHECK(dEdxi.d.bd == 1, "In AffineTransform, broadcasting over columns with mini-batched inputs is not implemented yet");
 #ifdef __CUDACC__
+      AlignedMemoryPool* scratch_allocator = dEdxi.device->pools[(int)DeviceMempool::SCS];
       if(dEdxi.d[1] == dEdf.d[1]) {
         Eigen::array<ptrdiff_t, 1> red_axis = { 2 };
         t<2>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).sum(red_axis);
       } else {
-        Eigen::array<ptrdiff_t, 2> red_axis = {1, 2};
-        t<1>(dEdxi).device(*dev.edevice) += tb<2>(dEdf).sum(red_axis);
+        Tensor ones(Dim({1, dEdf.d[1]}, dEdf.d.bd), nullptr, fx.device, fx.mem_pool);
+        ones.v = static_cast<float*>(scratch_allocator->allocate(ones.d.size() * sizeof(float)));
+        TensorTools::constant(ones, 1.0);
+        MatrixMultiplyTranspAcc(dev, dEdf, ones, dEdxi);
       }
+      scratch_allocator->free()
 #else
       if(dEdxi.d[1] == dEdf.d[1]) {
         for(unsigned b = 0; b < dEdf.d.bd; ++b)
