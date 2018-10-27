@@ -620,6 +620,11 @@ cdef class Expression: #{{{
         return c_dim_as_dim(d)
         # return (d.size(), d.rows(), d.cols(), d.batch_elems())
 
+    def __len__(self):
+        cdef CDim d;
+        d = self.c().dim()
+        return c_dim_as_dim(d)[0][0]
+
     def __repr__(self):
         return str(self)
     def __str__(self):
