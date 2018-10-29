@@ -49,6 +49,7 @@ set(dynet_library_SRCS
     nodes-norms.cc
     nodes-pickneglogsoftmax.cc
     nodes-random.cc
+    nodes-rounding.cc
     nodes-select.cc
     nodes-similarities.cc
     nodes-softmaxes.cc

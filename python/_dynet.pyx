@@ -2908,9 +2908,9 @@ cpdef Expression argmax(Expression x, str gradient_mode):
         dynet.Expression: The one hot argmax vector
     """
     if gradient_mode == "zero_gradient":
-        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_ArgmaxGradient.zero_gradient))
+        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_GradientMode.zero_gradient))
     elif gradient_mode == "straight_through_gradient":
-        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_ArgmaxGradient.straight_through_gradient))
+        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_GradientMode.straight_through_gradient))
     else:
         raise ValueError("Unknown gradient mode for argmax: " + gradient_mode)
 
@@ -3603,6 +3603,66 @@ cpdef Expression silu(Expression x, float beta=1.0):
         dynet.Expression: :math:`\\text{silu}(x_i, \\beta)`
     """
     return Expression.from_cexpr(x.cg_version, c_silu(x.c(), beta))
+
+cpdef Expression round(Expression x, str gradient_mode):
+    """Rounding
+    
+    This node takes an input vector :math:`x` and returns a vector where each element is rounded to the nearest integer.
+    The gradient_mode is either :code:`"zero_gradient"` or :code:`"straight_through_gradient"` (see "argmax" for more details)
+    
+    Args:
+        x (dynet.Expression): The input vector (can be batched)
+        gradient_mode (str): Gradient mode for the backward pass (one of :code:`"zero_gradient"` or :code:`"straight_through_gradient"`
+    
+    Returns:
+        dynet.Expression: The rounded vector
+    """
+    if gradient_mode == "zero_gradient":
+        return Expression.from_cexpr(x.cg_version, c_round(x.c(), c_GradientMode.zero_gradient))
+    elif gradient_mode == "straight_through_gradient":
+        return Expression.from_cexpr(x.cg_version, c_round(x.c(), c_GradientMode.straight_through_gradient))
+    else:
+        raise ValueError("Unknown gradient mode for round: " + gradient_mode)
+
+cpdef Expression ceil(Expression x, str gradient_mode):
+    """Ceiling
+    
+    This node takes an input vector :math:`x` and returns a vector where each element is rounded to the nearest integer greater than or equal to the input.
+    The gradient_mode is either :code:`"zero_gradient"` or :code:`"straight_through_gradient"` (see "argmax" for more details)
+    
+    Args:
+        x (dynet.Expression): The input vector (can be batched)
+        gradient_mode (str): Gradient mode for the backward pass (one of :code:`"zero_gradient"` or :code:`"straight_through_gradient"`
+    
+    Returns:
+        dynet.Expression: The ceiled vector
+    """
+    if gradient_mode == "zero_gradient":
+        return Expression.from_cexpr(x.cg_version, c_ceil(x.c(), c_GradientMode.zero_gradient))
+    elif gradient_mode == "straight_through_gradient":
+        return Expression.from_cexpr(x.cg_version, c_ceil(x.c(), c_GradientMode.straight_through_gradient))
+    else:
+        raise ValueError("Unknown gradient mode for ceil: " + gradient_mode)
+
+cpdef Expression floor(Expression x, str gradient_mode):
+    """Floor
+    
+    This node takes an input vector :math:`x` and returns a vector where each element is rounded to the nearest integer less than or equal to the input.
+    The gradient_mode is either :code:`"zero_gradient"` or :code:`"straight_through_gradient"` (see "argmax" for more details)
+    
+    Args:
+        x (dynet.Expression): The input vector (can be batched)
+        gradient_mode (str): Gradient mode for the backward pass (one of :code:`"zero_gradient"` or :code:`"straight_through_gradient"`
+    
+    Returns:
+        dynet.Expression: The floored vector
+    """
+    if gradient_mode == "zero_gradient":
+        return Expression.from_cexpr(x.cg_version, c_floor(x.c(), c_GradientMode.zero_gradient))
+    elif gradient_mode == "straight_through_gradient":
+        return Expression.from_cexpr(x.cg_version, c_floor(x.c(), c_GradientMode.straight_through_gradient))
+    else:
+        raise ValueError("Unknown gradient mode for floor: " + gradient_mode)
 
 cpdef Expression log_softmax(Expression x, list restrict=None):
     """Restricted log softmax
