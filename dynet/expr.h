@@ -1330,8 +1330,8 @@ Expression colwise_add(const Expression& x, const Expression& bias);
  * \ingroup lossoperations
  * \brief Softmax
  * \details The softmax function normalizes each column to ensure that all
- *          values are between 0 and 1 and add to one by applying the
- *          e^{x[i]}/{sum_j e^{x[j]}}.
+ *          values are between 0 and 1 and add to one by applying
+ *          \f$\frac{e^{x_i}}{\sum_j e^{x_j}}\f$.
  *
  * \param x A vector or matrix
  * \param d dimension to normalize over (default: 0)
@@ -1344,8 +1344,8 @@ Expression softmax(const Expression& x, unsigned d=0);
  * \ingroup lossoperations
  * \brief Log softmax
  * \details The log softmax function normalizes each column to ensure that all
- *          values are between 0 and 1 and add to one by applying the
- *          e^{x[i]}/{sum_j e^{x[j]}}, then takes the log
+ *          values are between 0 and 1 and add to one by applying
+ *          \f$\frac{e^{x_i}}{\sum_j e^{x_j}}\f$, then taking the log
  *
  * \param x A vector or matrix
  *
