@@ -2,8 +2,6 @@
 #include "dynet/nodes-rounding.h"
 
 #include "dynet/nodes-impl-macros.h"
-#include "dynet/functors.h"
-#include "dynet/simd-functors.h"
 
 using namespace std;
 
