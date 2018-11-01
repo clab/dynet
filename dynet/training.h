@@ -118,6 +118,7 @@ struct Trainer {
   /**
    * @brief Save the optimizer state
    * @details Write all hyperparameters, momentum values and assimilate (if applicable) to stream.
+   *          If the parameters are swapped with their moving averages, only the latters are saved.
    *
    * \param os Output stream
    */

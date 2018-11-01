@@ -271,8 +271,6 @@ void Trainer::restart(real lr) {
 
 void Trainer::save(std::ostream& os)
 {
-    if (ma_params_swapped)
-        DYNET_RUNTIME_ERR("Trainer cannot be saved: parameters are swapped with their exponential moving averaged weights");
     os.precision(FLOAT32_PRECISION);
     os << std::scientific << std::showpos;
     write_trainer_header(os, "#Trainer#", aux_allocated, aux_allocated_lookup);
@@ -291,8 +289,8 @@ void Trainer::save(std::ostream& os)
     ;
 
 
-    // save EMA state
-    if (ma_mode != MovingAverage::None)
+    // save EMA/CMA state if parameters are not swapped
+    if (ma_mode != MovingAverage::None && !ma_params_swapped)
     {
         os << "[MA:TRUE]\n";
         write_trainer_header(os, "#MA#", ma_aux_allocated, ma_aux_allocated_lookup);
