@@ -85,6 +85,24 @@ which will train a multilayer perceptron to predict the xor function.
 
 If any process here fails, please see :ref:`debugging-asking` for help.
 
+By default, Dynet will be compiled with the ``-Ofast`` optimization
+level which enables the ``-ffast-math`` option.  In most cases,
+this is be acceptable. However, it may impact mathematical computation outside
+the core of dynet, see `this issue <https://github.com/clab/dynet/issues/1433>`__.
+the ``RELEASE_OPT_LEVEL`` can be used to change the optimization level:
+
+::
+
+     cmake .. -DRELEASE_OPT_LEVEL=3 -DEIGEN3_INCLUDE_DIR=/path/to/eigen
+
+The ``CXXFLAGS`` environment variable can be used for more specific tunning,
+for example
+
+::
+    cmake -E env CXXFLAGS="-fno-math-errno" cmake .. -DRELEASE_OPT_LEVEL=3 -DEIGEN3_INCLUDE_DIR=/path/to/eigen
+
+Note that ``CXXFLAGS`` is only checked during the `first configuration <https://cmake.org/cmake/help/latest/envvar/CXXFLAGS.html>`__.
+
 Compiling/linking external programs
 -----------------------------------
 
