@@ -49,6 +49,7 @@ set(dynet_library_SRCS
     nodes-norms.cc
     nodes-pickneglogsoftmax.cc
     nodes-random.cc
+    nodes-rounding.cc
     nodes-select.cc
     nodes-similarities.cc
     nodes-softmaxes.cc
@@ -135,6 +136,7 @@ nodes-normalization.h
 nodes-norms.h
 nodes-pickneglogsoftmax.h
 nodes-random.h
+nodes-rounding.h
 nodes-select.h
 nodes-similarities.h
 nodes-softmaxes.h
@@ -191,6 +193,7 @@ set(dynet_gpu_mergeable_SRCS
     nodes-norms
     nodes-pickneglogsoftmax
     nodes-random
+    nodes-rounding
     nodes-select
     nodes-similarities
     nodes-softmaxes

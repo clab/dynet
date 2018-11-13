@@ -208,16 +208,18 @@ template<typename Scalar> struct scalar_asinh_forward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_asinh_forward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
 #ifndef __CUDACC__
-    using std::asinh;
+    return std::asinh(x);
+#else
+    return ::asinh(x);
 #endif
-    return asinh(x);
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
 #ifndef __CUDACC__
-    using std::asinh;
+    return std::asinh(x);
+#else
+    return ::asinh(x);
 #endif
-    return asinh(x);
   }
 };
 }
@@ -227,16 +229,18 @@ template<typename Scalar> struct scalar_acosh_forward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_acosh_forward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
 #ifndef __CUDACC__
-    using std::acosh;
+    return std::acosh(x);
+#else
+    return ::acosh(x);
 #endif
-    return acosh(x);
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
 #ifndef __CUDACC__
-    using std::acosh;
+    return std::acosh(x);
+#else
+    return ::acosh(x);
 #endif
-    return acosh(x);
   }
 };
 }
@@ -246,16 +250,18 @@ template<typename Scalar> struct scalar_atanh_forward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_atanh_forward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
 #ifndef __CUDACC__
-    using std::atanh;
+    return std::atanh(x);
+#else
+    return ::atanh(x);
 #endif
-    return atanh(x);
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
 #ifndef __CUDACC__
-    using std::atanh;
+    return std::atanh(x);
+#else
+    return ::atanh(x);
 #endif
-    return atanh(x);
   }
 };
 }
