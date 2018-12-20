@@ -13,7 +13,9 @@
 #include <limits>
 
 #if HAVE_CUDA
-#  define DYNET_DEVICE_FUNC __device__
+// Functors have to be callable on both the host and device, otherwise Eigen
+// fails to build expression templates correctly.
+#  define DYNET_DEVICE_FUNC __host__ __device__
 #  define DYNET_DEVICE_MIN 1.175494351e-38f
 #else
 #  define DYNET_DEVICE_FUNC
