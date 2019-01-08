@@ -6249,6 +6249,7 @@ cdef class Trainer:
     cpdef set_clip_threshold(self,float thr):
         """Set clipping thershold
         
+        Gradients are clipped to 5 by default.
         To deactivate clipping, set the threshold to be <=0
         
         Args:
