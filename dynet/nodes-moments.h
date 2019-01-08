@@ -13,13 +13,6 @@ struct Average : public Node {
   virtual bool supports_multibatch() const override { return true; }
 };
 
-// with a single argument x \in R^{n x m}
-// y_i = \sum_j x_i,j / m
-struct AverageColumns : public Node {
-  template <typename T> explicit AverageColumns(const T& a) : Node(a) {}
-  DYNET_NODE_DEFINE_DEV_IMPL()
-};
-
 // y = \sum_i,j,... x[i,j,...]
 struct MomentElements : public Node {
   template <typename T> explicit MomentElements(const T& a, unsigned o) : Node(a), order(o) {}

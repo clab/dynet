@@ -34,7 +34,7 @@ void SelectRows::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   for (unsigned i = 0; i < rm.size(); ++i) {
     DYNET_ARG_CHECK(rm[i] < xs[0]->d.rows(),
                             "Out-of-bounds index " << rm[i] << " in SelectRows over expression of dimensions " << xs[0]->d);
-    t<4>(fx).chip<0>(i).device(*dev.edevice) = t<4>(*xs[0]).chip<0>(rm[i]);
+    tb<4>(fx).chip<0>(i).device(*dev.edevice) = tb<4>(*xs[0]).chip<0>(rm[i]);
   }
 }
 
@@ -48,7 +48,7 @@ void SelectRows::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectRows::backward");
   auto& rm = *prows;
   for (unsigned i = 0; i < rm.size(); ++i)
-    t<4>(dEdxi).chip<0>(rm[i]).device(*dev.edevice) += t<4>(dEdf).chip<0>(i);
+    tb<4>(dEdxi).chip<0>(rm[i]).device(*dev.edevice) += tb<4>(dEdf).chip<0>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectRows)
 
@@ -79,7 +79,7 @@ void SelectCols::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
   for (unsigned i = 0; i < rm.size(); ++i) {
     DYNET_ARG_CHECK(rm[i] < xs[0]->d.cols(),
                             "Out-of-bounds index " << rm[i] << " in SelectCols over expression of dimensions " << xs[0]->d);
-    t<2>(fx).chip<1>(i).device(*dev.edevice) = t<2>(*xs[0]).chip<1>(rm[i]);
+    tb<2>(fx).chip<1>(i).device(*dev.edevice) = tb<2>(*xs[0]).chip<1>(rm[i]);
   }
 }
 
@@ -93,7 +93,7 @@ void SelectCols::backward_dev_impl(const MyDevice & dev,
   DYNET_ARG_CHECK(xs.size() == 1, "Failed dimension check in SelectCols::backward");
   auto& rm = *pcols;
   for (unsigned i = 0; i < rm.size(); ++i)
-    t<2>(dEdxi).chip<1>(rm[i]).device(*dev.edevice) += t<2>(dEdf).chip<1>(i);
+    tb<2>(dEdxi).chip<1>(rm[i]).device(*dev.edevice) += tb<2>(dEdf).chip<1>(i);
 }
 DYNET_NODE_INST_DEV_IMPL(SelectCols)
 

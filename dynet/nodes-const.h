@@ -10,6 +10,7 @@ namespace dynet {
 struct Constant : public Node {
   explicit Constant(const Dim& d, float val=0.f) : dim(d), value(val) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   Dim dim;
   float value;
 };

@@ -59,6 +59,7 @@ struct CwiseQuotient : public Node {
 struct Pow : public Node {
   explicit Pow(const std::initializer_list<VariableIndex>& a) : Node(a) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
 };
 
 } // namespace dynet
