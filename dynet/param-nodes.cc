@@ -322,7 +322,7 @@ void LookupNode::forward_dev_impl(const MyDevice & dev, const vector<const Tenso
       unsigned i = pindices->at(b);
       DYNET_ARG_CHECK(i < params.get_storage().values.size(),
                               "Out-of-bounds attempt to access index " << i << " for LookupParameter of size " << params.get_storage().values.size());
-      tb<2>(fx).chip<2>(b).device(*dev.edevice) = t<2>(params.get_storage().values[i]) * params.current_weight_decay();
+      tbvec(fx).chip<1>(b).device(*dev.edevice) = tvec(params.get_storage().values[i]) * params.current_weight_decay();
     }
 #endif
   }

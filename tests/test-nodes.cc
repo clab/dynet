@@ -79,6 +79,7 @@ struct NodeTest {
     TensorTools::set_elements(lookup1.get_storage().all_values, param_square1_vals);
     lookup2 = mod.add_lookup_parameters(10, {3});
     lookup3 = mod2.add_lookup_parameters(10, {3});
+    lookup4 = mod.add_lookup_parameters(10, {2,3,4,5});
   }
   ~NodeTest() {
     // for (auto x : av) free(x);
@@ -109,7 +110,7 @@ struct NodeTest {
   std::vector<char*> av;
   dynet::ParameterCollection mod, mod2;
   dynet::Parameter param1, param2, param3, param4, param5, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1, param_cube2;
-  dynet::LookupParameter lookup1, lookup2, lookup3;
+  dynet::LookupParameter lookup1, lookup2, lookup3, lookup4;
 };
 
 // define the test suite
@@ -2487,6 +2488,14 @@ BOOST_AUTO_TEST_CASE( lookup_test ) {
   Expression x2 = lookup(cg, lookup1, (unsigned)2);
   Expression y = x1 + x2;
   Expression z = to_scalar(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression lookup();
+BOOST_AUTO_TEST_CASE( lookup_highdim_batched_test ) {
+  dynet::ComputationGraph cg;
+  Expression x = lookup(cg, lookup4, {0, 2});
+  Expression z = sum_batches(to_scalar(x));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
