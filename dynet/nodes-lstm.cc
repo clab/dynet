@@ -222,7 +222,7 @@ namespace dynet {
     Tensor fx_ifo(Dim({hidden_dim*3, 1},batch_size), nullptr, fx.device, fx.mem_pool);
     fx_ifo.v = static_cast<float*>(scratch_allocator->allocate(fx_ifo.d.size() * sizeof(float)));
     tbvec(fx_ifo).device(*dev.edevice) = tbvec(fx).slice(indices_i, sizes_3);
-    tbvec(fx_ifo).device(*dev.edevice) = tbvec(fx_ifo).unaryExpr(Eigen::internal::scalar_logistic_op<float>());
+    tbvec(fx_ifo).device(*dev.edevice) = tbvec(fx_ifo).unaryExpr(scalar_logistic_sigmoid_op<float>());
     tbvec(fx).slice(indices_i, sizes_3).device(*dev.edevice) = tbvec(fx_ifo);
 
     Tensor fx_g(Dim({hidden_dim*1, 1},batch_size), nullptr, fx.device, fx.mem_pool);

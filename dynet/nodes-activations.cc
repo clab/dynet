@@ -64,7 +64,7 @@ Dim LogisticSigmoid::dim_forward(const vector<Dim>& xs) const {
 template<class MyDevice>
 void LogisticSigmoid::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 1, "Failed dimension check in LogisticSigmoid::forward");
-  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).unaryExpr(Eigen::internal::scalar_logistic_op<float>());
+  tvec(fx).device(*dev.edevice) = tvec(*xs[0]).unaryExpr(scalar_logistic_sigmoid_op<float>());
 }
 
 template<class MyDevice>
