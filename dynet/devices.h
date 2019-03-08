@@ -15,7 +15,7 @@
 
 namespace Eigen {
   struct DefaultDevice;
-  class GpuStreamDevice;
+  class CudaStreamDevice;
   struct GpuDevice;
 }
 
@@ -45,7 +45,7 @@ class Device {
 #if HAVE_CUDA
 class Device_GPU : public Device {
  public:
-  typedef Eigen::GpuStreamDevice EigenDevice;
+  typedef Eigen::CudaStreamDevice EigenDevice;
   explicit Device_GPU(int my_id, const DeviceMempoolSizes & mb, int device_id, unsigned seed);
   ~Device_GPU();
   void reset_rng(unsigned seed);
@@ -55,7 +55,7 @@ class Device_GPU : public Device {
   cudnnHandle_t cudnnHandle;
 #endif
   Eigen::GpuDevice* edevice;
-  Eigen::GpuStreamDevice* estream;
+  Eigen::CudaStreamDevice* estream;
   GPUAllocator gpu_mem;
   curandGenerator_t curandeng;
 };
