@@ -3222,7 +3222,7 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
     Args:
         x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
         f (dynet.Expression): 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
-        b (dynet.Expression): The bias (1D: Ci)
+        b (dynet.Expression): The bias (1D: Co)
         stride (list): the row and column strides
     
     Keyword Arguments:
