@@ -197,13 +197,13 @@ namespace DynetSharpExamples {
                 for (int t = 0; t < sent.Count; t++) {
                     // Regular softmax
                     Expression u_t = dy.affine_transform(bias, R, state.Output());
-                    errs.Add(dy.pickneglogsoftmax(u_t, (uint)sent[t]));
+                    errs.Add(dy.pickneglogsoftmax(u_t, sent[t]));
                     // Add the next item in
                     state = state.AddInput(dy.lookup(lp, sent[t]));
                 }// next t
                 // Add the last </s> tag
                 Expression u_last = dy.affine_transform(bias, R, state.Output());
-                errs.Add(dy.pickneglogsoftmax(u_last, (uint)d["</s>"]));
+                errs.Add(dy.pickneglogsoftmax(u_last, d["</s>"]));
 
                 // Run the sum
                 return dy.esum(errs);
