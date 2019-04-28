@@ -89,7 +89,7 @@ Expression v = dy.input(new[] { 1.0f, 2.0f, 3.0f });
 ```
 ```cs
 // create a matrix expression from an array
-Expression mat1 = dy.input(new[] { new[] { 1.0f, 2.0f }, new[] { 3.0f, 4.0f });
+Expression mat1 = dy.input(new[] { new[] { 1.0f, 2.0f }, new[] { 3.0f, 4.0f } });
 // Or, using the DyNetSharp Tensor object:
 // You can either input a multi dimensional array (float[], float[][], float[][][], etc.) 
 Tensor t2 = new Tensor(new[] { 1.0f, 2.0f });
@@ -117,8 +117,8 @@ Parameters are things need to be trained. In contrast to a system like Torch whe
 
 // First we create a parameter collection and add the parameters to it.
 ParameterCollection m =  new ParameterCollection();
-Parameter W = m.AddParameters(new[] { 8, 8 }); # an 8x8 matrix
-Parameter b = m.AddParameters(new[] { 8 }); # an 8x1 vector
+Parameter W = m.AddParameters(new[] { 8, 8 }); // an 8x8 matrix
+Parameter b = m.AddParameters(new[] { 8 }); // an 8x1 vector
 ```
 There are several ways to initial parameters:
 ```cs
@@ -167,13 +167,13 @@ m.AddLookupParameters(VOCAB_SIZE, DIM, new ConstInitializer(0f));
 DyNet provides hundreds of operations on Expressions. The user can manipulate Expressions, or build complex Expression easily.
 ```cs
 // First we create some vector Expressions.
-Expression e1 = dy.vecInput(new[] { 1f, 2f, 3f, 4f });
-Expression e2 = dy.vecInput(new[] { 5f, 6f, 7f, 8f });
+Expression e1 = dy.input(new[] { 1f, 2f, 3f, 4f });
+Expression e2 = dy.input(new[] { 5f, 6f, 7f, 8f });
 
 // Concatenate list of expressions to a single expression.
 Expression eCombined = dy.concatenate(e1, e2);
 // Concatenate columns of a list of expression to a single expression
-Expresssion eColCombined = dy.concatenate_cols(e1, e2);
+Expression eColCombined = dy.concatenate_cols(e1, e2);
 
 // Basic Math Operations
 
@@ -192,12 +192,12 @@ e = dy.dot_product(e1, e2); // dot product = sum(component-wise multiply)
 
 // Component-wise multiply
 e = dy.cmult(e1, e2);
-# Component-wise division
+// Component-wise division
 e = dy.cdiv(e1, e2);
 
 // Column-wise addition
-#  x:  An MxN matrix
-#  y:  A length M vector
+//  x:  An MxN matrix
+//  y:  A length M vector
 Expression mat = dy.colwise_add(x, y);
 
 // Useful math operations
@@ -254,11 +254,9 @@ Console.WriteLine("e1 transpose dimension: " + string.Join(", ", e.Shape()));
 
 // inverse
 e = dy.inverse(dy.inputTensor(new Tensor(new[] { 1f, 3f, 3f, 1f }, new[] { 2, 2 })));
-print('Inverse a matrix:\n', string.Join(", ", e.VectorValue()));
 
 // logdet
 e = dy.logdet(dy.inputTensor(new Tensor(new[] { 1f, 0f, 0f, 2f }, new[] { 2, 2 })));
-print('logdet diag(1,2) is log(2):\n', string.Join(", ", e.VectorValue()));
 
 // trace_of_product
 Expression diag_12 = dy.inputTensor(new Tensor(new[] { 1f, 0f, 0f, 2f }, new[] { 2, 2 }));
@@ -313,12 +311,12 @@ e = dy.softmax(e1);
 Expression e_log_softmax = dy.log_softmax(e1);
 // constrained_softmax()
 // similar to softmax, but defines upper bounds for the resulting probabilities. 
-e = dy.constrained_softmax(e1, dy.input(new[] { 0.01f, 0.05f, 0.10f, 0.55f }))
+e = dy.constrained_softmax(e1, dy.input(new[] { 0.01f, 0.05f, 0.10f, 0.55f }));
 ```
 
 ##### Picking values from vector expressions
 ```cs
-float k = 1, v = 3;
+int k = 1, v = 3;
 // Pick one element from a vector or matrix
 e = dy.pick(e1, k);
 e = e1[k]; // equivalent
@@ -365,7 +363,7 @@ e = dy.concatenate_cols(e1, e2);
 e = dy.concatenate(e1, e2);
 
 // affine transform
-Expression e0 = dy.vecInput(new[] { -1f, 0f });
+Expression e0 = dy.input(new[] { -1f, 0f });
 e = dy.affine_transform(e1, e, e0);
 
 // sum_elems
@@ -381,7 +379,7 @@ This part contains Neural Networks related issues.
 ```cs
 // Add a noise to each element from a gausian distribution
 // with standard-dev = stddev
-float stddev = 0.1;
+float stddev = 0.1f;
 e = dy.noise(e1, stddev);
 
 // Apply dropout to the input expression
@@ -390,12 +388,12 @@ e = dy.noise(e1, stddev);
 // Dynet implement the Inverted dropout where dropout with prob p 
 // and scaling others by 1/p at training time, and do not need 
 // to do anything at test time. 
-float p = 0.5;
+float p = 0.5f;
 e = dy.dropout(e1, p); // apply dropout with probability p 
 // If we set p=1, everything will be dropped out
 e = dy.dropout(e1, 1);
 // If we set p=0, everything will be kept
-e = dy.dropout(e1, 0)
+e = dy.dropout(e1, 0);
 ```
 ##### Loss Functions
 ```cs
@@ -428,20 +426,20 @@ e = dy.huber_distance(e1, e2, c: 1.345);
 // This is similar to cross entropy loss function
 // e1 must be a vector that takes values between 0 and 1
 // ty must be a vector that takes values between 0 and 1
-e = -(ty * log(e1) + (1 - ty) * log(1 - e1));
-ty = dy.vecInput(new[] { 0f, 0.5f, 0.5f, 1f });
-Expression e_scale = ty = dy.vecInput(new[] { 0f, 0f, 0f, 0f });
-e_scale.set(new[] { 0.5f, 0.5f, 0.5f, 0.5f });
+e = -(ty * dy.log(e1) + (1 - ty) * dy.log(1 - e1));
+ty = dy.input(new[] { 0f, 0.5f, 0.5f, 1f });
+Expression e_scale = ty = dy.input(new[] { 0f, 0f, 0f, 0f });
+e_scale.SetValue(new[] { 0.5f, 0.5f, 0.5f, 0.5f });
 e = dy.binary_log_loss(e_scale, ty);
 // The binary_log_loss is equivalent to the following:
-e_equl = -(dy.dot_product(ty, dy.log(e_scale)) + dy.dot_product((dy.input(new[] { 1f, 1f, 1f, 1f }) - ty), dy.log(dy.input(new[] { 1f, 1f, 1f, 1f }) - e_scale)));
+Expression e_equl = -(dy.dot_product(ty, dy.log(e_scale)) + dy.dot_product((dy.input(new[] { 1f, 1f, 1f, 1f }) - ty), dy.log(dy.input(new[] { 1f, 1f, 1f, 1f }) - e_scale)));
 
 // pairwise_rank_loss
 // e1 is row vector or scalar
 // e2 is row vector or scalar
 // m is number
 // e = max(0, m - (e1 - e2))
-e = dy.pairwise_rank_loss(dy.transpose(e1), dy.transpose(e2), m: 1.0); // Row vector needed, so we transpose the vector.
+e = dy.pairwise_rank_loss(dy.transpose(e1), dy.transpose(e2), m: 1.0f); // Row vector needed, so we transpose the vector.
 
 // and many more
 ```
