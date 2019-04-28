@@ -60,6 +60,7 @@ namespace dynetsharp {
 	// Extra functions
 	Dim ConvertArrToDim(array<long>^ arr);
 	array<long> ^ConvertDimToArr(dynet::Dim d);
+	std::vector<unsigned int> VecToUInt(std::vector<int> vec);
 	template<typename T> std::vector<T> ConvertArrayToVector(array<T> ^arr);
 	template<typename T> array<T> ^ConvertVectorToArray(std::vector<T> vec);
 	void ResetDynetMemory(size_t newMemSize);
@@ -90,6 +91,7 @@ namespace dynetsharp {
 			)
 		}
 		Tensor(array<float> ^arr, array<long> ^shape);
+		Tensor(array<float> ^arr);
 		Tensor(array<array<float> ^> ^arr);
 		Tensor(array<array<array<float> ^> ^> ^arr);
 		Tensor(array<array<array<array<float> ^> ^> ^> ^arr);
@@ -241,8 +243,8 @@ namespace dynetsharp {
 		array<long> ^Shape();
 
 		// Add a brackets lookup
-		property Expression ^default[unsigned] {
-			Expression ^get(unsigned index) {
+		property Expression ^default[int] {
+			Expression ^get(int index) {
 				ExceptionWrap(
 					return gcnew Expression(dynet::pick(*__thisptr, index));
 				)
@@ -280,7 +282,7 @@ namespace dynetsharp {
 		}
 		array<long> ^Shape();
 		int Size();
-		void InitRow(unsigned int iRow, array<float> ^row);
+		void InitRow(int iRow, array<float> ^row);
 		void InitFromArray(Tensor ^t);
 		array<Tensor ^> ^AsTensorArray();
 		Tensor ^RowAsTensor(int iRow);
@@ -737,7 +739,7 @@ namespace dynetsharp {
 		/// <remarks>You need to call this __AFTER__ calling `GetInitialState()`</remarks>
 		/// </summary>
         /// <param name='batchSize'>Batch size (default: {1})</param>
-		void SetDropoutMask(unsigned batchSize) {
+		void SetDropoutMask(int batchSize) {
 			ExceptionWrap(
 				__thissimpleptr->set_dropout_masks(batchSize);
 			)
@@ -850,7 +852,7 @@ namespace dynetsharp {
 		List<List<Parameter ^> ^> ^GetParameters();
 		List<List<Expression ^> ^> ^GetParameterExpressions();
 		void SetDropout(float d, float d_r);
-		void SetDropoutMask(unsigned batchSize);
+		void SetDropoutMask(int batchSize);
 	};
 	/// <summary>
 	/// For documentation, see <see cref="VanillaLSTMBuilder" />
@@ -928,7 +930,7 @@ namespace dynetsharp {
 		List<List<Parameter ^> ^> ^GetParameters();
 		List<List<Expression ^> ^> ^GetParameterExpressions();
 		void SetDropout(float d, float d_r);
-		void SetDropoutMask(unsigned batchSize);
+		void SetDropoutMask(int batchSize);
 
 		/// <summary>
 		/// <para>Set the sparsity rate</para>
@@ -969,7 +971,7 @@ namespace dynetsharp {
 		List<List<Parameter ^> ^> ^GetParameters();
 		List<List<Expression ^> ^> ^GetParameterExpressions();
 		void SetDropout(float d, float d_r);
-		void SetDropoutMask(unsigned batchSize);
+		void SetDropoutMask(int batchSize);
 
 		/// <summary>
 		/// <para>Set the gaussian weight noise</para>
@@ -1511,6 +1513,7 @@ namespace dynetsharp {
 		static Expression ^sum(List<Expression^> ^l);
 		static Expression ^sum(... array<Expression^> ^arr);
 		static Expression ^zeroes(array<long> ^dim);
+		static Expression ^zeros(array<long> ^dim);
 		static Expression ^ones(array<long> ^dim);
 		static Expression ^constant(array<long> ^dim, float val);
 		static Expression ^random_normal(array<long> ^dim);
@@ -1538,12 +1541,12 @@ namespace dynetsharp {
 		static Expression ^l1_distance(Expression ^x, Expression ^y);
 		static Expression ^binary_log_loss(Expression ^x, Expression ^y);
 		static Expression ^filter1d_narrow(Expression ^x, Expression ^y);
-		static Expression ^conv2d(Expression ^x, Expression ^y, array<unsigned int> ^stride);
-		static Expression ^conv2d(Expression ^x, Expression ^y, array<unsigned int> ^stride, bool is_valid);
-		static Expression ^conv2d_bias(Expression ^x, Expression ^y, Expression ^b, array<unsigned int> ^stride);
-		static Expression ^conv2d_bias(Expression ^x, Expression ^y, Expression ^b, array<unsigned int> ^stride, bool is_valid);
-		static Expression ^maxpooling2d(Expression ^x, array<unsigned int> ^ksize, array<unsigned int> ^stride);
-		static Expression ^maxpooling2d(Expression ^x, array<unsigned int> ^ksize, array<unsigned int> ^stride, bool is_valid);
+		static Expression ^conv2d(Expression ^x, Expression ^y, array<int> ^stride);
+		static Expression ^conv2d(Expression ^x, Expression ^y, array<int> ^stride, bool is_valid);
+		static Expression ^conv2d_bias(Expression ^x, Expression ^y, Expression ^b, array<int> ^stride);
+		static Expression ^conv2d_bias(Expression ^x, Expression ^y, Expression ^b, array<int> ^stride, bool is_valid);
+		static Expression ^maxpooling2d(Expression ^x, array<int> ^ksize, array<int> ^stride);
+		static Expression ^maxpooling2d(Expression ^x, array<int> ^ksize, array<int> ^stride, bool is_valid);
 		static Expression ^sin(Expression ^x);
 		static Expression ^cos(Expression ^x);
 		static Expression ^tan(Expression ^x);
@@ -1574,7 +1577,7 @@ namespace dynetsharp {
 		static Expression ^silu(Expression ^x, float beta);
 		static Expression ^log_softmax(Expression ^x);
 		static Expression ^softmax(Expression ^x);
-		static Expression ^softmax(Expression ^x, unsigned d);
+		static Expression ^softmax(Expression ^x, int d);
 		static Expression ^sparsemax(Expression ^x);
 		static Expression ^softsign(Expression ^x);
 		static Expression ^constrained_softmax(Expression ^x, Expression ^y);
@@ -1584,64 +1587,64 @@ namespace dynetsharp {
 		static Expression ^min(Expression ^x, Expression ^y);
 		static Expression ^max(Expression ^x, Expression ^y);
 		static Expression ^transpose(Expression ^x);
-		static Expression ^transpose(Expression ^x, array<unsigned> ^dims);
-		static Expression ^select_rows(Expression ^x, array<unsigned> ^rs);
-		static Expression ^select_cols(Expression ^x, array<unsigned> ^cs);
+		static Expression ^transpose(Expression ^x, array<int> ^dims);
+		static Expression ^select_rows(Expression ^x, array<int> ^rs);
+		static Expression ^select_cols(Expression ^x, array<int> ^cs);
 		static Expression ^sum_elems(Expression ^x);
-		static Expression ^sum_dim(Expression ^x, array<unsigned> ^d);
-		static Expression ^sum_dim(Expression ^x, array<unsigned> ^d, bool b);
+		static Expression ^sum_dim(Expression ^x, array<int> ^d);
+		static Expression ^sum_dim(Expression ^x, array<int> ^d, bool b);
 		static Expression ^sum_batches(Expression ^x);
 		static Expression ^cumsum(Expression ^x);
-		static Expression ^cumsum(Expression ^x, unsigned d);
+		static Expression ^cumsum(Expression ^x, int d);
 		static Expression ^mean_elems(Expression ^x);
-		static Expression ^mean_dim(Expression ^x, array<unsigned> ^d, bool b);
+		static Expression ^mean_dim(Expression ^x, array<int> ^d, bool b);
 		static Expression ^mean_batches(Expression ^x);
 		static Expression ^std_elems(Expression ^x);
-		static Expression ^std_dim(Expression ^x, array<unsigned> ^d, bool b);
+		static Expression ^std_dim(Expression ^x, array<int> ^d, bool b);
 		static Expression ^std_batches(Expression ^x);
-		static Expression ^moment_elems(Expression ^x, unsigned r);
-		static Expression ^moment_dim(Expression ^x, array<unsigned> ^d, unsigned r, bool b);
-		static Expression ^moment_batches(Expression ^x, unsigned r);
+		static Expression ^moment_elems(Expression ^x, int r);
+		static Expression ^moment_dim(Expression ^x, array<int> ^d, int r, bool b);
+		static Expression ^moment_batches(Expression ^x, int r);
 		static Expression ^fold_rows(Expression ^x);
-		static Expression ^fold_rows(Expression ^x, unsigned nrows);
+		static Expression ^fold_rows(Expression ^x, int nrows);
 		static Expression ^pairwise_rank_loss(Expression ^x, Expression ^y);
 		static Expression ^pairwise_rank_loss(Expression ^x, Expression ^y, float m);
-		static Expression ^poisson_loss(Expression ^x, unsigned py);
+		static Expression ^poisson_loss(Expression ^x, int py);
 		static Expression ^huber_distance(Expression ^x, Expression ^y);
 		static Expression ^huber_distance(Expression ^x, Expression ^y, float c);
-		static Expression ^kmax_pooling(Expression ^x, unsigned k);
-		static Expression ^kmax_pooling(Expression ^x, unsigned k, unsigned d);
-		static Expression ^pickneglogsoftmax(Expression ^x, unsigned v);
-		static Expression ^hinge(Expression ^x, unsigned v);
-		static Expression ^hinge(Expression ^x, unsigned v, float m);
-		static Expression ^hinge_dim(Expression ^x, array<unsigned> ^v);
-		static Expression ^hinge_dim(Expression ^x, array<unsigned> ^v, unsigned d, float m);
-		static Expression ^kmh_ngram(Expression ^x, unsigned v);
-		static Expression ^pick_range(Expression ^x, unsigned s, unsigned e);
-		static Expression ^pick_range(Expression ^x, unsigned s, unsigned e, unsigned d);
-		static Expression ^pickrange(Expression ^x, unsigned s, unsigned e);
+		static Expression ^kmax_pooling(Expression ^x, int k);
+		static Expression ^kmax_pooling(Expression ^x, int k, int d);
+		static Expression ^pickneglogsoftmax(Expression ^x, int v);
+		static Expression ^hinge(Expression ^x, int v);
+		static Expression ^hinge(Expression ^x, int v, float m);
+		static Expression ^hinge_dim(Expression ^x, array<int> ^v);
+		static Expression ^hinge_dim(Expression ^x, array<int> ^v, int d, float m);
+		static Expression ^kmh_ngram(Expression ^x, int v);
+		static Expression ^pick_range(Expression ^x, int s, int e);
+		static Expression ^pick_range(Expression ^x, int s, int e, int d);
+		static Expression ^pickrange(Expression ^x, int s, int e);
 		static Expression ^strided_select(Expression ^x, array<int> ^strides, array<int> ^range_from, array<int> ^range_to);
 		static Expression ^noise(Expression ^x, float stddev);
 		static Expression ^dropout(Expression ^x, float p);
 		static Expression ^dropout_batch(Expression ^x, float p);
-		static Expression ^dropout_dim(Expression ^x, unsigned d, float p);
+		static Expression ^dropout_dim(Expression ^x, int d, float p);
 		static Expression ^block_dropout(Expression ^x, float p);
 		static Expression ^reshape(Expression ^x, array<long> ^d);
 		static Expression ^max_dim(Expression ^x);
-		static Expression ^max_dim(Expression ^x, unsigned d);
+		static Expression ^max_dim(Expression ^x, int d);
 		static Expression ^min_dim(Expression ^x);
-		static Expression ^min_dim(Expression ^x, unsigned d);
+		static Expression ^min_dim(Expression ^x, int d);
 		static Expression ^contract3d_1d(Expression ^x, Expression ^y);
 		static Expression ^logsumexp(List<Expression^> ^l);
 		static Expression ^logsumexp(... array<Expression^> ^arr);
 		static Expression ^logsumexp_dim(Expression ^x);
-		static Expression ^logsumexp_dim(Expression ^x, unsigned d);
+		static Expression ^logsumexp_dim(Expression ^x, int d);
 		static Expression ^concatenate_cols(List<Expression ^> ^arr);
 		static Expression ^concatenate_cols(... array<Expression ^> ^arr);
 		static Expression ^concatenate(List<Expression ^> ^arr);
-		static Expression ^concatenate(List<Expression ^> ^arr, unsigned d);
+		static Expression ^concatenate(List<Expression ^> ^arr, int d);
 		static Expression ^concatenate(... array<Expression ^> ^arr);
-		static Expression ^concatenate(array<Expression ^> ^arr, unsigned d);
+		static Expression ^concatenate(array<Expression ^> ^arr, int d);
 		static Expression ^affine_transform(List<Expression ^> ^arr);
 		static Expression ^affine_transform(... array<Expression ^> ^arr);
 		static Expression ^layer_norm(Expression ^x, Expression ^g, Expression ^b);
@@ -1673,7 +1676,10 @@ namespace dynetsharp {
 		return ret;
 		)
 	}
-
+	std::vector<unsigned int> VecToUInt(std::vector<int> vec) {
+		std::vector<unsigned int> ret(vec.begin(), vec.end());
+		return ret;
+	}
 	template<typename T>
 	array<T> ^ConvertVectorToArray(std::vector<T> vec) {
 		ExceptionWrap(
