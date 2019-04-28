@@ -11,7 +11,7 @@ Open the Package-Manger-Console in Visual Studio, and type:
     PM> Install-Package DynetSharp
 
 ##### Option 2: Building and installing from source:
-Clone DyNet's GitHub repository from http://github.com/clab/dynet, and follow the instructions on the documentations for building DyNet for C++ for windows (https://dynet.readthedocs.io). [Make sure to install the current version of Eigen, as per the instructions]
+Clone DyNet's GitHub repository from http://github.com/clab/dynet, and follow the instructions on the documentations for building DyNet for C++ for windows (https://dynet.readthedocs.io/en/latest/install.html#windows-support). [Make sure to install the current version of Eigen, as per the instructions]
 After building the C++ version, open the DyNetSharp project. It is located in the "contrib" directory of the repository. Choose whether you want to build the "Debug", "Release", "MinSizeRel", or "RelWithDebInfo" mode, and make sure that you built that same setting in the C++ solution.
 After you built the C# wrapper, you can now add a reference to the DLL that appears in the build directory of the dynetsharp project from any C# project.
 
