@@ -772,7 +772,7 @@ namespace dynetsharp {
 	/// <param name='fRecalculate'>Recalculate the computation graph (for static graphs with new inputs) (default: False)</param>
 	float Parameter::ScalarValue(bool fRecalculate) {
 		ExceptionWrap(
-			return ToExpression()->ScalarValue();
+			return ToExpression()->ScalarValue(fRecalculate);
 		)
 	}
 	/// <summary>
@@ -793,7 +793,7 @@ namespace dynetsharp {
 	/// <param name='fRecalculate'>Recalculate the computation graph (for static graphs with new inputs) (default: False)</param>
 	array<float> ^Parameter::VectorValue(bool fRecalculate) {
 		ExceptionWrap(
-			return ToExpression()->VectorValue();
+			return ToExpression()->VectorValue(fRecalculate);
 		)
 	}
 	/// <summary>
@@ -812,7 +812,7 @@ namespace dynetsharp {
 	/// <param name='fRecalculate'>Recalculate the computation graph (for static graphs with new inputs) (default: False)</param>
 	Tensor ^Parameter::TensorValue(bool fRecalculate) {
 		ExceptionWrap(
-			return ToExpression()->TensorValue();
+			return ToExpression()->TensorValue(fRecalculate);
 		)
 	}
 	/// <summary>
