@@ -14,7 +14,7 @@ else:
         print("Run with --dynet-viz to get the visualization behavior.")
     from _dynet import *
 
-__version__ = "2.0.3"
+__version__ = "2.1"
 
 __gitversion__ = "${GIT_DESCRIBE}"
 
