@@ -199,6 +199,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         void set_check_validity(bool cv)
 
         void print_graphviz() const
+        void dump(string filename, bool show_values, bool show_gradients, bool nan_check_only) const
 
 cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CTrainer "dynet::Trainer":

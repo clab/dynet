@@ -1,4 +1,5 @@
 #include <iomanip>
+#include <fstream>
 
 #include "dynet/dynet.h"
 
@@ -419,6 +420,70 @@ void ComputationGraph::print_graphviz() const {
     }
     std::cerr << std::setprecision(4) << std::setw(11) << (total_memory/1024.0) << " KiB\t100%\t(total)" << std::endl;
     show_pool_mem_info();
+  }
+}
+
+  void ComputationGraph::dump(const string& filename, bool show_values, bool show_gradients, bool nan_check_only) {
+  // Create an ostream using either the given filename or cout if none given
+  std::streambuf* buf;
+  std::ofstream of;
+  if (filename != "") {
+    of.open(filename);
+    buf = of.rdbuf();
+  }
+  else {
+    buf = std::cout.rdbuf();
+  }
+  std::ostream out(buf);
+
+  if (nodes.size() == 0) {
+    out << "(Computation graph is empty)" << std::endl;
+    return;
+  }
+
+  const VariableIndex node_max_index = (VariableIndex)(nodes.size() - 1);
+  incremental_forward(node_max_index);
+  for(VariableIndex i = 0; i < node_max_index; ++i) {
+
+    out << "Node " << i << std::endl;
+    if (show_values) {
+      Tensor value = get_value(i);
+      out << "Value: ";
+      if (nan_check_only) {
+        if (value.is_valid()) {
+          out << "valid";
+        }
+        else {
+          out << "invalid";
+        }
+      }
+      else {
+        out << std::endl << value;
+      }
+      out << std::endl;
+    }
+
+    if (show_gradients) {
+      out << "Gradient: ";
+      try {
+        Tensor gradient = get_gradient(i);
+        if (nan_check_only) {
+          if (gradient.is_valid()) {
+            out << "valid";
+          }
+          else {
+            out << "invalid";
+          }
+        }
+        else {
+          out << std::endl << gradient;
+        }
+        out << std::endl;
+      }
+      catch(const std::runtime_error& e) {
+        out << "(not computed)" << std::endl;
+      }
+    }
   }
 }
 
