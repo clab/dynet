@@ -1871,6 +1871,8 @@ def renew_cg(immediate_compute=False, check_validity=False, autobatching=None):
     return _cg.renew(immediate_compute, check_validity, autobatching)
 
 def print_text_graphviz(): return _cg.print_graphviz()
+def dump_cg(filename="", show_values=True, show_gradients=True, nan_check_only=False): return _cg.dump(filename.encode('utf-8'), show_values, show_gradients, nan_check_only)
+
 def cg_checkpoint(): 
     """
     Saves the state of the computation graph
@@ -1955,6 +1957,9 @@ cdef class ComputationGraph:
 
     cpdef print_graphviz(self):
         self.thisptr.print_graphviz()
+
+    cpdef dump(self, filename, show_values, show_gradients, nan_check_only):
+        self.thisptr.dump(filename, show_values, show_gradients, nan_check_only)
 
     cpdef void checkpoint(self):
         self.thisptr.checkpoint()

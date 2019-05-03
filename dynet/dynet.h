@@ -465,11 +465,12 @@ struct ComputationGraph {
    * \brief Used for debugging
    */
   void print_graphviz() const;
+  void dump(const std::string& filename, bool show_values, bool show_gradients, bool nan_check_only);
 
   /**
    * \brief Get the unique graph ID
    * \details This ID is incremented by 1 each time a computation graph is
-   * created \return graph is
+   * created \return graph id
    */
   unsigned get_id() const { return graph_id; };
 
