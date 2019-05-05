@@ -6,68 +6,68 @@ namespace dynetsharp {
 	///////////////////////////////////////////////////////////
 	Expression ^Expression::_multiply(Expression ^other) {
 		ExceptionWrap(
-			return gcnew Expression(*__thisptr * *other->__thisptr);
+			return gcnew Expression(__thisptr * other->__thisptr);
 		)
 	}
 	Expression ^Expression::_subtract(Expression ^other) {
 		ExceptionWrap(
-			return gcnew Expression(*__thisptr - *other->__thisptr);
+			return gcnew Expression(__thisptr - other->__thisptr);
 		)
 	}
 	Expression ^Expression::_divide(Expression ^other) {
 		ExceptionWrap(
-			return gcnew Expression(*__thisptr / *other->__thisptr);
+			return gcnew Expression(__thisptr / other->__thisptr);
 		)
 	}
 	Expression ^Expression::_add(Expression ^other) {
 		ExceptionWrap(
-			return gcnew Expression(*__thisptr + *other->__thisptr);
+			return gcnew Expression(__thisptr + other->__thisptr);
 		)
 	}
 	Expression ^Expression::_multiply(float other) {
 		ExceptionWrap(
-			return gcnew Expression(*__thisptr * dynet::input(*cg, other));
+			return gcnew Expression(__thisptr * dynet::input(*cg, other));
 		)
 	}
 	Expression ^Expression::_subtract(float other) {
 		ExceptionWrap(
-			return gcnew Expression(*__thisptr - dynet::input(*cg, other));
+			return gcnew Expression(__thisptr - dynet::input(*cg, other));
 		)
 	}
 	Expression ^Expression::_divide(float other) {
 		ExceptionWrap(
-			return gcnew Expression(*__thisptr / dynet::input(*cg, other));
+			return gcnew Expression(__thisptr / dynet::input(*cg, other));
 		)
 	}
 	Expression ^Expression::_add(float other) {
 		ExceptionWrap(
-			return gcnew Expression(*__thisptr + dynet::input(*cg, other));
+			return gcnew Expression(__thisptr + dynet::input(*cg, other));
 		)
 	}
 	Expression ^Expression::operator*(float other, Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::input(*cg, other) * *x->__thisptr);
+			return gcnew Expression(dynet::input(*cg, other) * x->__thisptr);
 		)
 	}
 	Expression ^Expression::operator-(float other, Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::input(*cg, other) - *x->__thisptr);
+			return gcnew Expression(dynet::input(*cg, other) - x->__thisptr);
 		)
 	}
 	Expression ^Expression::operator/(float other, Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::input(*cg, other) / *x->__thisptr);
+			return gcnew Expression(dynet::input(*cg, other) / x->__thisptr);
 		)
 	}
 	Expression ^Expression::operator+(float other, Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::input(*cg, other) + *x->__thisptr);
+			return gcnew Expression(dynet::input(*cg, other) + x->__thisptr);
 		)
 	}
 	// Private function
 	void Expression::GetValue() {
 		ExceptionWrap(
-			val = new dynet::Tensor(cg->get_value(*__thisptr));
+			val = new dynet::Tensor(cg->get_value(__thisptr));
 		)
 	}
 	/// <summary>
@@ -119,7 +119,7 @@ namespace dynetsharp {
 	/// </summary>
 	void Expression::Forward() {
 		ExceptionWrap(
-			val = new dynet::Tensor(cg->forward(*__thisptr));
+			val = new dynet::Tensor(cg->forward(__thisptr));
 		)
 	}
 	/// <summary>
@@ -127,7 +127,7 @@ namespace dynetsharp {
 	/// </summary>
 	void Expression::IncrementalForward() {
 		ExceptionWrap(
-			val = new dynet::Tensor(cg->incremental_forward(*__thisptr));
+			val = new dynet::Tensor(cg->incremental_forward(__thisptr));
 		)
 	}
 	/// <summary>
@@ -135,7 +135,7 @@ namespace dynetsharp {
 	/// </summary>
 	void Expression::Backward() {
 		ExceptionWrap(
-			cg->backward(*__thisptr, false);
+			cg->backward(__thisptr, false);
 		)
 	}
 	/// <summary>
@@ -145,7 +145,7 @@ namespace dynetsharp {
 	/// <param name='full'>Flag whether to compute all gradients (including with respect to constant nodes).</param>
 	void Expression::Backward(bool full) {
 		ExceptionWrap(
-			cg->backward(*__thisptr, full);
+			cg->backward(__thisptr, full);
 		)
 	}
 	/// <summary>
@@ -216,7 +216,7 @@ namespace dynetsharp {
 	/// </summary>
 	array<long> ^Expression::Shape() {
 		ExceptionWrap(
-			return ConvertDimToArr(__thisptr->dim());
+			return ConvertDimToArr(__thisptr.dim());
 		)
 	}
 	/// <summary>
@@ -226,7 +226,7 @@ namespace dynetsharp {
 	/// </summary>
 	Tensor ^Expression::Gradient() {
 		ExceptionWrap(
-			return gcnew Tensor(__thisptr->gradient());
+			return gcnew Tensor(__thisptr.gradient());
 		)
 	}
 	///////////////////////////////////////////////////////////
@@ -1040,7 +1040,7 @@ namespace dynetsharp {
 		ExceptionWrap(
 			ensure_freshness();
 		// Run through
-		dynet::Expression output = __builderptr->add_input(*__stateptr, *e->__thisptr);
+		dynet::Expression output = __builderptr->add_input(*__stateptr, e->__thisptr);
 		// Return a new output
 		return gcnew RNNState(__builderptr, __builderptr->state(), this, gcnew Expression(output));
 		)
@@ -1095,10 +1095,10 @@ namespace dynetsharp {
 		if (l->Length == 0) return ret;
 		// Add them all in
 		// Put in the first
-		__builderptr->add_input(*__stateptr, *l[0]->__thisptr);
+		__builderptr->add_input(*__stateptr, l[0]->__thisptr);
 		for (int iExp = 1; iExp < l->Length; iExp++) {
 			ret->Add(gcnew Expression(__builderptr->back()));
-			__builderptr->add_input(*l[iExp]->__thisptr);
+			__builderptr->add_input(l[iExp]->__thisptr);
 		}
 		ret->Add(gcnew Expression(__builderptr->back()));
 
@@ -1531,6 +1531,9 @@ namespace dynetsharp {
 		CheckForInitialized();
 		ExceptionWrap(
 			delete cg;
+			for (auto val : _floatInputs) delete val;
+			for (auto val : _vecInputs) delete val;
+
 		_cg_version++;
 		// New memory?
 		if (maxOverallMemory && HowMuchMemoryDynet() > maxOverallMemory)
@@ -1540,6 +1543,8 @@ namespace dynetsharp {
 		cg = new ComputationGraph();
 		cg->set_immediate_compute(fImmediateCompute);
 		cg->set_check_validity(fCheckValidity);
+		_floatInputs.clear();
+		_vecInputs.clear();
 		)
 	}
 	/// <summary>
@@ -1611,7 +1616,7 @@ namespace dynetsharp {
 	/// <param name='index'>Index to pick</param>
 	Expression ^DynetFunctions::pick(Expression ^exp, int index) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pick(*exp->__thisptr, index));
+			return gcnew Expression(dynet::pick(exp->__thisptr, index));
 		)
 	}
 	/// <summary>
@@ -1623,7 +1628,7 @@ namespace dynetsharp {
 	/// <param name='dim'>Index of dimension to pick from, default 0</param>
 	Expression ^DynetFunctions::pick(Expression ^exp, int index, int dim) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pick(*exp->__thisptr, index, dim));
+			return gcnew Expression(dynet::pick(exp->__thisptr, index, dim));
 		)
 	}
 	/// <summary>
@@ -1633,6 +1638,7 @@ namespace dynetsharp {
 	Expression ^DynetFunctions::input(float num) {
 		ExceptionWrap(
 			float *val = new float(num);
+			_floatInputs.push_back(val);
 			return gcnew Expression(dynet::input(*cg, val), val);
 		)
 	}
@@ -1643,8 +1649,9 @@ namespace dynetsharp {
 	/// <param name='num'>Value of Expression</param>
 	Expression ^DynetFunctions::input(array<float>^ num) {
 		ExceptionWrap(
-			std::vector<float> *vec = new std::vector<float>(ConvertArrayToVector<float>(num));
-			return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length }, vec), vec);
+			std::vector<float> *val = new std::vector<float>(ConvertArrayToVector<float>(num));
+			_vecInputs.push_back(val);
+			return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length }, val), val);
 		) 
 	}
 	/// <summary>
@@ -1659,17 +1666,19 @@ namespace dynetsharp {
 			for (int iItem = 0; iItem < num[iVec]->Length; iItem++)
 				vec.push_back((real)num[iVec][iItem]);
 		// Convert to pointer, and send that
-		std::vector<float> *valVec = new std::vector<float>(vec);
-		return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length, (unsigned)num[0]->Length }, valVec), valVec);
+		std::vector<float> *val = new std::vector<float>(vec);
+		_vecInputs.push_back(val);
+		return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length, (unsigned)num[0]->Length }, val), val);
 		)
 	}
 	/// <summary>
 	/// <para>Create an Expression object on the computation graph with a the value of the Tensor</para>
+	/// <remarks>Note: The values in the Tensor object are *not* linked to the values in the Expression</remarks>
 	/// </summary>
 	/// <param name='tensor'>Value of Expression</param>
 	Expression ^DynetFunctions::inputTensor(Tensor ^tensor) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::input(*cg, ConvertArrToDim(tensor->Shape()), tensor->_vec));
+			return gcnew Expression(dynet::input(*cg, ConvertArrToDim(tensor->Shape()), *tensor->_vec));
 		)
 	}
 	Expression ^DynetFunctions::average(List<Expression^> ^l) {
@@ -1831,7 +1840,7 @@ namespace dynetsharp {
 	/// <param name='x'>Input expression</param>
 	Expression ^DynetFunctions::flip_gradient(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::flip_gradient(*x->__thisptr));
+			return gcnew Expression(dynet::flip_gradient(x->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1841,7 +1850,7 @@ namespace dynetsharp {
 	/// <param name='x'>Input expression</param>
 	Expression ^DynetFunctions::scale_gradient(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::scale_gradient(*x->__thisptr));
+			return gcnew Expression(dynet::scale_gradient(x->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1852,7 +1861,7 @@ namespace dynetsharp {
 	/// <param name='lambd'>Lambda value for operation</param>
 	Expression ^DynetFunctions::scale_gradient(Expression ^x, float lambd) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::scale_gradient(*x->__thisptr, lambd));
+			return gcnew Expression(dynet::scale_gradient(x->__thisptr, lambd));
 		)
 	}
 	/// <summary>
@@ -1867,7 +1876,7 @@ namespace dynetsharp {
 	/// <param name='y'>The second input expression</param>
 	Expression ^DynetFunctions::cdiv(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::cdiv(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::cdiv(x->__thisptr, y->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1882,7 +1891,7 @@ namespace dynetsharp {
 	/// <param name='y'>The second input expression</param>
 	Expression ^DynetFunctions::cmult(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::cmult(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::cmult(x->__thisptr, y->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1893,7 +1902,7 @@ namespace dynetsharp {
 	/// <param name='y'>A length M vector</param>
 	Expression ^DynetFunctions::colwise_add(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::colwise_add(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::colwise_add(x->__thisptr, y->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1903,7 +1912,7 @@ namespace dynetsharp {
 	/// <param name='x'>Input expression</param>
 	Expression ^DynetFunctions::inverse(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::inverse(*x->__thisptr));
+			return gcnew Expression(dynet::inverse(x->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1913,7 +1922,7 @@ namespace dynetsharp {
 	/// <param name='x'>Input expression</param>
 	Expression ^DynetFunctions::logdet(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::logdet(*x->__thisptr));
+			return gcnew Expression(dynet::logdet(x->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1924,7 +1933,7 @@ namespace dynetsharp {
 	/// <param name='y'>The second input expression</param>
 	Expression ^DynetFunctions::trace_of_product(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::trace_of_product(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::trace_of_product(x->__thisptr, y->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1935,7 +1944,7 @@ namespace dynetsharp {
 	/// <param name='y'>The second input expression</param>
 	Expression ^DynetFunctions::dot_product(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::dot_product(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::dot_product(x->__thisptr, y->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1946,7 +1955,7 @@ namespace dynetsharp {
 	/// <param name='y'>The second input expression</param>
 	Expression ^DynetFunctions::circ_conv(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::circ_conv(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::circ_conv(x->__thisptr, y->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1957,7 +1966,7 @@ namespace dynetsharp {
 	/// <param name='y'>The second input expression</param>
 	Expression ^DynetFunctions::circ_corr(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::circ_corr(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::circ_corr(x->__thisptr, y->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1967,7 +1976,7 @@ namespace dynetsharp {
 	/// <param name='x'>Input expression</param>
 	Expression ^DynetFunctions::squared_norm(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::squared_norm(*x->__thisptr));
+			return gcnew Expression(dynet::squared_norm(x->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1977,7 +1986,7 @@ namespace dynetsharp {
 	/// <param name='x'>Input expression</param>
 	Expression ^DynetFunctions::l2_norm(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::l2_norm(*x->__thisptr));
+			return gcnew Expression(dynet::l2_norm(x->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1988,7 +1997,7 @@ namespace dynetsharp {
 	/// <param name='y'>The second input expression</param>
 	Expression ^DynetFunctions::squared_distance(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::squared_distance(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::squared_distance(x->__thisptr, y->__thisptr));
 		)
 	}
 	/// <summary>
@@ -1999,7 +2008,7 @@ namespace dynetsharp {
 	/// <param name='y'>The second input expression</param>
 	Expression ^DynetFunctions::l1_distance(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::l1_distance(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::l1_distance(x->__thisptr, y->__thisptr));
 		)
 	}
 	/// <summary>
@@ -2010,485 +2019,485 @@ namespace dynetsharp {
 	/// <param name='y'>The second input expression</param>
 	Expression ^DynetFunctions::binary_log_loss(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::binary_log_loss(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::binary_log_loss(x->__thisptr, y->__thisptr));
 		)
 	}
 	//TODO: Docs
 	Expression ^DynetFunctions::filter1d_narrow(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::filter1d_narrow(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::filter1d_narrow(x->__thisptr, y->__thisptr));
 		)
 	}
 	//TODO: Docs
 	Expression ^DynetFunctions::conv2d(Expression ^x, Expression ^y, array<int> ^stride) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::conv2d(*x->__thisptr, *y->__thisptr, VecToUInt(ConvertArrayToVector<int>(stride))));
+			return gcnew Expression(dynet::conv2d(x->__thisptr, y->__thisptr, VecToUInt(ConvertArrayToVector<int>(stride))));
 		)
 	}
 	Expression ^DynetFunctions::conv2d(Expression ^x, Expression ^y, array<int> ^stride, bool is_valid) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::conv2d(*x->__thisptr, *y->__thisptr, VecToUInt(ConvertArrayToVector<int>(stride)), is_valid));
+			return gcnew Expression(dynet::conv2d(x->__thisptr, y->__thisptr, VecToUInt(ConvertArrayToVector<int>(stride)), is_valid));
 		)
 	}
 	Expression ^DynetFunctions::conv2d_bias(Expression ^x, Expression ^y, Expression ^b, array<int> ^stride) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::conv2d(*x->__thisptr, *y->__thisptr, *b->__thisptr, VecToUInt(ConvertArrayToVector<int>(stride))));
+			return gcnew Expression(dynet::conv2d(x->__thisptr, y->__thisptr, b->__thisptr, VecToUInt(ConvertArrayToVector<int>(stride))));
 		)
 	}
 	Expression ^DynetFunctions::conv2d_bias(Expression ^x, Expression ^y, Expression ^b, array<int> ^stride, bool is_valid) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::conv2d(*x->__thisptr, *y->__thisptr, *b->__thisptr, VecToUInt(ConvertArrayToVector<int>(stride)), is_valid));
+			return gcnew Expression(dynet::conv2d(x->__thisptr, y->__thisptr, b->__thisptr, VecToUInt(ConvertArrayToVector<int>(stride)), is_valid));
 		)
 	}
 	Expression ^DynetFunctions::maxpooling2d(Expression ^x, array<int> ^ksize, array<int> ^stride) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::maxpooling2d(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(ksize)), VecToUInt(ConvertArrayToVector<int>(stride))));
+			return gcnew Expression(dynet::maxpooling2d(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(ksize)), VecToUInt(ConvertArrayToVector<int>(stride))));
 		)
 	}
 	Expression ^DynetFunctions::maxpooling2d(Expression ^x, array<int> ^ksize, array<int> ^stride, bool is_valid) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::maxpooling2d(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(ksize)), VecToUInt(ConvertArrayToVector<int>(stride)), is_valid));
+			return gcnew Expression(dynet::maxpooling2d(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(ksize)), VecToUInt(ConvertArrayToVector<int>(stride)), is_valid));
 		)
 	}
 	Expression ^DynetFunctions::sin(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::sin(*x->__thisptr));
+			return gcnew Expression(dynet::sin(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::cos(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::cos(*x->__thisptr));
+			return gcnew Expression(dynet::cos(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::tan(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::tan(*x->__thisptr));
+			return gcnew Expression(dynet::tan(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::asin(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::asin(*x->__thisptr));
+			return gcnew Expression(dynet::asin(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::acos(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::acos(*x->__thisptr));
+			return gcnew Expression(dynet::acos(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::atan(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::atan(*x->__thisptr));
+			return gcnew Expression(dynet::atan(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::sinh(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::sinh(*x->__thisptr));
+			return gcnew Expression(dynet::sinh(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::cosh(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::cosh(*x->__thisptr));
+			return gcnew Expression(dynet::cosh(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::tanh(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::tanh(*x->__thisptr));
+			return gcnew Expression(dynet::tanh(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::asinh(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::asinh(*x->__thisptr));
+			return gcnew Expression(dynet::asinh(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::acosh(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::acosh(*x->__thisptr));
+			return gcnew Expression(dynet::acosh(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::atanh(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::atanh(*x->__thisptr));
+			return gcnew Expression(dynet::atanh(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::exp(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::exp(*x->__thisptr));
+			return gcnew Expression(dynet::exp(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::square(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::square(*x->__thisptr));
+			return gcnew Expression(dynet::square(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::sqrt(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::sqrt(*x->__thisptr));
+			return gcnew Expression(dynet::sqrt(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::abs(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::abs(*x->__thisptr));
+			return gcnew Expression(dynet::abs(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::erf(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::erf(*x->__thisptr));
+			return gcnew Expression(dynet::erf(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::cube(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::cube(*x->__thisptr));
+			return gcnew Expression(dynet::cube(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::log(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::log(*x->__thisptr));
+			return gcnew Expression(dynet::log(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::log_sigmoid(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::log_sigmoid(*x->__thisptr));
+			return gcnew Expression(dynet::log_sigmoid(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::lgamma(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::lgamma(*x->__thisptr));
+			return gcnew Expression(dynet::lgamma(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::logistic(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::logistic(*x->__thisptr));
+			return gcnew Expression(dynet::logistic(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::rectify(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::rectify(*x->__thisptr));
+			return gcnew Expression(dynet::rectify(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::elu(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::elu(*x->__thisptr));
+			return gcnew Expression(dynet::elu(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::elu(Expression ^x, float alpha) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::elu(*x->__thisptr, alpha));
+			return gcnew Expression(dynet::elu(x->__thisptr, alpha));
 		)
 	}
 	Expression ^DynetFunctions::selu(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::selu(*x->__thisptr));
+			return gcnew Expression(dynet::selu(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::silu(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::silu(*x->__thisptr));
+			return gcnew Expression(dynet::silu(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::silu(Expression ^x, float beta) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::silu(*x->__thisptr, beta));
+			return gcnew Expression(dynet::silu(x->__thisptr, beta));
 		)
 	}
 	Expression ^DynetFunctions::log_softmax(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::log_softmax(*x->__thisptr));
+			return gcnew Expression(dynet::log_softmax(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::softmax(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::softmax(*x->__thisptr));
+			return gcnew Expression(dynet::softmax(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::softmax(Expression ^x, int d) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::softmax(*x->__thisptr, d));
+			return gcnew Expression(dynet::softmax(x->__thisptr, d));
 		)
 	}
 	Expression ^DynetFunctions::sparsemax(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::sparsemax(*x->__thisptr));
+			return gcnew Expression(dynet::sparsemax(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::softsign(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::softsign(*x->__thisptr));
+			return gcnew Expression(dynet::softsign(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::constrained_softmax(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::constrained_softmax(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::constrained_softmax(x->__thisptr, y->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::pow(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pow(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::pow(x->__thisptr, y->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::emin(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::min(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::min(x->__thisptr, y->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::emax(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::max(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::max(x->__thisptr, y->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::min(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::min(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::min(x->__thisptr, y->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::max(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::max(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::max(x->__thisptr, y->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::transpose(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::transpose(*x->__thisptr, { 0,1 }));
+			return gcnew Expression(dynet::transpose(x->__thisptr, { 0,1 }));
 		)
 	}
 	Expression ^DynetFunctions::transpose(Expression ^x, array<int> ^dims) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::transpose(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(dims))));
+			return gcnew Expression(dynet::transpose(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(dims))));
 		)
 	}
 	Expression ^DynetFunctions::select_rows(Expression ^x, array<int> ^rs) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::select_rows(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(rs))));
+			return gcnew Expression(dynet::select_rows(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(rs))));
 		)
 	}
 	Expression ^DynetFunctions::select_cols(Expression ^x, array<int> ^cs) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::select_cols(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(cs))));
+			return gcnew Expression(dynet::select_cols(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(cs))));
 		)
 	}
 	Expression ^DynetFunctions::sum_elems(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::sum_elems(*x->__thisptr));
+			return gcnew Expression(dynet::sum_elems(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::sum_dim(Expression ^x, array<int> ^d) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::sum_dim(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d))));
+			return gcnew Expression(dynet::sum_dim(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d))));
 		)
 	}
 	Expression ^DynetFunctions::sum_dim(Expression ^x, array<int> ^d, bool b) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::sum_dim(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d)), b));
+			return gcnew Expression(dynet::sum_dim(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d)), b));
 		)
 	}
 	Expression ^DynetFunctions::sum_batches(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::sum_batches(*x->__thisptr));
+			return gcnew Expression(dynet::sum_batches(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::cumsum(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::cumsum(*x->__thisptr, 0));
+			return gcnew Expression(dynet::cumsum(x->__thisptr, 0));
 		)
 	}
 	Expression ^DynetFunctions::cumsum(Expression ^x, int d) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::cumsum(*x->__thisptr, d));
+			return gcnew Expression(dynet::cumsum(x->__thisptr, d));
 		)
 	}
 	Expression ^DynetFunctions::mean_elems(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::mean_elems(*x->__thisptr));
+			return gcnew Expression(dynet::mean_elems(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::mean_dim(Expression ^x, array<int> ^d, bool b) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::mean_dim(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d)), b));
+			return gcnew Expression(dynet::mean_dim(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d)), b));
 		)
 	}
 	Expression ^DynetFunctions::mean_batches(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::mean_batches(*x->__thisptr));
+			return gcnew Expression(dynet::mean_batches(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::std_elems(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::std_elems(*x->__thisptr));
+			return gcnew Expression(dynet::std_elems(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::std_dim(Expression ^x, array<int> ^d, bool b) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::std_dim(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d)), b));
+			return gcnew Expression(dynet::std_dim(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d)), b));
 		)
 	}
 	Expression ^DynetFunctions::std_batches(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::std_batches(*x->__thisptr));
+			return gcnew Expression(dynet::std_batches(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::moment_elems(Expression ^x, int r) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::moment_elems(*x->__thisptr, r));
+			return gcnew Expression(dynet::moment_elems(x->__thisptr, r));
 		)
 	}
 	Expression ^DynetFunctions::moment_dim(Expression ^x, array<int> ^d, int r, bool b) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::moment_dim(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d)), r, b));
+			return gcnew Expression(dynet::moment_dim(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(d)), r, b));
 		)
 	}
 	Expression ^DynetFunctions::moment_batches(Expression ^x, int r) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::moment_batches(*x->__thisptr, r));
+			return gcnew Expression(dynet::moment_batches(x->__thisptr, r));
 		)
 	}
 	Expression ^DynetFunctions::fold_rows(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::fold_rows(*x->__thisptr));
+			return gcnew Expression(dynet::fold_rows(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::fold_rows(Expression ^x, int nrows) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::fold_rows(*x->__thisptr, nrows));
+			return gcnew Expression(dynet::fold_rows(x->__thisptr, nrows));
 		)
 	}
 	Expression ^DynetFunctions::pairwise_rank_loss(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pairwise_rank_loss(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::pairwise_rank_loss(x->__thisptr, y->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::pairwise_rank_loss(Expression ^x, Expression ^y, float m) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pairwise_rank_loss(*x->__thisptr, *y->__thisptr, m));
+			return gcnew Expression(dynet::pairwise_rank_loss(x->__thisptr, y->__thisptr, m));
 		)
 	}
 	Expression ^DynetFunctions::poisson_loss(Expression ^x, int py) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::poisson_loss(*x->__thisptr, py));
+			return gcnew Expression(dynet::poisson_loss(x->__thisptr, py));
 		)
 	}
 	Expression ^DynetFunctions::huber_distance(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::huber_distance(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::huber_distance(x->__thisptr, y->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::huber_distance(Expression ^x, Expression ^y, float c) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::huber_distance(*x->__thisptr, *y->__thisptr, c));
+			return gcnew Expression(dynet::huber_distance(x->__thisptr, y->__thisptr, c));
 		)
 	}
 	Expression ^DynetFunctions::kmax_pooling(Expression ^x, int k) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::kmax_pooling(*x->__thisptr, k));
+			return gcnew Expression(dynet::kmax_pooling(x->__thisptr, k));
 		)
 	}
 	Expression ^DynetFunctions::kmax_pooling(Expression ^x, int k, int d) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::kmax_pooling(*x->__thisptr, k, d));
+			return gcnew Expression(dynet::kmax_pooling(x->__thisptr, k, d));
 		)
 	}
 	Expression ^DynetFunctions::pickneglogsoftmax(Expression ^x, int v) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pickneglogsoftmax(*x->__thisptr, v));
+			return gcnew Expression(dynet::pickneglogsoftmax(x->__thisptr, v));
 		)
 	}
 	Expression ^DynetFunctions::hinge(Expression ^x, int v) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::hinge(*x->__thisptr, v));
+			return gcnew Expression(dynet::hinge(x->__thisptr, v));
 		)
 	}
 	Expression ^DynetFunctions::hinge(Expression ^x, int v, float m) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::hinge(*x->__thisptr, v, m));
+			return gcnew Expression(dynet::hinge(x->__thisptr, v, m));
 		)
 	}
 	Expression ^DynetFunctions::hinge_dim(Expression ^x, array<int> ^v) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::hinge_dim(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(v))));
+			return gcnew Expression(dynet::hinge_dim(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(v))));
 		)
 	}
 	Expression ^DynetFunctions::hinge_dim(Expression ^x, array<int> ^v, int d, float m) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::hinge_dim(*x->__thisptr, VecToUInt(ConvertArrayToVector<int>(v)), d, m));
+			return gcnew Expression(dynet::hinge_dim(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(v)), d, m));
 		)
 	}
 	Expression ^DynetFunctions::kmh_ngram(Expression ^x, int v) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::kmh_ngram(*x->__thisptr, v));
+			return gcnew Expression(dynet::kmh_ngram(x->__thisptr, v));
 		)
 	}
 	Expression ^DynetFunctions::pick_range(Expression ^x, int s, int e) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pick_range(*x->__thisptr, s, e));
+			return gcnew Expression(dynet::pick_range(x->__thisptr, s, e));
 		)
 	}
 	Expression ^DynetFunctions::pick_range(Expression ^x, int s, int e, int d) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pick_range(*x->__thisptr, s, e, d));
+			return gcnew Expression(dynet::pick_range(x->__thisptr, s, e, d));
 		)
 	}
 	Expression ^DynetFunctions::pickrange(Expression ^x, int s, int e) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pickrange(*x->__thisptr, s, e));
+			return gcnew Expression(dynet::pickrange(x->__thisptr, s, e));
 		)
 	}
 	Expression ^DynetFunctions::strided_select(Expression ^x, array<int> ^strides, array<int> ^range_from, array<int> ^range_to) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::strided_select(*x->__thisptr, ConvertArrayToVector<int>(strides), ConvertArrayToVector<int>(range_from), ConvertArrayToVector<int>(range_to)));
+			return gcnew Expression(dynet::strided_select(x->__thisptr, ConvertArrayToVector<int>(strides), ConvertArrayToVector<int>(range_from), ConvertArrayToVector<int>(range_to)));
 		)
 	}
 	Expression ^DynetFunctions::noise(Expression ^x, float stddev) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::noise(*x->__thisptr, stddev));
+			return gcnew Expression(dynet::noise(x->__thisptr, stddev));
 		)
 	}
 	Expression ^DynetFunctions::dropout(Expression ^x, float p) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::dropout(*x->__thisptr, p));
+			return gcnew Expression(dynet::dropout(x->__thisptr, p));
 		)
 	}
 	Expression ^DynetFunctions::dropout_batch(Expression ^x, float p) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::dropout_batch(*x->__thisptr, p));
+			return gcnew Expression(dynet::dropout_batch(x->__thisptr, p));
 		)
 	}
 	Expression ^DynetFunctions::dropout_dim(Expression ^x, int d, float p) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::dropout_dim(*x->__thisptr, d, p));
+			return gcnew Expression(dynet::dropout_dim(x->__thisptr, d, p));
 		)
 	}
 
 	Expression ^DynetFunctions::block_dropout(Expression ^x, float p) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::block_dropout(*x->__thisptr, p));
+			return gcnew Expression(dynet::block_dropout(x->__thisptr, p));
 		)
 	}
 	Expression ^DynetFunctions::reshape(Expression ^x, array<long> ^d) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::reshape(*x->__thisptr, ConvertArrToDim(d)));
+			return gcnew Expression(dynet::reshape(x->__thisptr, ConvertArrToDim(d)));
 		)
 	}
 	Expression ^DynetFunctions::max_dim(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::max_dim(*x->__thisptr));
+			return gcnew Expression(dynet::max_dim(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::max_dim(Expression ^x, int d) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::max_dim(*x->__thisptr, d));
+			return gcnew Expression(dynet::max_dim(x->__thisptr, d));
 		)
 	}
 	Expression ^DynetFunctions::min_dim(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::min_dim(*x->__thisptr));
+			return gcnew Expression(dynet::min_dim(x->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::min_dim(Expression ^x, int d) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::min_dim(*x->__thisptr, d));
+			return gcnew Expression(dynet::min_dim(x->__thisptr, d));
 		)
 	}
 	Expression ^DynetFunctions::contract3d_1d(Expression ^x, Expression ^y) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::contract3d_1d(*x->__thisptr, *y->__thisptr));
+			return gcnew Expression(dynet::contract3d_1d(x->__thisptr, y->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::logsumexp(List<Expression^> ^l) {
@@ -2503,12 +2512,12 @@ namespace dynetsharp {
 	}
 	Expression ^DynetFunctions::logsumexp_dim(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::logsumexp_dim(*x->__thisptr, 0));
+			return gcnew Expression(dynet::logsumexp_dim(x->__thisptr, 0));
 		)
 	}
 	Expression ^DynetFunctions::logsumexp_dim(Expression ^x, int d) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::logsumexp_dim(*x->__thisptr, d));
+			return gcnew Expression(dynet::logsumexp_dim(x->__thisptr, d));
 		)
 	}
 	Expression ^DynetFunctions::concatenate_cols(List<Expression ^> ^arr) {
@@ -2553,27 +2562,27 @@ namespace dynetsharp {
 	}
 	Expression ^DynetFunctions::layer_norm(Expression ^x, Expression ^g, Expression ^b) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::layer_norm(*x->__thisptr, *g->__thisptr, *b->__thisptr));
+			return gcnew Expression(dynet::layer_norm(x->__thisptr, g->__thisptr, b->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::weight_norm(Expression ^w, Expression ^g) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::weight_norm(*w->__thisptr, *g->__thisptr));
+			return gcnew Expression(dynet::weight_norm(w->__thisptr, g->__thisptr));
 		)
 	}
 	Expression ^DynetFunctions::round(Expression ^x, GradientMode gm) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::round(*x->__thisptr, (dynet::GradientMode)gm));
+			return gcnew Expression(dynet::round(x->__thisptr, (dynet::GradientMode)gm));
 		)
 	}
 	Expression ^DynetFunctions::ceil(Expression ^x, GradientMode gm) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::ceil(*x->__thisptr, (dynet::GradientMode)gm));
+			return gcnew Expression(dynet::ceil(x->__thisptr, (dynet::GradientMode)gm));
 		)
 	}
 	Expression ^DynetFunctions::floor(Expression ^x, GradientMode gm) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::floor(*x->__thisptr, (dynet::GradientMode)gm));
+			return gcnew Expression(dynet::floor(x->__thisptr, (dynet::GradientMode)gm));
 		)
 	}
 	void DynetFunctions::ResetRandomSeed(unsigned newSeed) {
