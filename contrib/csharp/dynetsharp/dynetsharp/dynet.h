@@ -54,6 +54,9 @@ namespace dynetsharp {
 
 	static ComputationGraph *cg = new ComputationGraph();
 	static int _cg_version = 0;
+	static std::vector<float *> _floatInputs;
+	static std::vector<std::vector<float> *> _vecInputs;
+	
 	// For clearing out memory
 	static size_t maxOverallMemory = 0;
 	static size_t initialMemorySize = 0;
@@ -139,7 +142,7 @@ namespace dynetsharp {
 	/// </summary>
 	public ref class Expression {
 	private:
-		dynet::Expression *__thisactualptr;
+		unsigned variableIndex;
 		const dynet::Tensor *val;
 		int self_cg_version;
 		void GetValue();
@@ -153,19 +156,19 @@ namespace dynetsharp {
 		// Initialize
 		void Init(dynet::Expression &inexpr) {
 			CheckForInitialized();
-			__thisptr = new dynet::Expression(inexpr);
+			__thisptr = inexpr;
 			val = NULL;
 			self_cg_version = _cg_version;
 		}
 	public:
-		property dynet::Expression *__thisptr {
-			dynet::Expression *get() {
+		property dynet::Expression __thisptr {
+			dynet::Expression get() {
 				if (self_cg_version != _cg_version)
 					throw gcnew Exception(gcnew String("Stale Expression (created before renewing the Computation Graph)."));
-				return __thisactualptr;
+				return dynet::Expression(cg, variableIndex);
 			}
-			void set(dynet::Expression *input) {
-				__thisactualptr = input;
+			void set(dynet::Expression input) {
+				variableIndex = input.i;
 			}
 		};
 
@@ -187,18 +190,18 @@ namespace dynetsharp {
 			this->!Expression();
 		}
 		!Expression() {
-			if (__thisactualptr != NULL)
-				delete __thisactualptr;
+			//if (__thisactualptr != NULL)
+			//	delete __thisactualptr;
 			if (val != NULL)
 				delete val;
-			if (fHasFloatVal && floatVal != NULL)
-				delete floatVal;
-			if (fHasFloatArrVal && floatArrVal != NULL)
-				delete floatArrVal;
+			//if (fHasFloatVal && floatVal != NULL)
+			//	delete floatVal;
+			//if (fHasFloatArrVal && floatArrVal != NULL)
+			//	delete floatArrVal;
 
 			floatVal = NULL;
 			floatArrVal = NULL;
-			__thisptr = NULL;
+			//__thisptr = NULL;
 			val = NULL;
 		}
 		bool IsStale() {
@@ -246,13 +249,13 @@ namespace dynetsharp {
 		property Expression ^default[int] {
 			Expression ^get(int index) {
 				ExceptionWrap(
-					return gcnew Expression(dynet::pick(*__thisptr, index));
+					return gcnew Expression(dynet::pick(__thisptr, index));
 				)
 			}
 		};
 		// Equals method
 		static bool operator==(Expression^ t1, Expression ^t2) {
-			return t1->__thisactualptr->i == t2->__thisactualptr->i;
+			return t1->variableIndex == t2->variableIndex;
 		}
 	};
 
@@ -1709,7 +1712,7 @@ namespace dynetsharp {
 		ExceptionWrap(
 			std::vector<dynet::Expression> vec(arr->Length);
 		for (int iItem = 0; iItem < arr->Length; iItem++)
-			vec[iItem] = *arr[iItem]->__thisptr;
+			vec[iItem] = arr[iItem]->__thisptr;
 		return vec;
 		)
 	}
