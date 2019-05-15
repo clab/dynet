@@ -541,13 +541,13 @@ Expression min(const Expression& x, const Expression& y);
 // We need two overloaded versions of `max`, but apparently %template
 // gets unhappy when you use it to overload a function, so we have to define
 // the `ExpressionVector` version of `max` explicitly.
-%{
-namespace dynet {
-Expression max(const std::vector<Expression>& xs) {
-  return detail::f<Max, std::vector<Expression>>(xs);
-};
-}
-%}
+//%{
+//namespace dynet {
+//Expression max(const std::vector<Expression>& xs) {
+//  return detail::f<Max, std::vector<Expression>>(xs);
+//};
+//}
+//%}
 
 Expression max(const Expression& x, const Expression& y);
 Expression max(const std::vector<Expression>& xs);
@@ -609,21 +609,21 @@ Expression pick_batch_elems(const Expression& x, const std::vector<unsigned> & v
 
 // Concatenate and ConcatenateCols got changed around, need to implement
 // explicitly now.
-%{
-namespace dynet {
-inline Expression concatenate_to_batch(const std::vector<Expression>& xs) {
-  return detail::f<ConcatenateToBatch>(xs);
-};
-
-inline Expression concatenate_cols(const std::vector<Expression>& xs) {
-  return detail::f<Concatenate>(xs, 1);
-};
-
-inline Expression concatenate(const std::vector<Expression>& xs, unsigned d) {
-  return detail::f<Concatenate>(xs, d);
-};
-}
-%}
+//%{
+//namespace dynet {
+//inline Expression concatenate_to_batch(const std::vector<Expression>& xs) {
+//  return detail::f<ConcatenateToBatch>(xs);
+//};
+//
+//inline Expression concatenate_cols(const std::vector<Expression>& xs) {
+//  return detail::f<Concatenate>(xs, 1);
+//};
+//
+//inline Expression concatenate(const std::vector<Expression>& xs, unsigned d) {
+//  return detail::f<Concatenate>(xs, d);
+//};
+//}
+//%}
 
 Expression concatenate_to_batch(const std::vector<Expression>& xs);
 
