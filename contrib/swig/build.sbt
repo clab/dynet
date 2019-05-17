@@ -96,3 +96,5 @@ assemblyMergeStrategy in assembly := {
 assembleArtifact in packageScala := false
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+
+javaOptions in Test ++= Seq("-Xms1G", "-XX:+CMSClassUnloadingEnabled", "-XX:+UseConcMarkSweepGC")
