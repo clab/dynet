@@ -88,7 +88,7 @@ else()
   message("-- Optimization level: ${RELEASE_OPT_LEVEL}")
 
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-omit-frame-pointer")
-  set(CMAKE_CXX_FLAGS_RELEASE "-funroll-loops -O${RELEASE_OPT_LEVEL} -march=native")
+  set(CMAKE_CXX_FLAGS_RELEASE "-funroll-loops -O${RELEASE_OPT_LEVEL} -march=x86-64")
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
