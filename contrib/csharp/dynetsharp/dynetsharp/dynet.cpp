@@ -758,7 +758,6 @@ namespace dynetsharp {
 	}
 	/// <summary>
 	/// <para>Get the scalar value of this parameter</para>
-	/// <remarks>Equivalent to doing param.ToExpression().ScalarValue()</remarks>
 	/// </summary>
 	float Parameter::ScalarValue() {
 		ExceptionWrap(
@@ -767,7 +766,6 @@ namespace dynetsharp {
 	}
 	/// <summary>
 	/// <para>Get the scalar value of this parameter</para>
-	/// <remarks>Equivalent to doing param.ToExpression().ScalarValue(fRecalculate)</remarks>
 	/// </summary>
 	/// <param name='fRecalculate'>Recalculate the computation graph (for static graphs with new inputs) (default: False)</param>
 	float Parameter::ScalarValue(bool fRecalculate) {
@@ -778,7 +776,6 @@ namespace dynetsharp {
 	/// <summary>
 	/// <para>Get the vector value of this parameter</para>
 	/// <remarks>In case of a multidimensional expression, the values are flattened according to a column major ordering</remarks><para/>
-	/// <remarks>Equivalent to doing param.ToExpression().VectorValue()</remarks>
 	/// </summary>
 	array<float> ^Parameter::VectorValue() {
 		ExceptionWrap(
@@ -787,7 +784,6 @@ namespace dynetsharp {
 	}
 	/// <summary>
 	/// <para>Get the vector value of this parameter</para>
-	/// <remarks>Equivalent to doing param.ToExpression().VectorValue(fRecalculate)</remarks><para/>
 	/// <remarks>In case of a multidimensional expression, the values are flattened according to a column major ordering</remarks><para/>
 	/// </summary>
 	/// <param name='fRecalculate'>Recalculate the computation graph (for static graphs with new inputs) (default: False)</param>
@@ -798,7 +794,6 @@ namespace dynetsharp {
 	}
 	/// <summary>
 	/// <para>Returns the value of the expression as a Tensor.</para>
-	/// <remarks>Equivalent to doing param.ToExpression().TensorValue()</remarks>
 	/// </summary>
 	Tensor ^Parameter::TensorValue() {
 		ExceptionWrap(
@@ -807,7 +802,6 @@ namespace dynetsharp {
 	}
 	/// <summary>
 	/// <para>Returns the value of the expression as a Tensor.</para>
-	/// <remarks>Equivalent to doing param.ToExpression().TensorValue(fRecalculate)</remarks>
 	/// </summary>
 	/// <param name='fRecalculate'>Recalculate the computation graph (for static graphs with new inputs) (default: False)</param>
 	Tensor ^Parameter::TensorValue(bool fRecalculate) {
@@ -834,13 +828,12 @@ namespace dynetsharp {
 	}
 	/// <summary>
 	/// <para>Returns the parameter as an expression</para>
+	/// <remarks>Deprecated - an explicit conversion is no longer needed.</remarks>
 	/// </summary>
+	[Obsolete("Deprecated - an explicit conversion is no longer needed.")]
 	Expression ^Parameter::ToExpression() {
 		ExceptionWrap(
-			// Default "update" is true, so return the regular experssion
-			if (!__exp || __exp->IsStale())
-				__exp = gcnew Expression(dynet::parameter(*cg, *__thisptr));
-		return __exp;
+			return GetExpression();
 		)
 	}
 	/// <summary>
@@ -850,7 +843,7 @@ namespace dynetsharp {
 	Expression ^Parameter::ToExpression(bool fUpdate) {
 		ExceptionWrap(
 			// If the fUpdate flag is true, just call the regular function. 
-			if (fUpdate) return ToExpression();
+			if (fUpdate) return GetExpression();
 		// Otherwise, update the constant expression
 		if (!__const_exp || __const_exp->IsStale())
 			__const_exp = gcnew Expression(dynet::const_parameter(*cg, *__thisptr));
@@ -1570,16 +1563,6 @@ namespace dynetsharp {
 	/// </summary>
 	/// <param name='lp'>LookupParameter to retrieve record from</param>
 	/// <param name='index'>Index of row to lookup</param>
-	Expression ^DynetFunctions::lookup(LookupParameter ^lp, int index) {
-		ExceptionWrap(
-			return gcnew Expression(dynet::lookup(*cg, *lp->__thisptr, index));
-		)
-	}
-	/// <summary>
-	/// <para>Lookup an embedding from a lookup parameter and returns it as a expression</para>
-	/// </summary>
-	/// <param name='lp'>LookupParameter to retrieve record from</param>
-	/// <param name='index'>Index of row to lookup</param>
 	/// <param name='fUpdate'>Default true, if this is set to False, the returned expression won't be updated during the backward pass</param>
 	Expression ^DynetFunctions::lookup(LookupParameter ^lp, int index, bool fUpdate) {
 		ExceptionWrap(
@@ -1589,12 +1572,13 @@ namespace dynetsharp {
 	/// <summary>
 	/// <para>Add parameters to the computation graph.</para>
 	/// <para>Get the expression objects corresponding to parameters. Gradients for parameters will be computed and used by Optimizers to update.</para>
-	/// <remarks>Equivalent to doing Parameter.ToExpression()</remarks>
+	/// <remarks>Deprecated - an explicit conversion is no longer needed.</remarks>
 	/// </summary>
 	/// <param name='p'>Parameter object to add to the computation graph</param>
+	[Obsolete("Deprecated - an explicit conversion is no longer needed.")]
 	Expression ^DynetFunctions::parameter(Parameter ^p) {
 		ExceptionWrap(
-			return p->ToExpression();
+			return p;
 		)
 	}
 	/// <summary>
@@ -1606,17 +1590,6 @@ namespace dynetsharp {
 	Expression ^DynetFunctions::const_parameter(Parameter ^p) {
 		ExceptionWrap(
 			return p->ToExpression(false);
-		)
-	}
-	/// <summary>
-	/// <para>Pick element.</para>
-	/// <para>Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.</para>
-	/// </summary>
-	/// <param name='exp'>Expression to pick from</param>
-	/// <param name='index'>Index to pick</param>
-	Expression ^DynetFunctions::pick(Expression ^exp, int index) {
-		ExceptionWrap(
-			return gcnew Expression(dynet::pick(exp->__thisptr, index));
 		)
 	}
 	/// <summary>

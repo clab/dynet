@@ -140,6 +140,10 @@ Parameter p6 = m.AddParameters(new[] { 3, 5 }); // By default, it uses the Gloro
 Parameter p7 = m.AddParameters(new[] { 3, 5 }, new NormalInitializer(mean, stddev));
 // Creates 3x5 matrix from a float array (size is inferred)
 Parameter p8 = m.AddParameters(new[] { 3, 5 }, new FromVectorInitializer(Enumerable.Repeat(1.0f, 3 * 5).ToArray()));
+
+// You can use the parameters naturally as expressions in the computation graph, e.g.:
+Expression e = p1;
+Expression e2 = p1 * dy.input(new[] { 1f, 2f, 3f, 4f, 5f });
 ```
 
 ##### Create LookupParameters

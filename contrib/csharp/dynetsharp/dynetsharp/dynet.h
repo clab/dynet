@@ -76,9 +76,10 @@ namespace dynetsharp {
 		int GetActualPosFromArr(std::vector<int> arr, bool fCheckBoundaries);
 		std::vector<float> _getFlattenedRowValue(array<int> ^pos);
 		std::vector<long> *_dim;
-	public:
+	internal:
 		dynet::Tensor *__thisptr;
 		std::vector<float> *_vec;
+	public:
 		Tensor(dynet::Tensor _tensor) {
 			ExceptionWrap(
 				dynet::Dim d = _tensor.d;
@@ -160,7 +161,7 @@ namespace dynetsharp {
 			val = NULL;
 			self_cg_version = _cg_version;
 		}
-	public:
+	internal:
 		property dynet::Expression __thisptr {
 			dynet::Expression get() {
 				if (self_cg_version != _cg_version)
@@ -171,7 +172,15 @@ namespace dynetsharp {
 				variableIndex = input.i;
 			}
 		};
-
+		Expression ^_multiply(Expression ^other);
+		Expression ^_add(Expression ^other);
+		Expression ^_divide(Expression ^other);
+		Expression ^_subtract(Expression ^other);
+		Expression ^_multiply(float other);
+		Expression ^_add(float other);
+		Expression ^_divide(float other);
+		Expression ^_subtract(float other);
+	public:
 		Expression(dynet::Expression inexpr) {
 			Init(inexpr);
 		}
@@ -207,14 +216,7 @@ namespace dynetsharp {
 		bool IsStale() {
 			return self_cg_version != _cg_version;
 		}
-		Expression ^_multiply(Expression ^other);
-		Expression ^_add(Expression ^other);
-		Expression ^_divide(Expression ^other);
-		Expression ^_subtract(Expression ^other);
-		Expression ^_multiply(float other);
-		Expression ^_add(float other);
-		Expression ^_divide(float other);
-		Expression ^_subtract(float other);
+		
 		static Expression ^operator-(Expression ^x, Expression ^other) { return x->_subtract(other); }
 		static Expression ^operator*(Expression ^x, Expression ^other) { return x->_multiply(other); }
 		static Expression ^operator/(Expression ^x, Expression ^other) { return x->_divide(other); }
@@ -270,8 +272,9 @@ namespace dynetsharp {
 	/// <para>They are used to embed a set of discrete objects (e.g. word embeddings). These are sparsely updated.</para>
 	/// </summary>
 	public ref class LookupParameter {
-	public:
+	internal:
 		dynet::LookupParameter *__thisptr;
+	public:
 		LookupParameter(dynet::LookupParameter inp) {
 			__thisptr = new dynet::LookupParameter(inp);
 		}
@@ -316,6 +319,12 @@ namespace dynetsharp {
 		dynet::Parameter *__thisptr;
 		Expression ^__exp;
 		Expression ^__const_exp;
+		Expression ^GetExpression() {
+			// Default "update" is true, so return the regular experssion
+			if (!__exp || __exp->IsStale())
+				__exp = gcnew Expression(dynet::parameter(*cg, *__thisptr));
+			return __exp;
+		}
 	public:
 		Parameter(dynet::Parameter inp) {
 			__thisptr = new dynet::Parameter(inp);
@@ -352,6 +361,9 @@ namespace dynetsharp {
 		static bool operator==(Parameter^ t1, Parameter ^t2) {
 			return t1->__thisptr->p == t2->__thisptr->p;
 		}
+		static operator Expression ^(Parameter ^p) {
+			return p->ToExpression();
+		}
 	};
 
 	// Initializer
@@ -361,8 +373,8 @@ namespace dynetsharp {
 	public ref class ParamInitializer abstract {
 	internal:
 		ParamInitializer() { CheckForInitialized(); }
-	public:
 		dynet::ParameterInit *__thisptr;
+	public:
 		~ParamInitializer() {
 			this->!ParamInitializer();
 		}
@@ -559,8 +571,9 @@ namespace dynetsharp {
 	/// <para>Hierarchy: The parameter collections can be nested, where each collection can hold zero or more sub-collection, which are also ParameterCollection objects.Each(sub-)collection contains the parameters in it and in all the(sub-)collections below it.</para>
 	/// </summary>
 	public ref class ParameterCollection {
-	public:
+	internal:
 		dynet::ParameterCollection *__thisptr;
+	public:
 		/// <summary>
 		/// <para>A ParameterCollection holds Parameters. Use it to create, load and save parameters.</para>
 		/// <para>(It used to be called Model in previous versions of DyNet)</para>
@@ -1361,8 +1374,9 @@ namespace dynetsharp {
 				__thisptr = new dynet::DynetParams(ptr);
 			);
 		}
-	public:
+	internal:
 		dynet::DynetParams *__thisptr;
+	public:
 		/// <summary>
 		/// <para>This object holds the global parameters of Dynet</para>
 		/// <para>This is useful if you want to specify the global dynet parameters(memory, random seed...) programmatically. </para>
@@ -1499,12 +1513,10 @@ namespace dynetsharp {
 		static void RenewCG();
 		static void CheckpointCG();
 		static void RevertCG();
-		static Expression ^lookup(LookupParameter ^lp, int index);
-		static Expression ^lookup(LookupParameter ^lp, int index, bool fUpdate);
+		static Expression ^lookup(LookupParameter ^lp, int index, bool fUpdate = true);
 		static Expression ^parameter(Parameter ^p);
 		static Expression ^const_parameter(Parameter ^p);
-		static Expression ^pick(Expression ^exp, int index);
-		static Expression ^pick(Expression ^exp, int index, int dim);
+		static Expression ^pick(Expression ^exp, int index, int dim = 0);
 		static Expression ^input(float num);
 		static Expression ^input(array<float>^ num);
 		static Expression ^input(array<array<float>^>^ num);
