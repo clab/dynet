@@ -11,7 +11,7 @@
 %pragma(java) jniclasscode=%{
     static {
         try {
-            File tempFile = File.createTempFile("dynet", "");
+            File tempFile = File.createTempFile("dynet", ".dll");
             String libname = System.mapLibraryName("dynet_swig");
 
             if (libname.endsWith("dylib")) {
