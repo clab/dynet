@@ -56,7 +56,7 @@ namespace dynetsharp {
 	static int _cg_version = 0;
 	static std::vector<float *> _floatInputs;
 	static std::vector<std::vector<float> *> _vecInputs;
-	
+	dynet::Device *str2dev(String ^name);
 	// For clearing out memory
 	static size_t maxOverallMemory = 0;
 	static size_t initialMemorySize = 0;
@@ -79,7 +79,6 @@ namespace dynetsharp {
 	internal:
 		dynet::Tensor *__thisptr;
 		std::vector<float> *_vec;
-	public:
 		Tensor(dynet::Tensor _tensor) {
 			ExceptionWrap(
 				dynet::Dim d = _tensor.d;
@@ -94,11 +93,6 @@ namespace dynetsharp {
 			__thisptr = new dynet::Tensor(_tensor);
 			)
 		}
-		Tensor(array<float> ^arr, array<long> ^shape);
-		Tensor(array<float> ^arr);
-		Tensor(array<array<float> ^> ^arr);
-		Tensor(array<array<array<float> ^> ^> ^arr);
-		Tensor(array<array<array<array<float> ^> ^> ^> ^arr);
 		~Tensor() {
 			this->!Tensor();
 		}
@@ -112,6 +106,13 @@ namespace dynetsharp {
 			_vec = NULL;
 			_dim = NULL;
 		}
+	public:
+		Tensor(array<float> ^arr, array<long> ^shape);
+		Tensor(array<float> ^arr);
+		Tensor(array<array<float> ^> ^arr);
+		Tensor(array<array<array<float> ^> ^> ^arr);
+		Tensor(array<array<array<array<float> ^> ^> ^> ^arr);
+		
 		int NDims() { return ndims; }
 		array<long> ^Shape() { return ConvertVectorToArray<long>(*_dim); }
 
@@ -180,7 +181,6 @@ namespace dynetsharp {
 		Expression ^_add(float other);
 		Expression ^_divide(float other);
 		Expression ^_subtract(float other);
-	public:
 		Expression(dynet::Expression inexpr) {
 			Init(inexpr);
 		}
@@ -194,7 +194,6 @@ namespace dynetsharp {
 			fHasFloatArrVal = true;
 			floatArrVal = floatArrValue;
 		}
-		
 		~Expression() {
 			this->!Expression();
 		}
@@ -213,6 +212,7 @@ namespace dynetsharp {
 			//__thisptr = NULL;
 			val = NULL;
 		}
+	public:
 		bool IsStale() {
 			return self_cg_version != _cg_version;
 		}
@@ -274,7 +274,6 @@ namespace dynetsharp {
 	public ref class LookupParameter {
 	internal:
 		dynet::LookupParameter *__thisptr;
-	public:
 		LookupParameter(dynet::LookupParameter inp) {
 			__thisptr = new dynet::LookupParameter(inp);
 		}
@@ -286,6 +285,7 @@ namespace dynetsharp {
 				delete __thisptr;
 			__thisptr = NULL;
 		}
+	public:
 		array<long> ^Shape();
 		int Size();
 		void InitRow(int iRow, array<float> ^row);
@@ -325,7 +325,7 @@ namespace dynetsharp {
 				__exp = gcnew Expression(dynet::parameter(*cg, *__thisptr));
 			return __exp;
 		}
-	public:
+	internal:
 		Parameter(dynet::Parameter inp) {
 			__thisptr = new dynet::Parameter(inp);
 			__exp = nullptr;
@@ -338,6 +338,7 @@ namespace dynetsharp {
 				delete __thisptr;
 			__thisptr = NULL;
 		}
+	public:
 		array<long> ^Shape();
 		void ClipInPlace(float left, float right);
 		void SetValue(Tensor ^val);
@@ -374,7 +375,6 @@ namespace dynetsharp {
 	internal:
 		ParamInitializer() { CheckForInitialized(); }
 		dynet::ParameterInit *__thisptr;
-	public:
 		~ParamInitializer() {
 			this->!ParamInitializer();
 		}
@@ -573,6 +573,17 @@ namespace dynetsharp {
 	public ref class ParameterCollection {
 	internal:
 		dynet::ParameterCollection *__thisptr;
+		ParameterCollection(dynet::ParameterCollection origPc) {
+			__thisptr = new dynet::ParameterCollection(origPc);
+		}
+		~ParameterCollection() {
+			this->!ParameterCollection();
+		}
+		!ParameterCollection() {
+			if (__thisptr != NULL)
+				delete __thisptr;
+			__thisptr = NULL;
+		}
 	public:
 		/// <summary>
 		/// <para>A ParameterCollection holds Parameters. Use it to create, load and save parameters.</para>
@@ -588,23 +599,18 @@ namespace dynetsharp {
 				__thisptr = new dynet::ParameterCollection();
 			)
 		}
-		ParameterCollection(dynet::ParameterCollection origPc) {
-			__thisptr = new dynet::ParameterCollection(origPc);
-		}
-		~ParameterCollection() {
-			this->!ParameterCollection();
-		}
-		!ParameterCollection() {
-			if (__thisptr != NULL)
-				delete __thisptr;
-			__thisptr = NULL;
-		}
 		Parameter ^AddParameters(array<long>^ dim);
 		Parameter ^AddParameters(array<long>^ dim, ParamInitializer ^pi);
 		Parameter ^AddParametersFromTensor(Tensor ^t);
+		Parameter ^AddParameters(array<long>^ dim, String ^device);
+		Parameter ^AddParameters(array<long>^ dim, ParamInitializer ^pi, String ^device);
+		Parameter ^AddParametersFromTensor(Tensor ^t, String ^device);
 		LookupParameter ^AddLookupParameters(int size, array<long>^ dim);
 		LookupParameter ^AddLookupParameters(int size, array<long>^ dim, ParamInitializer ^pi);
 		LookupParameter ^AddLookupParametersFromTensor(Tensor ^t);
+		LookupParameter ^AddLookupParameters(int size, array<long>^ dim, String ^device);
+		LookupParameter ^AddLookupParameters(int size, array<long>^ dim, ParamInitializer ^pi, String ^device);
+		LookupParameter ^AddLookupParametersFromTensor(Tensor ^t, String ^device);
 		List<Parameter ^> ^GetParametersList();
 		List<LookupParameter ^> ^GetLookupParametersList();
 		ParameterCollection ^AddSubCollection();
@@ -633,7 +639,7 @@ namespace dynetsharp {
 			if (self_cg_version != _cg_version)
 				throw gcnew Exception(gcnew String("Stale State (created before renewing the Computation Graph)."));
 		}
-	public:
+	internal:
 		RNNState(dynet::RNNBuilder *builder, dynet::RNNPointer state) {
 			__builderptr = builder;
 			__stateptr = new dynet::RNNPointer(state);
@@ -656,7 +662,7 @@ namespace dynetsharp {
 				delete __stateptr;
 			__stateptr = NULL;
 		}
-
+	public:
 		RNNState ^GetPrev();
 		Expression ^Output();
 		RNNState ^AddInput(Expression ^e);
@@ -685,7 +691,6 @@ namespace dynetsharp {
 		dynet::RNNBuilder *__thisptr;
 		RNNState ^__init_state;
 		int self_cg_version;
-	public:
 		~RNNBuilder() {
 			this->!RNNBuilder();
 		}
@@ -694,6 +699,7 @@ namespace dynetsharp {
 				delete __thisptr;
 			__thisptr = NULL;
 		}
+	public:
 		RNNState ^GetInitialState();
 		RNNState ^GetInitialState(bool fUpdate);
 		RNNState ^GetInitialState(array<Expression ^> ^vecs);
@@ -1030,7 +1036,6 @@ namespace dynetsharp {
 	internal:
 		dynet::Trainer *__thisptr;
 		Trainer() { CheckForInitialized(); }
-	public:
 		~Trainer() {
 			this->!Trainer();
 		}
@@ -1039,6 +1044,7 @@ namespace dynetsharp {
 				delete __thisptr;
 			__thisptr = NULL;
 		}
+	public:
 		/// <summary>
 		/// <para>Update the parameters</para>
 		/// <para>The update equation is different for each trainer, check the online c++ documentation for more details on what each trainer does</para>
@@ -1374,27 +1380,6 @@ namespace dynetsharp {
 				__thisptr = new dynet::DynetParams(ptr);
 			);
 		}
-	internal:
-		dynet::DynetParams *__thisptr;
-	public:
-		/// <summary>
-		/// <para>This object holds the global parameters of Dynet</para>
-		/// <para>This is useful if you want to specify the global dynet parameters(memory, random seed...) programmatically. </para>
-		/// <remarks>Don't forget to initialize with <c>dyparams.Initialize()</c>, otherwise dynet will raise an error.</remarks>
-		/// </summary>
-		/// <example>Example:
-		/// <c>
-		/// DynetParams dyparams = DynetParams();
-		/// dyparams.AutoBatch = true;
-		/// dyparams.RandomSeed = 8427628;
-		/// dyparams.Initialize();
-		/// </c>
-		/// </example>
-		DynetParams() {
-			ExceptionWrap(
-				__thisptr = new dynet::DynetParams();
-			)
-		}
 		~DynetParams() {
 			this->!DynetParams();
 		}
@@ -1403,6 +1388,10 @@ namespace dynetsharp {
 				delete __thisptr;
 			__thisptr = NULL;
 		}
+	internal:
+		dynet::DynetParams *__thisptr;
+	public:
+		DynetParams();
 		/// <summary>
 		/// <para>Memory allocated to dynet, unit is in MB</para>
 		/// </summary>
@@ -1452,58 +1441,40 @@ namespace dynetsharp {
 			void set(bool fProfile) { __thisptr->shared_parameters = fProfile && 1; }
 			bool get() { return __thisptr->shared_parameters && 1; }
 		}
-		void SetCPUMode() {
-			__thisptr->ids_requested = true;
-			__thisptr->cpu_requested = true;
+		void SetRequestedGPUs(int n);
+		property int RequestedGPUs {
+			int get() { return __thisptr->ngpus_requested ? __thisptr->requested_gpus : -1; }
 		}
-		/// <summary>
-		/// <para>Initialize dynet with the current dynetparams object.</para>
-		/// <remarks>This is one way, you can't uninitialize dynet</remarks>
-		/// </summary>
-		void Initialize() {
-			//std::set_unexpected(unexpectedHandler);
-			fInitialized = true;
-			ExceptionWrap(
-				initialMemorySize = std::stoull(__thisptr->mem_descriptor);
-				maxOverallMemory = maxMemory;
-				dynet::initialize(*__thisptr);
-			)
-		}
-		/// <summary>
-		/// <para>Create the DynetParams object for initializing dynet using the command line arguments.</para>
-		/// <remarks>Accepts the standard arg format for dynet</remarks>
-		/// <param name='args'>Command line arguments</param>
-		/// </summary>
-		static DynetParams ^FromArgs(array<String ^> ^args) {
-			// Convert to C array
-			int argc = args->Length;
-			char **argv = (char **)malloc(argc * sizeof(char *));
-			for (int iArg = 0; iArg < argc; iArg++)
-				argv[iArg] = (char *)Runtime::InteropServices::Marshal::StringToHGlobalAnsi(args[iArg]).ToPointer();
-			// Create the return object
-			DynetParams ^ret = gcnew DynetParams(dynet::extract_dynet_params(argc, argv));
-
-			// Free
-			for (int iArg = 0; iArg < argc; iArg++) free(argv[iArg]);
-			free(argv);
-
-			return ret;
-		}
-		/// <summary>
-		/// <para>Update the default&amp;max mem-descriptor variables, memory is released during RenewCG().</para>
-		/// </summary>
-		void UpdateMemDescriptors() {
-			ExceptionWrap(
-				// Set the new memory size
-				initialMemorySize = std::stoull(__thisptr->mem_descriptor);
-				maxOverallMemory = maxMemory;
-			)
-		}
+		void SetGPUMask(array<bool> ^mask);
+		void SetGPUMask(List<bool> ^mask);
+		void SetDeviceIDs(String ^devices);
+		void SetDeviceIDs(... array<String ^> ^devices);
+		void SetDeviceIDs(List<String ^> ^devices);
+		bool GetGPUMaskState(int index);
+		void Initialize();
+		static DynetParams ^FromArgs(array<String ^> ^args);
+		void UpdateMemDescriptors();
 	};
 
 	public enum class GradientMode {
 		ZeroGradient = dynet::zero_gradient,
 		StraightThroughGradient = dynet::straight_through_gradient,
+	};
+	public enum class DeviceType {
+		CPU = (int)dynet::DeviceType::CPU,
+		GPU = (int)dynet::DeviceType::GPU
+	};
+	public ref class DeviceInfo {
+	private:
+		String ^name;
+		int id;
+		DeviceType dtype;
+	internal:
+		DeviceInfo(std::string name, int id, dynet::DeviceType dtype) : name(gcnew String(name.c_str())), id(id), dtype((DeviceType)dtype) {}
+	public:
+		property String ^Name { String ^get() { return name; } }
+		property int Id { int get() { return id; } }
+		property DeviceType dType { DeviceType get() { return dtype; } }
 	};
 
 	public ref class DynetFunctions abstract sealed {
@@ -1513,14 +1484,20 @@ namespace dynetsharp {
 		static void RenewCG();
 		static void CheckpointCG();
 		static void RevertCG();
-		static Expression ^lookup(LookupParameter ^lp, int index, bool fUpdate = true);
+		static Expression ^lookup(LookupParameter ^lp, int index);
+		static Expression ^lookup(LookupParameter ^lp, int index, bool fUpdate);
 		static Expression ^parameter(Parameter ^p);
 		static Expression ^const_parameter(Parameter ^p);
-		static Expression ^pick(Expression ^exp, int index, int dim = 0);
+		static Expression ^pick(Expression ^exp, int index);
+		static Expression ^pick(Expression ^exp, int index, int dim);
 		static Expression ^input(float num);
+		static Expression ^input(float num, String ^device);
 		static Expression ^input(array<float>^ num);
+		static Expression ^input(array<float>^ num, String ^device);
 		static Expression ^input(array<array<float>^>^ num);
+		static Expression ^input(array<array<float>^>^ num, String ^device);
 		static Expression ^inputTensor(Tensor ^tensor);
+		static Expression ^inputTensor(Tensor ^tensor, String ^device);
 		static Expression ^average(List<Expression^> ^l);
 		static Expression ^average(... array<Expression^> ^arr);
 		static Expression ^esum(List<Expression^> ^l);
@@ -1528,16 +1505,29 @@ namespace dynetsharp {
 		static Expression ^sum(List<Expression^> ^l);
 		static Expression ^sum(... array<Expression^> ^arr);
 		static Expression ^zeroes(array<long> ^dim);
+		static Expression ^zeroes(array<long> ^dim, String ^device);
 		static Expression ^zeros(array<long> ^dim);
+		static Expression ^zeros(array<long> ^dim, String ^device);
+		static Expression ^one_hot(int dim, int idx);
+		static Expression ^one_hot(int dim, int idx, String ^device);
 		static Expression ^ones(array<long> ^dim);
+		static Expression ^ones(array<long> ^dim, String ^device);
 		static Expression ^constant(array<long> ^dim, float val);
+		static Expression ^constant(array<long> ^dim, float val, String ^device);
 		static Expression ^random_normal(array<long> ^dim);
+		static Expression ^random_normal(array<long> ^dim, String ^device);
 		static Expression ^random_normal(array<long> ^dim, float mean, float stddev);
+		static Expression ^random_normal(array<long> ^dim, float mean, float stddev, String ^device);
 		static Expression ^random_bernoulli(array<long> ^dim, float p);
+		static Expression ^random_bernoulli(array<long> ^dim, float p, String ^device);
 		static Expression ^random_bernoulli(array<long> ^dim, float p, float scale);
+		static Expression ^random_bernoulli(array<long> ^dim, float p, float scale, String ^device);
 		static Expression ^random_uniform(array<long> ^dim, float left, float right);
+		static Expression ^random_uniform(array<long> ^dim, float left, float right, String ^device);
 		static Expression ^random_gumbel(array<long> ^dim);
+		static Expression ^random_gumbel(array<long> ^dim, String ^device);
 		static Expression ^random_gumbel(array<long> ^dim, float mu, float beta);
+		static Expression ^random_gumbel(array<long> ^dim, float mu, float beta, String ^device);
 		static Expression ^flip_gradient(Expression ^x);
 		static Expression ^scale_gradient(Expression ^x);
 		static Expression ^scale_gradient(Expression ^x, float lambd);
@@ -1671,10 +1661,22 @@ namespace dynetsharp {
 		static void ShowPoolMemInfo();
 		static size_t HowMuchMemoryDynet();
 		static size_t HowMuchUsedMemoryDynet();
+		static List<String ^> ^GetListOfAvailableDevices();
+		static DeviceInfo ^GetDeviceInfo(String ^name);
+		static Expression ^ToDevice(Expression ^e, String ^device);
+		static void ResetRandomSeed(int seed);
 		static void PrintCGGraphViz() {
 			ExceptionWrap(cg->print_graphviz();)
 		}
 	};
+	dynet::Device *str2dev(String ^name) {
+		if (name->Equals("") || name->Equals("default"))
+			return default_device;
+		char *str = (char *)Runtime::InteropServices::Marshal::StringToHGlobalAnsi(name).ToPointer();
+		dynet::Device *d = get_device_manager()->get_global_device(str);
+		free(str);
+		return d;
+	}
 	// Private functions only for use here:
 	Dim ConvertArrToDim(array<long>^ arr) {
 		ExceptionWrap(
@@ -1769,7 +1771,7 @@ namespace dynetsharp {
 	}
 	void ResetDynetMemory(size_t newMemSize) {
 		ExceptionWrap(
-			if (default_device->type == DeviceType::CPU) {
+			if (default_device->type == dynet::DeviceType::CPU) {
 				std::cerr << "[dynet] re-allocating memory: " << newMemSize << "MB\n";
 				size_t newSize = newMemSize / 4;
 

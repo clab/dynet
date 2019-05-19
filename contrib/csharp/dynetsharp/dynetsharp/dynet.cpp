@@ -542,7 +542,17 @@ namespace dynetsharp {
 	/// <param name='dim'>Shape(dims) of the parameter to add</param>
 	Parameter ^ParameterCollection::AddParameters(array<long>^ dim) {
 		ExceptionWrap(
-			return AddParameters(dim, gcnew GlorotInitializer());
+			return AddParameters(dim, gcnew GlorotInitializer(), "");
+		)
+	}
+	/// <summary>
+	/// <para>Add a parameter to the ParameterCollection, with a given initializer (default is GlorotInitializer)</para>
+	/// </summary>
+	/// <param name='dim'>Shape(dims) of the parameter to add</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Parameter ^ParameterCollection::AddParameters(array<long>^ dim, String ^device) {
+		ExceptionWrap(
+			return AddParameters(dim, gcnew GlorotInitializer(), device);
 		)
 	}
 	/// <summary>
@@ -553,7 +563,19 @@ namespace dynetsharp {
 	/// <param name='pi'>Initializer to use when initializing the parameter. e.g,. GlorotInitializer</param>
 	Parameter ^ParameterCollection::AddParameters(array<long>^ dim, ParamInitializer ^pi) {
 		ExceptionWrap(
-			return gcnew Parameter(__thisptr->add_parameters(ConvertArrToDim(dim), *pi->__thisptr));
+			return AddParameters(dim, pi, "");
+		)
+	}
+	/// <summary>
+	/// <para>Add a parameter to the ParameterCollection, with a given initializer (default is GlorotInitializer)</para>
+	/// <remarks>List of possible initializers: NormalInitializer, UniformInitializer, ConstInitializer, IdentityInitializer, GlorotInitializer, SaxeInitializer, FromFileInitializer, FromVectorInitializer</remarks>
+	/// </summary>
+	/// <param name='dim'>Shape(dims) of the parameter to add</param>
+	/// <param name='pi'>Initializer to use when initializing the parameter. e.g,. GlorotInitializer</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Parameter ^ParameterCollection::AddParameters(array<long>^ dim, ParamInitializer ^pi, String ^device) {
+		ExceptionWrap(
+			return gcnew Parameter(__thisptr->add_parameters(ConvertArrToDim(dim), *pi->__thisptr, "",str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -563,7 +585,18 @@ namespace dynetsharp {
 	/// <param name='dim'>Shape(dims) of the parameter to add</param>
 	LookupParameter ^ParameterCollection::AddLookupParameters(int size, array<long>^ dim) {
 		ExceptionWrap(
-			return AddLookupParameters(size, dim, gcnew GlorotInitializer());
+			return AddLookupParameters(size, dim, gcnew GlorotInitializer(), "");
+		)
+	}
+	/// <summary>
+	/// <para>Add a lookup parameter to the ParameterCollection, with a given initializer (default is GlorotInitializer)</para>
+	/// </summary>
+	/// <param name='size'>Number of rows for the collection</param>
+	/// <param name='dim'>Shape(dims) of the parameter to add</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	LookupParameter ^ParameterCollection::AddLookupParameters(int size, array<long>^ dim, String ^device) {
+		ExceptionWrap(
+			return AddLookupParameters(size, dim, gcnew GlorotInitializer(), device);
 		)
 	}
 	/// <summary>
@@ -575,7 +608,20 @@ namespace dynetsharp {
 	/// <param name='pi'>Initializer to use when initializing the parameter. e.g,. GlorotInitializer</param>
 	LookupParameter ^ParameterCollection::AddLookupParameters(int size, array<long>^ dim, ParamInitializer ^pi) {
 		ExceptionWrap(
-			return gcnew LookupParameter(__thisptr->add_lookup_parameters(size, ConvertArrToDim(dim), *pi->__thisptr));
+			return AddLookupParameters(size, dim, pi, "");
+		)
+	}
+	/// <summary>
+	/// <para>Add a lookup parameter to the ParameterCollection, with a given initializer (default is GlorotInitializer)</para>
+	/// <remarks>List of possible initializers: NormalInitializer, UniformInitializer, ConstInitializer, IdentityInitializer, GlorotInitializer, SaxeInitializer, FromFileInitializer, FromVectorInitializer</remarks>
+	/// </summary>
+	/// <param name='size'>Number of rows for the collection</param>
+	/// <param name='dim'>Shape(dims) of the parameter to add</param>
+	/// <param name='pi'>Initializer to use when initializing the parameter. e.g,. GlorotInitializer</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	LookupParameter ^ParameterCollection::AddLookupParameters(int size, array<long>^ dim, ParamInitializer ^pi, String ^device) {
+		ExceptionWrap(
+			return gcnew LookupParameter(__thisptr->add_lookup_parameters(size, ConvertArrToDim(dim), *pi->__thisptr, "", str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -608,8 +654,18 @@ namespace dynetsharp {
 	/// <param name='t'>Values to initialize parameter with</param>
 	Parameter ^ParameterCollection::AddParametersFromTensor(Tensor ^t) {
 		ExceptionWrap(
+			return AddParametersFromTensor(t, "");
+		)
+	}
+	/// <summary>
+	/// <para>Add a parameter to the ParameterCollection, initializing with defined values</para>
+	/// </summary>
+	/// <param name='t'>Values to initialize parameter with</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Parameter ^ParameterCollection::AddParametersFromTensor(Tensor ^t, String ^device) {
+		ExceptionWrap(
 			dynet::Dim dim = ConvertArrToDim(t->Shape());
-		return gcnew Parameter(__thisptr->add_parameters(dim, dynet::ParameterInitFromVector(*t->_vec)));
+			return gcnew Parameter(__thisptr->add_parameters(dim, dynet::ParameterInitFromVector(*t->_vec), "", str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -618,9 +674,19 @@ namespace dynetsharp {
 	/// <param name='t'>Values to initialize parameter with</param>
 	LookupParameter ^ParameterCollection::AddLookupParametersFromTensor(Tensor ^t) {
 		ExceptionWrap(
+			return AddLookupParametersFromTensor(t, "");
+		)
+	}
+	/// <summary>
+	/// <para>Add a LookupParameter to the ParameterCollection, initializing with defined values</para>
+	/// </summary>
+	/// <param name='t'>Values to initialize parameter with</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	LookupParameter ^ParameterCollection::AddLookupParametersFromTensor(Tensor ^t, String ^device) {
+		ExceptionWrap(
 			std::vector<long> dimVec = ConvertArrayToVector<long>(t->Shape());
 		dynet::Dim dim(std::vector<long>(dimVec.begin() + 1, dimVec.end()));
-		return gcnew LookupParameter(__thisptr->add_lookup_parameters(dimVec[0], dim, dynet::ParameterInitFromVector(*t->_vec)));
+		return gcnew LookupParameter(__thisptr->add_lookup_parameters(dimVec[0], dim, dynet::ParameterInitFromVector(*t->_vec), "", str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1503,6 +1569,173 @@ namespace dynetsharp {
 	///////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////
+	//////////////// DynetParams Functions ////////////////////
+	///////////////////////////////////////////////////////////
+	/// <summary>
+	/// <para>This object holds the global parameters of Dynet</para>
+	/// <para>This is useful if you want to specify the global dynet parameters(memory, random seed...) programmatically. </para>
+	/// <remarks>Don't forget to initialize with <c>dyparams.Initialize()</c>, otherwise dynet will raise an error.</remarks>
+	/// </summary>
+	/// <example>Example:
+	/// <c>
+	/// DynetParams dyparams = DynetParams();
+	/// dyparams.AutoBatch = true;
+	/// dyparams.RandomSeed = 8427628;
+	/// dyparams.Initialize();
+	/// </c>
+	/// </example>
+	DynetParams::DynetParams() {
+		ExceptionWrap(
+			__thisptr = new dynet::DynetParams();
+		)
+	}
+	/// <summary>
+	/// <para>Number of requested gpus</para>
+	/// <remarks>Cancels out "SetGPUMask" and "SetDeviceIDs"</remarks>
+	/// </summary>
+	/// <param name='n'>Numbers of GPUs to load</param>
+	void DynetParams::SetRequestedGPUs(int n) {
+		ExceptionWrap(
+			__thisptr->requested_gpus = n;
+		__thisptr->ngpus_requested = true;
+		__thisptr->ids_requested = false;
+		)
+	}
+	/// <summary>
+	/// <para>Set the GPU mask to load, should be a list of booleans</para>
+	/// <remarks>Cancels out "SetRequestedGPUs" and "SetDeviceIDs"</remarks>
+	/// </summary>
+	/// <param name='mask'>List of true/false per GPU</param>
+	void DynetParams::SetGPUMask(array<bool> ^mask) {
+		if (__thisptr->gpu_mask.size() == 0)
+			throw gcnew ArgumentException("The current installation of dynet does not support GPU");
+		ExceptionWrap(
+			// Reset the whole mask
+			int maxMask = mask->Length;
+		for (int i = 0; i < __thisptr->gpu_mask.size(); i++)
+			__thisptr->gpu_mask[i] = i < maxMask && mask[i] && 1;
+		__thisptr->ngpus_requested = false;
+		__thisptr->ids_requested = true;
+		)
+	}
+	/// <summary>
+	/// <para>Set the GPU mask to load, should be a list of booleans</para>
+	/// <remarks>Cancels out "SetRequestedGPUs" and "SetDeviceIDs"</remarks>
+	/// </summary>
+	/// <param name='mask'>List of true/false per GPU</param>
+	void DynetParams::SetGPUMask(List<bool> ^mask) {
+		ExceptionWrap(
+			SetGPUMask(mask->ToArray());
+		)
+	}
+	/// <summary>
+	/// <para>Set the IDs of the devices to load</para>
+	/// <remarks>Cancels out "SetGPUMask" and "SetRequestedGPUs"</remarks>
+	/// </summary>
+	/// <param name='devices'>Comma-separated list of devices to load</param>
+	void DynetParams::SetDeviceIDs(String ^devices) {
+		ExceptionWrap(
+			char **argv = (char **)malloc(sizeof(char *) * 3);
+		int argc = 3;
+		argv[0] = (char *)"";
+		argv[1] = (char *)"--dynet-devices";
+		argv[2] = (char *)Runtime::InteropServices::Marshal::StringToHGlobalAnsi(devices).ToPointer();
+		// Send to dynet to extract the gpu mask (and handle all the exceptions)
+		auto dp = dynet::extract_dynet_params(argc, argv);
+		// Copy everything in
+		__thisptr->ids_requested = true;
+		__thisptr->cpu_requested = true;
+		__thisptr->requested_gpus = dp.requested_gpus;
+		__thisptr->gpu_mask.assign(dp.gpu_mask.begin(), dp.gpu_mask.end());
+
+		// Free
+		free(argv[2]);
+		free(argv);
+		)
+	}
+	/// <summary>
+	/// <para>Set the IDs of the devices to load</para>
+	/// <remarks>Cancels out "SetGPUMask" and "SetRequestedGPUs"</remarks>
+	/// </summary>
+	/// <param name='devices'>List of devices to load</param>
+	void DynetParams::SetDeviceIDs(... array<String ^> ^devices) {
+		ExceptionWrap(
+			SetDeviceIDs(System::String::Join(",", devices));
+		)
+	}
+	/// <summary>
+	/// <para>Set the IDs of the devices to load</para>
+	/// <remarks>Cancels out "SetGPUMask" and "SetRequestedGPUs"</remarks>
+	/// </summary>
+	/// <param name='devices'>List of devices to load</param>
+	void DynetParams::SetDeviceIDs(List<String ^> ^devices) {
+		ExceptionWrap(
+			SetDeviceIDs(devices->ToArray());
+		)
+	}
+
+	/// <summary>
+	/// <para>Get the mask state of a given GPU</para>
+	/// </summary>
+	/// <param name='index'>Index of GPU</param>
+	bool DynetParams::GetGPUMaskState(int index) {
+		if (!__thisptr->ids_requested)
+			throw gcnew Exception("Cannot get mask state of GPU when not in ID mode");
+		ExceptionWrap(
+			return __thisptr->gpu_mask[index];
+		)
+	}
+
+	/// <summary>
+	/// <para>Initialize dynet with the current dynetparams object.</para>
+	/// <remarks>This is one way, you can't uninitialize dynet</remarks>
+	/// </summary>
+	void DynetParams::Initialize() {
+		//std::set_unexpected(unexpectedHandler);
+		fInitialized = true;
+		ExceptionWrap(
+			initialMemorySize = std::stoull(__thisptr->mem_descriptor);
+		maxOverallMemory = maxMemory;
+		dynet::initialize(*__thisptr);
+		)
+	}
+	/// <summary>
+	/// <para>Create the DynetParams object for initializing dynet using the command line arguments.</para>
+	/// <remarks>Accepts the standard arg format for dynet</remarks>
+	/// <param name='args'>Command line arguments</param>
+	/// </summary>
+	DynetParams ^DynetParams::FromArgs(array<String ^> ^args) {
+		ExceptionWrap(
+			// Convert to C array
+			int argc = args->Length;
+			char **argv = (char **)malloc(argc * sizeof(char *));
+			for (int iArg = 0; iArg < argc; iArg++)
+				argv[iArg] = (char *)Runtime::InteropServices::Marshal::StringToHGlobalAnsi(args[iArg]).ToPointer();
+			// Create the return object
+			DynetParams ^ret = gcnew DynetParams(dynet::extract_dynet_params(argc, argv));
+
+			// Free
+			for (int iArg = 0; iArg < argc; iArg++) free(argv[iArg]);
+			free(argv);
+
+			return ret;
+		)
+	}
+	/// <summary>
+	/// <para>Update the default&amp;max mem-descriptor variables, memory is released during RenewCG().</para>
+	/// </summary>
+	void DynetParams::UpdateMemDescriptors() {
+		ExceptionWrap(
+			// Set the new memory size
+			initialMemorySize = std::stoull(__thisptr->mem_descriptor);
+		maxOverallMemory = maxMemory;
+		)
+	}
+	///////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////
+
+	///////////////////////////////////////////////////////////
 	//////////////////// Static Functions /////////////////////
 	///////////////////////////////////////////////////////////
 	/// <summary>
@@ -1563,6 +1796,16 @@ namespace dynetsharp {
 	/// </summary>
 	/// <param name='lp'>LookupParameter to retrieve record from</param>
 	/// <param name='index'>Index of row to lookup</param>
+	Expression ^DynetFunctions::lookup(LookupParameter ^lp, int index) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::lookup(*cg, *lp->__thisptr, index));
+		)
+	}
+	/// <summary>
+	/// <para>Lookup an embedding from a lookup parameter and returns it as a expression</para>
+	/// </summary>
+	/// <param name='lp'>LookupParameter to retrieve record from</param>
+	/// <param name='index'>Index of row to lookup</param>
 	/// <param name='fUpdate'>Default true, if this is set to False, the returned expression won't be updated during the backward pass</param>
 	Expression ^DynetFunctions::lookup(LookupParameter ^lp, int index, bool fUpdate) {
 		ExceptionWrap(
@@ -1593,6 +1836,17 @@ namespace dynetsharp {
 		)
 	}
 	/// <summary>
+	/// <para>Pick element.</para> 
+	/// <para>Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.</para>
+	/// </summary>
+	/// <param name='exp'>Expression to pick from</param>
+	/// <param name='index'>Index to pick</param>
+	Expression ^DynetFunctions::pick(Expression ^exp, int index) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::pick(exp->__thisptr, index));
+		)
+	}
+	/// <summary>
 	/// <para>Pick element.</para>
 	/// <para>Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.</para>
 	/// </summary>
@@ -1610,9 +1864,19 @@ namespace dynetsharp {
 	/// <param name='num'>Value of Expression</param>
 	Expression ^DynetFunctions::input(float num) {
 		ExceptionWrap(
+			return input(num, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an Expression object on the computation graph with a scalar value</para>
+	/// </summary>
+	/// <param name='num'>Value of Expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::input(float num, String ^device) {
+		ExceptionWrap(
 			float *val = new float(num);
 			_floatInputs.push_back(val);
-			return gcnew Expression(dynet::input(*cg, val), val);
+			return gcnew Expression(dynet::input(*cg, val, str2dev(device)), val);
 		)
 	}
 	/// <summary>
@@ -1622,9 +1886,20 @@ namespace dynetsharp {
 	/// <param name='num'>Value of Expression</param>
 	Expression ^DynetFunctions::input(array<float>^ num) {
 		ExceptionWrap(
+			return input(num, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an Expression object on the computation graph with a 1-dim vector value</para>
+	/// <remarks>Better to use inputTensor for initializing vector expressions</remarks>
+	/// </summary>
+	/// <param name='num'>Value of Expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::input(array<float>^ num, String ^device) {
+		ExceptionWrap(
 			std::vector<float> *val = new std::vector<float>(ConvertArrayToVector<float>(num));
 			_vecInputs.push_back(val);
-			return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length }, val), val);
+			return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length }, val, str2dev(device)), val);
 		) 
 	}
 	/// <summary>
@@ -1634,6 +1909,17 @@ namespace dynetsharp {
 	/// <param name='num'>Value of Expression</param>
 	Expression ^DynetFunctions::input(array<array<float>^>^ num) {
 		ExceptionWrap(
+			return input(num, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an Expression object on the computation graph with a 2-dim vector value</para>
+	/// <remarks>Better to use inputTensor for initializing vector expressions</remarks>
+	/// </summary>
+	/// <param name='num'>Value of Expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::input(array<array<float>^>^ num, String ^device) {
+		ExceptionWrap(
 			std::vector<float> vec;
 		for (int iVec = 0; iVec < num->Length; iVec++)
 			for (int iItem = 0; iItem < num[iVec]->Length; iItem++)
@@ -1641,7 +1927,7 @@ namespace dynetsharp {
 		// Convert to pointer, and send that
 		std::vector<float> *val = new std::vector<float>(vec);
 		_vecInputs.push_back(val);
-		return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length, (unsigned)num[0]->Length }, val), val);
+		return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length, (unsigned)num[0]->Length }, val, str2dev(device)), val);
 		)
 	}
 	/// <summary>
@@ -1651,7 +1937,18 @@ namespace dynetsharp {
 	/// <param name='tensor'>Value of Expression</param>
 	Expression ^DynetFunctions::inputTensor(Tensor ^tensor) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::input(*cg, ConvertArrToDim(tensor->Shape()), *tensor->_vec));
+			return inputTensor(tensor, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an Expression object on the computation graph with a the value of the Tensor</para>
+	/// <remarks>Note: The values in the Tensor object are *not* linked to the values in the Expression</remarks>
+	/// </summary>
+	/// <param name='tensor'>Value of Expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::inputTensor(Tensor ^tensor, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::input(*cg, ConvertArrToDim(tensor->Shape()), *tensor->_vec, str2dev(device)));
 		)
 	}
 	Expression ^DynetFunctions::average(List<Expression^> ^l) {
@@ -1691,17 +1988,62 @@ namespace dynetsharp {
 	/// <param name='dim'>Dimensions of the expression</param>
 	Expression ^DynetFunctions::zeroes(array<long> ^dim) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::zeroes(*cg, ConvertArrToDim(dim)));
+			return zeros(dim);
 		)
 	}
 	/// <summary>
-/// <para>Create an input full of zeros</para>
-/// <para>Create an input full of zeros, sized according to dimensions `dim`</para>
-/// </summary>
-/// <param name='dim'>Dimensions of the expression</param>
+	/// <para>Create an input full of zeros</para>
+	/// <para>Create an input full of zeros, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::zeroes(array<long> ^dim, String ^device) {
+		ExceptionWrap(
+			return zeros(dim, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of zeros</para>
+	/// <para>Create an input full of zeros, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
 	Expression ^DynetFunctions::zeros(array<long> ^dim) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::zeros(*cg, ConvertArrToDim(dim)));
+			return zeros(dim, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of zeros</para>
+	/// <para>Create an input full of zeros, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::zeros(array<long> ^dim, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::zeros(*cg, ConvertArrToDim(dim), str2dev(device)));
+		)
+	}
+	/// <summary>
+	/// <para>Inputs a one hot vector into the graph.</para>
+	/// <para>A one hot vector is a vector where one coordinate is 1 and everything else is 0</para>
+	/// </summary>
+	/// <param name='dim'>Dimension of the vector</param>
+	/// <param name='idx'>Index of the coordinate that is 1</param>
+	Expression ^DynetFunctions::one_hot(int dim, int idx) {
+		ExceptionWrap(
+			return one_hot(dim, idx, "");
+		)
+	}
+	/// <summary>
+	/// <para>Inputs a one hot vector into the graph.</para>
+	/// <para>A one hot vector is a vector where one coordinate is 1 and everything else is 0</para>
+	/// </summary>
+	/// <param name='dim'>Dimension of the vector</param>
+	/// <param name='idx'>Index of the coordinate that is 1</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::one_hot(int dim, int idx, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::one_hot(*cg, dim, idx, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1711,7 +2053,18 @@ namespace dynetsharp {
 	/// <param name='dim'>Dimensions of the expression</param>
 	Expression ^DynetFunctions::ones(array<long> ^dim) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::ones(*cg, ConvertArrToDim(dim)));
+			return ones(dim, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of ones</para>
+	/// <para>Create an input full of ones, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::ones(array<long> ^dim, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::ones(*cg, ConvertArrToDim(dim), str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1722,7 +2075,19 @@ namespace dynetsharp {
 	/// <param name='val'>Constant value</param>
 	Expression ^DynetFunctions::constant(array<long> ^dim, float val) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::constant(*cg, ConvertArrToDim(dim), val));
+			return constant(dim, val, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of a constant value</para>
+	/// <para>Create an input full of a constant value, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='val'>Constant value</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::constant(array<long> ^dim, float val, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::constant(*cg, ConvertArrToDim(dim), val, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1732,7 +2097,18 @@ namespace dynetsharp {
 	/// <param name='dim'>Dimensions of the expression</param>
 	Expression ^DynetFunctions::random_normal(array<long> ^dim) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_normal(*cg, ConvertArrToDim(dim)));
+			return random_normal(dim, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random normal vector</para>
+	/// <para>Create a vector distributed according to normal distribution with mean (default: 0), variance (default: 1).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_normal(array<long> ^dim, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::random_normal(*cg, ConvertArrToDim(dim), 0.0f, 1.0f, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1744,7 +2120,20 @@ namespace dynetsharp {
 	/// <param name='stddev'>Variance value for distribution (default: 1)</param>
 	Expression ^DynetFunctions::random_normal(array<long> ^dim, float mean, float stddev) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_normal(*cg, ConvertArrToDim(dim), mean, stddev));
+			return random_normal(dim, mean, stddev, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random normal vector</para>
+	/// <para>Create a vector distributed according to normal distribution with mean (default: 0), variance (default: 1).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='mean'>Mean value for distribution (default: 0)</param>
+	/// <param name='stddev'>Variance value for distribution (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_normal(array<long> ^dim, float mean, float stddev, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::random_normal(*cg, ConvertArrToDim(dim), mean, stddev, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1755,7 +2144,19 @@ namespace dynetsharp {
 	/// <param name='p'>Parameter of the bernoulli distribution</param>
 	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_bernoulli(*cg, ConvertArrToDim(dim), p));
+			return random_bernoulli(dim, p, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random bernoulli tensor</para>
+	/// <para>Create a tensor distributed according to bernoulli distribution with parameter P</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='p'>Parameter of the bernoulli distribution</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::random_bernoulli(*cg, ConvertArrToDim(dim), p, 1.0f, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1767,7 +2168,20 @@ namespace dynetsharp {
 	/// <param name='scale'>Scaling factor to apply to the sampled tensor (default: (1.0))</param>
 	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, float scale) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_bernoulli(*cg, ConvertArrToDim(dim), p, scale));
+			return random_bernoulli(dim, p, scale, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random bernoulli tensor</para>
+	/// <para>Create a tensor distributed according to bernoulli distribution with parameter P</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='p'>Parameter of the bernoulli distribution</param>
+	/// <param name='scale'>Scaling factor to apply to the sampled tensor (default: (1.0))</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, float scale, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::random_bernoulli(*cg, ConvertArrToDim(dim), p, scale, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1779,7 +2193,20 @@ namespace dynetsharp {
 	/// <param name='right'>Upper bound of the uniform distribution</param>
 	Expression ^DynetFunctions::random_uniform(array<long> ^dim, float left, float right) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_uniform(*cg, ConvertArrToDim(dim), left, right));
+			return random_uniform(dim, left, right, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random uniform tensor</para>
+	/// <para>Create a tensor distributed according to uniform distribution with boundaries left and right.</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='left'>Lower bound of the uniform distribution</param>
+	/// <param name='right'>Upper bound of the uniform distribution</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_uniform(array<long> ^dim, float left, float right, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::random_uniform(*cg, ConvertArrToDim(dim), left, right, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1789,7 +2216,18 @@ namespace dynetsharp {
 	/// <param name='dim'>Dimensions of the expression</param>
 	Expression ^DynetFunctions::random_gumbel(array<long> ^dim) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_gumbel(*cg, ConvertArrToDim(dim)));
+			return random_gumbel(dim, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random Gumbel sampled vector</para>
+	/// <para>Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::random_gumbel(*cg, ConvertArrToDim(dim), 0.0f, 1.0f, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1801,9 +2239,22 @@ namespace dynetsharp {
 	/// <param name='beta'>Parameter beta of the gumbel distribution (default: 1.0, non-default not supported)</param>
 	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, float mu, float beta) {
 		ExceptionWrap(
+			return random_gumbel(dim, mu, beta, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random Gumbel sampled vector</para>
+	/// <para>Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='mu'>Parameter mu of the gumbel distribution (default: 0.0, non-default not supported)</param>
+	/// <param name='beta'>Parameter beta of the gumbel distribution (default: 1.0, non-default not supported)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, float mu, float beta, String ^device) {
+		ExceptionWrap(
 			if (mu != 0.0 || beta != 1.0)
 				throw gcnew Exception(gcnew String("Currently only paramters of mu=0.0 and beta=1.0 are supported."));
-		return gcnew Expression(dynet::random_gumbel(*cg, ConvertArrToDim(dim), mu, beta));
+		return gcnew Expression(dynet::random_gumbel(*cg, ConvertArrToDim(dim), mu, beta, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2229,7 +2680,7 @@ namespace dynetsharp {
 	}
 	Expression ^DynetFunctions::transpose(Expression ^x) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::transpose(x->__thisptr, { 0,1 }));
+			return gcnew Expression(dynet::transpose(x->__thisptr, { 1, 0 }));
 		)
 	}
 	Expression ^DynetFunctions::transpose(Expression ^x, array<int> ^dims) {
@@ -2590,6 +3041,45 @@ namespace dynetsharp {
 			totalMem += (d->pools[3]->used() >> 20);
 		}
 		return totalMem;
+		)
+	}
+	/// <summary>
+	/// <para>We use the term Device to refer to a Computation Device. A computation device is a piece of hardware performing computation(e.g., CPU, GPU).</para>
+	/// <para>Computation devices are identified by string names(e.g., 'CPU', 'GPU:0'). This returns the list of available devices.</para>
+	/// <para>Devices have both a processor and an associated memory. Hence, each Parameters, LookupParameters and Expression are tied to devices.</para>
+	/// <para>- Parameter and LookupParameters are associated with a device at creation time.</para>
+	/// <para>If no device is given at creation time, the default device is assumed.</para>
+	/// <para>- Parameter Expressions reside on the same device as their Parameters.</para>
+	/// <para>- Other Expressions reside on the same device as the expressions that comprise them.</para>
+	/// <para>- An Expression e can be copied across devices using <c>dy.ToDevice(e, name)</c>.</para>
+	/// </summary>
+	/// <returns>list of available device names (as strings)</returns>
+	List<String ^> ^DynetFunctions::GetListOfAvailableDevices() {
+		ExceptionWrap(
+			List<String ^> ^ret = gcnew List<String ^>((int)get_device_manager()->num_devices());
+		for (auto d : get_device_manager()->get_devices())
+			ret->Add(gcnew String(d->name.c_str()));
+		return ret;
+		)
+	}
+	DeviceInfo ^DynetFunctions::GetDeviceInfo(String ^name) {
+		ExceptionWrap(
+			Device *d = str2dev(name);
+			return gcnew DeviceInfo(d->name, d->device_id, d->type);
+		)
+	}
+	Expression ^DynetFunctions::ToDevice(Expression ^e, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::to_device(e->__thisptr, str2dev(device)));
+		)
+	}
+	/// <summary>
+	/// <para>Resets the random seed and the random number generator</para>
+	/// </summary>
+	/// <param name='seed'>The new random seed</param>
+	void DynetFunctions::ResetRandomSeed(int seed) {
+		ExceptionWrap(
+			reset_rng(seed);
 		)
 	}
 	///////////////////////////////////////////////////////////
