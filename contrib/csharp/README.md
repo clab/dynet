@@ -9,11 +9,76 @@ Before using DyNetSharp, you need to have the Microsoft Visual C++ Redistributab
 Open the Package-Manger-Console in Visual Studio, and type:
     
     PM> Install-Package DynetSharp
+    
+> This installs the CPU-only version. If you want to use GPU, you have to compile from source (see below).
 
 ##### Option 2: Building and installing from source:
-Clone DyNet's GitHub repository from http://github.com/clab/dynet, and follow the instructions on the documentations for building DyNet for C++ for windows (https://dynet.readthedocs.io/en/latest/install.html#windows-support). [Make sure to install the current version of Eigen, as per the instructions]
-After building the C++ version, open the DyNetSharp project. It is located in the "contrib" directory of the repository. Choose whether you want to build the "Debug", "Release", "MinSizeRel", or "RelWithDebInfo" mode, and make sure that you built that same setting in the C++ solution.
-After you built the C# wrapper, you can now add a reference to the DLL that appears in the build directory of the dynetsharp project from any C# project.
+
+Most of these instructions are copied out of the documentation for compiling DyNet for C++ for windows (https://dynet.readthedocs.io/en/latest/install.html#windows-support), with a few addition for installing with GPU support.
+
+##### Prerequisites: 
+- Git for windows (https://git-scm.com/download/win)
+- TortoiseHg for windows (https://tortoisehg.bitbucket.io/download/index.html)
+- CMake for windows (https://cmake.org/download/) [**If you are compiling with Visual Studio 2019, you have to have cmake 3.14+**]
+- [GPU only] Nvidia GPU Toolkit (https://developer.nvidia.com/cuda-downloads)
+- [GPU only] Nvidia CuDNN library (https://developer.nvidia.com/rdp/cudnn-download) [this requires creating a free login and signing in].
+    * The C# solution assumes that you will extract the library to the path: c:\cudnn\cuda\
+    * If you don't, you'll have to modify the solution files [explained below].
+
+> Make sure all the installations add their binaries to the PATH variable
+
+##### Downloading the source code: 
+```bash
+hg clone https://bitbucket.org/eigen/eigen/ -r b2e267d
+git clone https://github.com/clab/dynet.git
+cd dynet
+mkdir build
+cd build
+```
+
+##### Building DyNet for C++: 
+Building for CPU:
+```bash
+cmake .. -DEIGEN3_INCLUDE_DIR=..\..\eigen -G"Visual Studio 14 2015 Win64"
+```
+Building for GPU:
+```bash
+cmake .. -DEIGEN3_INCLUDE_DIR=..\..\eigen -G"Visual Studio 14 2015 Win64" -DBACKEND=cuda -DCUDNN_ROOT=c:\cudnn\cuda
+```
+
+If you have a different version of Visual Studio, you just need to modify it, e.g.:
+- Visual Studio 2017: "Visual Studio 15 2017 Win64"
+- Visual Studio 2019: "Visual Studio 16 2019"
+
+[GPU only] If you saved CuDNN in a different directory, you need to modify that here as well.
+
+This will generate dynet.sln. Simply open this and build all. Note: multi-process functionality is currently not supported in Windows, so the multi-process examples (`*-mp`) will not be included in the generated solution.
+For extra speed (approximately 30% gain), make the following two changes to the properties page for the "dynet" project (Click on the "dynet" project in the solution explorer, and click Alt-Enter):
+- C/C++ -> Preprocessor -> Preprocessor Definitions
+    - Add `__FMA__;` to the beginning.
+- C/C++ -> Code Generation -> Floating Point Model
+    - Change to `Fast (/fp:fast)`
+ > Note: Changing this only changes it in the active configuration (Debug/Release/RelWithDebInfo/MinSizeRel). Make sure you change it in the configuration you are building in.
+
+This completes building DyNet for C++. After that's done, you can move on to building DyNet for C#.
+
+##### Building DyNet for C#: 
+
+> [GPU only] If you are building for GPU, you have to change the configuration file. Navigate to the C# directory: `dynet\contrib\csharp\dynetsharp`.
+In the `dynetsharp` sub-directory, there are two `.vcxproj` files. 
+Rename the `dynetsharp.vcxproj` file to a `dynetsharp_CPU.vcxproj`, and then rename `dynetsharp_GPU.vcxproj` to `dynetsharp.vcxproj`. 
+
+Open the C# solution, which is located in the following path: `dynet\contrib\csharp\dynetsharp\dynetsharp.sln`.
+
+> [GPU only] If you saved CuDNN in a different directory, you need to modify the paths in the Linker/Include directories in the relevant configurations. 
+
+When building the C# code, the solution might give you an error in the file `devices.h`, saying that the header `<unsupported/Eigen/CXX11/Tensor>` cannot be found - just comment out that line in the header file, it's not needed for the C# wrapper.
+
+Build the dynetsharp solution with the desired configuration, and it will generate the `dynetsharp.dll` file for use directly in your C# program.
+
+> [GPU only] For runtime, make sure that the following DLLs are accessiable via the PATH variable, otherwise the program won't run. (Alternatively, you can just copy them into the C# utility build path):
+>&nbsp;&nbsp;&nbsp;&nbsp;`C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\bin\*.dll`
+>&nbsp;&nbsp;&nbsp;&nbsp;`C:\cudnn\cuda\bin\cudnn*.dll`
 
 ### Using DyNetSharp 
 The wrapper was built very similarly to the python wrapper, so much of the sample code will look similar. 
@@ -54,7 +119,7 @@ static void Main(string[] args) {
 > Note: The DynetParams.FromArgs function returns a DynetParams object, so you can capture the object and have some of the parameters set from the args, and some in the code.
 > All the parameters must be set before the first initialize, otherwise they won't be acknowledged in the current run. 
 
-DyNet has a dynamic memory pool, and as the computation graph grows, DyNet will automatically increase its memory pool to fit all the computations. In C++ and in Python, that memory is never released while running. In C#, you can set a variable in the ```DynetParams``` called the "MaxMemDescriptor", and whenever you renew the computation graph, if DyNet's memory pool is larger than that number, it will release all the memory and reallocate the original amount of requested memory (default is 512mb). 
+**Only when using CPU:** DyNet has a dynamic memory pool, and as the computation graph grows, DyNet will automatically increase its memory pool to fit all the computations. In C++ and in Python, that memory is never released while running. In C#, you can set a variable in the ```DynetParams``` called the "MaxMemDescriptor", and whenever you renew the computation graph, if DyNet's memory pool is larger than that number, it will release all the memory and reallocate the original amount of requested memory (default is 512mb).
 With this being said, since DyNetSharp allows memory-reallocation, you can update the MemDescriptor/MaxMemDescriptor after initializing, and the changes will go into effect with the next comptuation graph. Usage:
 ```cs
 DynetParams dp = new DynetParams();
@@ -64,7 +129,33 @@ dp.MaxMemDescriptor = 1024;
 dp.UpdateMemDescriptors();
 ```
 
-##### Create a new computation graph
+##### Using DyNet Sharp with GPU:
+If you compiled with the GPU mode, it will by default use 1 GPU. You can customize the GPU usage by specifying it in the `DynetParams` prior to initialization. You can specify which devices you want to load in a few ways. 
+```cs
+// 1] Specifying the quantity:
+dp.SetRequestedGPUs(2);
+// 2] Boolean array with true/false by index of GPU. So to load GPU:0 and GPU:3
+dp.SetGPUMask(new[] { true, false, false, true });
+// 3] Specifying the IDs of the devices to load (here, you can specify a CPU as well):
+dp.SetDeviceIDs("GPU:0", "CPU", "GPU:1", "GPU:2");
+// or as a single string:
+dp.SetDeviceIDS("GPU:0,CPU,GPU:1,GPU:2");
+```
+> Note: Every time you specify the GPUs with a different method, the previous call gets zeroed out and as if it never was. 
+
+Each `Expression`/`Parameter`/`LookupParameter` is stored on a single device. Therefore, when you create a Parameter you can specify which device to store it on. Also, when inputting a new expression, you can specify which device to store it on.
+For example:
+```cs
+LookupParameter lp = model.AddLookupParameter(VOCAB_SIZE, DIM, "GPU:1");
+Expression e = dy.input(new[] { 1f, 2f, 3f, 4f }, "GPU:0");
+Expression e2 = dy.ones(new[] { 100, 50 }, "CPU");
+// You can transfer an expression from one device to the other:
+Expression e3 = dy.ToDevice(e, "GPU:1");
+// To see the list of available devices:
+List<string> allDevices = dy.GetListOfAvailableDevices();
+```
+
+##### Creating a new computation graph
 There is a single global computation graph that is used at any point. dy.RenewCG() clears the current one and starts a new one:
 ```cs
 dy.RenewCG();
