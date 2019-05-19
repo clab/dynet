@@ -132,6 +132,7 @@ dp.UpdateMemDescriptors();
 ##### Using DyNet Sharp with GPU:
 If you compiled with the GPU mode, it will by default use 1 GPU. You can customize the GPU usage by specifying it in the `DynetParams` prior to initialization. You can specify which devices you want to load in a few ways. 
 ```cs
+// 3 alternate ways to specify the GPU devices to use, choose one:
 // 1] Specifying the quantity:
 dp.SetRequestedGPUs(2);
 // 2] Boolean array with true/false by index of GPU. So to load GPU:0 and GPU:3
@@ -141,7 +142,7 @@ dp.SetDeviceIDs("GPU:0", "CPU", "GPU:1", "GPU:2");
 // or as a single string:
 dp.SetDeviceIDS("GPU:0,CPU,GPU:1,GPU:2");
 ```
-> Note: Every time you specify the GPUs with a different method, the previous call gets zeroed out and as if it never was. 
+> Note: You can only specify the requested GPUs with one of the above 3 methods. Calling a second method will nullify the previous call.
 
 Each `Expression`/`Parameter`/`LookupParameter` is stored on a single device. Therefore, when you create a Parameter you can specify which device to store it on. Also, when inputting a new expression, you can specify which device to store it on.
 For example:
