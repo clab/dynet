@@ -21,6 +21,15 @@ typedef struct dynetExpression dynetExpression_t;
 DYNET_C_API DYNET_C_STATUS dynetCreateExpression(dynetExpression_t **newobj);
 
 /**
+ * Creates a clone of the existing Expression object.
+ * @param src Pointer to a source Expression.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCloneExpression(
+    const dynetExpression_t *src, dynetExpression_t **newobj);
+
+/**
  * Deletes the Expression object.
  * @param expr Pointer of a handler.
  * @return Status code.

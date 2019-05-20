@@ -37,6 +37,14 @@ DYNET_C_STATUS dynetCreateExpression(dynetExpression_t **newobj) try {
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
+DYNET_C_STATUS dynetCloneExpression(
+    const dynetExpression_t *src, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(src);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::Expression(*to_cpp_ptr(src)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
 DYNET_C_STATUS dynetDeleteExpression(dynetExpression_t *expr) try {
   DYNET_C_CHECK_NOT_NULL(expr);
   delete to_cpp_ptr(expr);
