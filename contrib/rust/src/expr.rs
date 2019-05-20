@@ -29,12 +29,14 @@ impl Expression {
     /// Returns the dimension of the expression.
     pub fn dim(&self) -> Dim {
         unsafe {
-            let mut dim_ptr: *const dynet_sys::dynetDim_t = ptr::null();
+            let mut src_ptr: *const dynet_sys::dynetDim_t = ptr::null();
             check_api_status!(dynet_sys::dynetGetExpressionDim(
                 self.as_ptr(),
-                &mut dim_ptr
+                &mut src_ptr
             ));
-            Dim::from_raw(dim_ptr as *mut _, false).clone()
+            let mut dim_ptr: *mut dynet_sys::dynetDim_t = ptr::null_mut();
+            check_api_status!(dynet_sys::dynetCloneDim(src_ptr, &mut dim_ptr));
+            Dim::from_raw(dim_ptr, true)
         }
     }
 

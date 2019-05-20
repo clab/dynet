@@ -29,14 +29,11 @@ impl Parameter {
     }
 
     /// Returns the dim of the parameter.
-    pub fn dim(&mut self) -> Dim {
+    pub fn dim(&self) -> Dim {
         unsafe {
             let mut dim_ptr: *mut dynet_sys::dynetDim_t = ptr::null_mut();
-            check_api_status!(dynet_sys::dynetGetParameterDim(
-                self.as_mut_ptr(),
-                &mut dim_ptr,
-            ));
-            Dim::from_raw(dim_ptr, false)
+            check_api_status!(dynet_sys::dynetGetParameterDim(self.as_ptr(), &mut dim_ptr));
+            Dim::from_raw(dim_ptr, true)
         }
     }
 
@@ -136,14 +133,14 @@ impl LookupParameter {
     }
 
     /// Returns the dim of the parameter.
-    pub fn dim(&mut self) -> Dim {
+    pub fn dim(&self) -> Dim {
         unsafe {
             let mut dim_ptr: *mut dynet_sys::dynetDim_t = ptr::null_mut();
             check_api_status!(dynet_sys::dynetGetLookupParameterDim(
-                self.as_mut_ptr(),
+                self.as_ptr(),
                 &mut dim_ptr,
             ));
-            Dim::from_raw(dim_ptr, false)
+            Dim::from_raw(dim_ptr, true)
         }
     }
 
