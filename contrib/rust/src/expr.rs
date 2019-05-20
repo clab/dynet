@@ -71,6 +71,33 @@ impl Default for Expression {
     }
 }
 
+impl Clone for Expression {
+    #[inline]
+    fn clone(&self) -> Expression {
+        unsafe {
+            let mut expr_ptr: *mut dynet_sys::dynetExpression_t = ptr::null_mut();
+            check_api_status!(dynet_sys::dynetCloneExpression(
+                self.as_ptr(),
+                &mut expr_ptr
+            ));
+            Expression::from_raw(expr_ptr, true)
+        }
+    }
+
+    #[inline]
+    fn clone_from(&mut self, source: &Expression) {
+        unsafe {
+            check_api_status!(dynet_sys::dynetDeleteExpression(self.as_mut_ptr()));
+            let mut expr_ptr: *mut dynet_sys::dynetExpression_t = ptr::null_mut();
+            check_api_status!(dynet_sys::dynetCloneExpression(
+                source.as_ptr(),
+                &mut expr_ptr
+            ));
+            self.inner = NonNull::new(expr_ptr).expect("pointer must not be null");
+        }
+    }
+}
+
 impl AsRef<Expression> for Expression {
     #[inline]
     fn as_ref(&self) -> &Expression {
