@@ -13,6 +13,13 @@ backtrace = "0.3"
 dynet-sys = { path = "dynet-sys" }
 libc = "0.2"
 
+[dev-dependencies]
+rand = "0.6"
+
 [[example]]
 name = "xor"
 path = "examples/xor/xor.rs"
+
+[[example]]
+name = "mnist"
+path = "examples/mnist/mnist.rs"
