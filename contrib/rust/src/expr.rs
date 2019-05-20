@@ -1075,3 +1075,28 @@ pub fn max_dim<E: AsRef<Expression>>(x: E, d: u32) -> Expression {
 pub fn min_dim<E: AsRef<Expression>>(x: E, d: u32) -> Expression {
     expr_func_body!(dynetApplyMinDim, x.as_ref().as_ptr(), d)
 }
+
+/// Adds Gaussian noise
+pub fn noise<E: AsRef<Expression>>(x: E, stddev: f32) -> Expression {
+    expr_func_body!(dynetApplyNoise, x.as_ref().as_ptr(), stddev)
+}
+
+/// Applies dropout
+pub fn dropout<E: AsRef<Expression>>(x: E, p: f32) -> Expression {
+    expr_func_body!(dynetApplyDropout, x.as_ref().as_ptr(), p)
+}
+
+/// Applies dropout along a specific dimension
+pub fn dropout_dim<E: AsRef<Expression>>(x: E, d: u32, p: f32) -> Expression {
+    expr_func_body!(dynetApplyDropoutDim, x.as_ref().as_ptr(), d, p)
+}
+
+/// Applies dropout to entire elements of a minibatch
+pub fn dropout_batch(<E: AsRef<Expression>>(x: E, p: f32) -> Expression {
+    expr_func_body!(dynetApplyDropoutBatch, x.as_ref().as_ptr(), p)
+}
+
+/// Applies block dropout
+pub fn block_dropout<E: AsRef<Expression>>(x: E, p: f32) -> Expression {
+    expr_func_body!(dynetApplyBlockDropout, x.as_ref().as_ptr(), p)
+}
