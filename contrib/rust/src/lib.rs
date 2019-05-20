@@ -31,6 +31,8 @@ mod graph;
 pub use graph::*;
 mod init;
 pub use init::{initialize, reset_rng, DynetParams};
+mod io;
+pub use io::*;
 mod model;
 pub use model::{LookupParameter, Parameter, ParameterCollection};
 mod param_init;

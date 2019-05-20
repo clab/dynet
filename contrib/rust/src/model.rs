@@ -1,9 +1,14 @@
 use std::ffi::CString;
+use std::io as std_io;
+use std::path::Path;
 use std::ptr::{self, NonNull};
 
 use dynet_sys;
 
-use super::{ApiResult, Device, Dim, ParameterInit, Result, Tensor, Wrap};
+use super::{
+    ApiResult, Device, Dim, Load, ParameterInit, Result, Save, Tensor, TextFileLoader,
+    TextFileSaver, Wrap,
+};
 
 /// A struct to represent a trainable parameter.
 #[derive(Debug)]
@@ -81,6 +86,20 @@ impl Parameter {
             ));
             retval == 1
         }
+    }
+}
+
+impl Save for Parameter {
+    fn save<P: AsRef<Path>>(&self, path: P) -> std_io::Result<()> {
+        TextFileSaver::new(path, false)
+            .and_then(|mut saver| unsafe { saver.save_parameter(self, None) })
+    }
+}
+
+impl Load for Parameter {
+    fn load<P: AsRef<Path>>(&mut self, path: P) -> std_io::Result<()> {
+        TextFileLoader::new(path)
+            .and_then(|mut loader| unsafe { loader.populate_parameter(self, None) })
     }
 }
 
@@ -172,6 +191,20 @@ impl LookupParameter {
             ));
             retval == 1
         }
+    }
+}
+
+impl Save for LookupParameter {
+    fn save<P: AsRef<Path>>(&self, path: P) -> std_io::Result<()> {
+        TextFileSaver::new(path, false)
+            .and_then(|mut saver| unsafe { saver.save_lookup_parameter(self, None) })
+    }
+}
+
+impl Load for LookupParameter {
+    fn load<P: AsRef<Path>>(&mut self, path: P) -> std_io::Result<()> {
+        TextFileLoader::new(path)
+            .and_then(|mut loader| unsafe { loader.populate_lookup_parameter(self, None) })
     }
 }
 
@@ -360,5 +393,19 @@ impl ParameterCollection {
 impl Default for ParameterCollection {
     fn default() -> ParameterCollection {
         ParameterCollection::new()
+    }
+}
+
+impl Save for ParameterCollection {
+    fn save<P: AsRef<Path>>(&self, path: P) -> std_io::Result<()> {
+        TextFileSaver::new(path, false)
+            .and_then(|mut saver| unsafe { saver.save_model(self, None) })
+    }
+}
+
+impl Load for ParameterCollection {
+    fn load<P: AsRef<Path>>(&mut self, path: P) -> std_io::Result<()> {
+        TextFileLoader::new(path)
+            .and_then(|mut loader| unsafe { loader.populate_model(self, None) })
     }
 }

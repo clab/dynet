@@ -69,7 +69,7 @@ DYNET_C_API DYNET_C_STATUS dynetSaveLookupParameter(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetCreateTextFileLoader(
-    const char *filename, dynetTextFileSaver_t **newobj);
+    const char *filename, dynetTextFileLoader_t **newobj);
 
 /**
  * Deletes the TextFileLoader object.
