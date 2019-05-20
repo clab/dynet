@@ -12,3 +12,7 @@ readme = "README.md"
 backtrace = "0.3"
 dynet-sys = { path = "dynet-sys" }
 libc = "0.2"
+
+[[example]]
+name = "xor"
+path = "examples/xor/xor.rs"
