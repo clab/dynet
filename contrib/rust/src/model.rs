@@ -79,7 +79,7 @@ impl Parameter {
             let mut retval: u32 = 0;
             check_api_status!(dynet_sys::dynetIsParameterUpdated(
                 self.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval == 1
         }
@@ -88,15 +88,13 @@ impl Parameter {
 
 impl Save for Parameter {
     fn save<P: AsRef<Path>>(&self, path: P) -> std_io::Result<()> {
-        TextFileSaver::new(path, false)
-            .and_then(|mut saver| unsafe { saver.save_parameter(self, None) })
+        TextFileSaver::new(path, false).and_then(|mut saver| saver.save_parameter(self, None))
     }
 }
 
 impl Load for Parameter {
     fn load<P: AsRef<Path>>(&mut self, path: P) -> std_io::Result<()> {
-        TextFileLoader::new(path)
-            .and_then(|mut loader| unsafe { loader.populate_parameter(self, None) })
+        TextFileLoader::new(path).and_then(|mut loader| loader.populate_parameter(self, None))
     }
 }
 
@@ -151,13 +149,13 @@ impl LookupParameter {
             check_api_status!(dynet_sys::dynetGetLookupParameterValues(
                 self.as_mut_ptr(),
                 ptr::null_mut(),
-                &mut size as *mut _,
+                &mut size,
             ));
             let mut tensor_ptrs = vec![ptr::null_mut(); size];
             check_api_status!(dynet_sys::dynetGetLookupParameterValues(
                 self.as_mut_ptr(),
                 tensor_ptrs.as_mut_ptr(),
-                &mut size as *mut _,
+                &mut size,
             ));
             tensor_ptrs
                 .into_iter()
@@ -184,7 +182,7 @@ impl LookupParameter {
             let mut retval: u32 = 0;
             check_api_status!(dynet_sys::dynetIsLookupParameterUpdated(
                 self.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval == 1
         }
@@ -194,14 +192,14 @@ impl LookupParameter {
 impl Save for LookupParameter {
     fn save<P: AsRef<Path>>(&self, path: P) -> std_io::Result<()> {
         TextFileSaver::new(path, false)
-            .and_then(|mut saver| unsafe { saver.save_lookup_parameter(self, None) })
+            .and_then(|mut saver| saver.save_lookup_parameter(self, None))
     }
 }
 
 impl Load for LookupParameter {
     fn load<P: AsRef<Path>>(&mut self, path: P) -> std_io::Result<()> {
         TextFileLoader::new(path)
-            .and_then(|mut loader| unsafe { loader.populate_lookup_parameter(self, None) })
+            .and_then(|mut loader| loader.populate_lookup_parameter(self, None))
     }
 }
 
@@ -244,7 +242,7 @@ impl ParameterCollection {
             let mut retval: f32 = 0.0;
             check_api_status!(dynet_sys::dynetGetParameterCollectionGradientL2Norm(
                 self.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval
         }
@@ -266,7 +264,7 @@ impl ParameterCollection {
             let mut retval: f32 = 0.0;
             check_api_status!(dynet_sys::dynetGetParameterCollectionWeightDecayLambda(
                 self.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval
         }
@@ -380,7 +378,7 @@ impl ParameterCollection {
             let mut retval: usize = 0;
             check_api_status!(dynet_sys::dynetGetParameterCollectionParameterCount(
                 self.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval
         }
@@ -395,14 +393,12 @@ impl Default for ParameterCollection {
 
 impl Save for ParameterCollection {
     fn save<P: AsRef<Path>>(&self, path: P) -> std_io::Result<()> {
-        TextFileSaver::new(path, false)
-            .and_then(|mut saver| unsafe { saver.save_model(self, None) })
+        TextFileSaver::new(path, false).and_then(|mut saver| saver.save_model(self, None))
     }
 }
 
 impl Load for ParameterCollection {
     fn load<P: AsRef<Path>>(&mut self, path: P) -> std_io::Result<()> {
-        TextFileLoader::new(path)
-            .and_then(|mut loader| unsafe { loader.populate_model(self, None) })
+        TextFileLoader::new(path).and_then(|mut loader| loader.populate_model(self, None))
     }
 }

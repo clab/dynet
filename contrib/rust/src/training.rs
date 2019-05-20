@@ -43,7 +43,7 @@ pub trait Trainer: Wrap<dynet_sys::dynetTrainer_t> {
             let mut retval: f32 = 0.0;
             check_api_status!(dynet_sys::dynetGetTrainerLearningRate(
                 self.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval
         }
@@ -55,7 +55,7 @@ pub trait Trainer: Wrap<dynet_sys::dynetTrainer_t> {
             let mut retval: f32 = 0.0;
             check_api_status!(dynet_sys::dynetGetTrainerClipThreshold(
                 self.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval
         }

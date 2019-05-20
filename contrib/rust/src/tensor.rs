@@ -51,7 +51,7 @@ impl Tensor {
             let mut retval: f32 = 0.0;
             check_api_status!(dynet_sys::dynetEvaluateTensorAsScalar(
                 self.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval
         }
@@ -66,13 +66,13 @@ impl Tensor {
             check_api_status!(dynet_sys::dynetEvaluateTensorAsArray(
                 self.as_ptr(),
                 ptr::null_mut(),
-                &mut size as *mut _,
+                &mut size,
             ));
             let mut retval = vec![0f32; size];
             check_api_status!(dynet_sys::dynetEvaluateTensorAsArray(
                 self.as_ptr(),
                 retval.as_mut_ptr(),
-                &mut size as *mut _,
+                &mut size,
             ));
             retval
         }
@@ -86,13 +86,13 @@ impl fmt::Display for Tensor {
             check_api_status!(dynet_sys::dynetRepresentTensorAsString(
                 self.as_ptr(),
                 ptr::null_mut(),
-                &mut size as *mut _,
+                &mut size,
             ));
             let buffer = CString::new(vec![b'0'; size]).unwrap().into_raw();
             check_api_status!(dynet_sys::dynetRepresentTensorAsString(
                 self.as_ptr(),
                 buffer,
-                &mut size as *mut _,
+                &mut size,
             ));
             f.write_str(CString::from_raw(buffer).to_str().unwrap())
         }

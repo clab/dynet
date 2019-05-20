@@ -48,7 +48,7 @@ impl Code {
     }
 }
 
-impl fmt::Display for Code {
+impl Display for Code {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             &Code::Ok => f.write_str("Ok"),
