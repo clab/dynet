@@ -442,7 +442,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplySum(
     const dynetExpression_t *const *xs, size_t n, dynetExpression_t **newobj);
 
 /**
- * Applies sum all elements operation.
+ * Sums all elements.
  * @param x Input expression.
  * @param newobj Pointer to receive an Expression.
  * @return Status code.
@@ -775,7 +775,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyLgamma(
     const dynetExpression_t *x, dynetExpression_t **newobj);
 
 /**
- * Computes log.
+ * Computes logarithm.
  * @param x Input expression.
  * @param newobj Pointer to receive an Expression.
  * @return Status code.
@@ -831,7 +831,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplySilu(
     const dynetExpression_t *x, float beta, dynetExpression_t **newobj);
 
 /**
- * Computes absolute value.
+ * Computes soft sign.
  * @param x Input expression.
  * @param newobj Pointer to receive an Expression.
  * @return Status code.
@@ -1035,7 +1035,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyHingeOne(
     dynetExpression_t **newobj);
 
 /**
- * Computes hinge loss.
+ * Computes batched hinge loss.
  * @param x A mini-batch of vectors of scores.
  * @param indices The indices of the correct candidates for each batch element.
  * @param n Number of indices.
@@ -1094,7 +1094,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplySparsemax(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplySparsemaxLoss(
-    const dynetExpression_t *x, const uint32_t target_support, size_t n,
+    const dynetExpression_t *x, const uint32_t *target_support, size_t n,
     dynetExpression_t **newobj);
 
 /**
@@ -1184,7 +1184,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyPairwiseRankLoss(
     dynetExpression_t **newobj);
 
 /**
- * Computes poisson loss.
+ * Computes Poisson loss.
  * @param x The parameter of the Poisson distribution.
  * @param y The target value.
  * @param newobj Pointer to receive an Expression.
@@ -1348,7 +1348,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyPickBatchElems(
     dynetExpression_t **newobj);
 
 /**
- * Stridingly selects in multiple dimensions
+ * Stridingly selects in multiple dimensions.
  * @param x Input expression.
  * @param strides List of strides for each dimension, must be >= 1. Dimensions
  *                not included default to 1. Batch dimension can be included as

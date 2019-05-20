@@ -86,7 +86,7 @@ DYNET_C_API DYNET_C_STATUS dynetGetExprValueFromComputationGraph(
     const dynetTensor_t **retval);
 
 /**
- * Get gradient for the given expression.
+ * Gets the gradient for the given expression.
  * @param cg Pointer of a handler.
  * @param expr Expression to evaluate.
  * @param retval Pointer to receive a calculated value.

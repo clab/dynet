@@ -80,7 +80,7 @@ DYNET_C_API DYNET_C_STATUS dynetSetParameterUpdated(
     dynetParameter_t *param, DYNET_C_BOOL b);
 
 /**
- * Sets update status of the parameter.
+ * Returns update status of the parameter.
  * @param param Pointer of a handler.
  * @param retval Pointer to receive an update status value.
  * @return Status code.
@@ -134,9 +134,9 @@ DYNET_C_API DYNET_C_STATUS dynetGetLookupParameterDim(
     const dynetLookupParameter_t *param, dynetDim_t **newobj);
 
 /**
- * Retrieves internal values in the parameter as a tensor.
+ * Retrieves internal values in the parameter as an array of tensors.
  * @param param Pointer of a handler.
- * @param tensor Pointer to receive a list of the internal values.
+ * @param tensors Pointer to receive a list of the internal values.
  * @param size Pointer to receive the length of the array.
  * @return Status code.
  */
@@ -222,7 +222,7 @@ DYNET_C_API DYNET_C_STATUS dynetAddParametersToParameterCollection(
 /**
  * Adds a lookup parameter to the ParameterCollection.
  * @param pc Pointer of a handler.
- * @param n Dimension of each embedding.
+ * @param n Number of lookup indices.
  * @param d Pointer of a dim.
  * @param init Pointer of an initializer.
  * @param name Name of the parameter.
@@ -253,6 +253,6 @@ DYNET_C_API DYNET_C_STATUS dynetAddSubcollectionToParameterCollection(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetGetParameterCollectionParameterCount(
-    const dynetLookupParameter_t *param, size_t *retval);
+    const dynetParameterCollection_t *pc, size_t *retval);
 
 #endif  // DYNET_C_MODEL_H_

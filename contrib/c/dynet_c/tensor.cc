@@ -9,7 +9,7 @@
 using dynet_c::internal::to_c_ptr;
 using dynet_c::internal::to_cpp_ptr;
 
-DYNET_C_STATUS dynetDeleteDynetParams(dynetTensor_t *tensor) try {
+DYNET_C_STATUS dynetDeleteTensor(dynetTensor_t *tensor) try {
   DYNET_C_CHECK_NOT_NULL(tensor);
   delete to_cpp_ptr(tensor);
   return DYNET_C_OK;

@@ -652,13 +652,13 @@ DYNET_C_STATUS dynetApplySoftmax(
 DYNET_C_IMPL_UNARY_FUNC(LogSoftmax, log_softmax);
 
 DYNET_C_STATUS dynetApplyRestrictedLogSoftmax(
-    const dynetExpression_t *x, const uint32_t *restrictions, size_t n,
+    const dynetExpression_t *x, const uint32_t *restriction, size_t n,
     dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(x);
-  DYNET_C_CHECK_NOT_NULL(restrictions);
+  DYNET_C_CHECK_NOT_NULL(restriction);
   DYNET_C_CHECK_NOT_NULL(newobj);
   *newobj = to_c_ptr_from_value(dynet::log_softmax(
-      *to_cpp_ptr(x), std::vector<uint32_t>(restrictions, restrictions + n)));
+      *to_cpp_ptr(x), std::vector<uint32_t>(restriction, restriction + n)));
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
