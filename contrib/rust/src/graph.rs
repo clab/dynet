@@ -4,7 +4,8 @@ use dynet_sys;
 
 use super::{ApiResult, Expression, Result, Tensor, Wrap};
 
-/// A struct to store information about the dimensionality of expressions.
+/// Computation graph where nodes represent forward and backward intermediate values, and edges
+/// represent functions of multiple values.
 // TODO(chantera): write example.
 #[derive(Debug)]
 pub struct ComputationGraph {
