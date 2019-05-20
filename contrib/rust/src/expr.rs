@@ -941,3 +941,137 @@ pub fn pairwise_rank_loss<E1: AsRef<Expression>, E2: AsRef<Expression>>(
 pub fn poisson_loss<E: AsRef<Expression>>(x: E, y: u32) -> Expression {
     expr_func_body!(dynetApplyPoissonLoss, x.as_ref().as_ptr(), y)
 }
+
+impl_expr_unary_func!(nobackporp, dynetApplyNobackprop, "Prevents backprop");
+impl_expr_unary_func!(flip_gradient, dynetApplyFlipGradient, "Flips gradient");
+
+/// Scales gradient by constant
+pub fn scale_gradient<E: AsRef<Expression>>(x: E, lambd: f32) -> Expression {
+    expr_func_body!(dynetApplyScaleGradient, x.as_ref().as_ptr(), lambd)
+}
+
+/// Computes argmax
+pub fn argmax<E: AsRef<Expression>>(x: E) -> Expression {
+    argmax_with_zero_gradient_mode(x)
+}
+impl_expr_unary_func!(
+    argmax_with_zero_gradient_mode,
+    dynetApplyArgmaxWithZeroGradientMode,
+    "Computes argmax with zero gradient mode"
+);
+impl_expr_unary_func!(
+    argmax_with_straight_through_gradient_mode,
+    dynetApplyArgmaxWithStraightThroughGradientMode,
+    "Computes argmax with straight through gradient mode"
+);
+
+/// Reshapes to another size
+pub fn reshape<E: AsRef<Expression>, D: Into<Dim>>(x: E, d: D) -> Expression {
+    expr_func_body!(dynetApplyReshape, x.as_ref().as_ptr(), d.into().as_ptr())
+}
+
+/// Transposes a matrix
+pub fn transpose<E: AsRef<Expression>>(x: E, dims: &[u32]) -> Expression {
+    expr_func_body!(
+        dynetApplyTranspose,
+        x.as_ref().as_ptr(),
+        dims.as_ptr(),
+        dims.len()
+    )
+}
+
+/// Selects rows
+pub fn select_rows<E: AsRef<Expression>>(x: E, rows: &[u32]) -> Expression {
+    expr_func_body!(
+        dynetApplySelectRows,
+        x.as_ref().as_ptr(),
+        rows.as_ptr(),
+        rows.len()
+    )
+}
+
+/// Selects cols
+pub fn select_cols<E: AsRef<Expression>>(x: E, cols: &[u32]) -> Expression {
+    expr_func_body!(
+        dynetApplySelectCols,
+        x.as_ref().as_ptr(),
+        cols.as_ptr(),
+        cols.len()
+    )
+}
+
+/// Picks element
+pub fn pick_one<E: AsRef<Expression>>(x: E, v: u32, d: u32) -> Expression {
+    expr_func_body!(dynetApplyPickOne, x.as_ref().as_ptr(), v, d)
+}
+
+/// Picks elements from batches
+pub fn pick<E: AsRef<Expression>>(x: E, v: &[u32], d: u32) -> Expression {
+    expr_func_body!(dynetApplyPick, x.as_ref().as_ptr(), v.as_ptr(), v.len(), d)
+}
+
+/// Picks range of elements
+pub fn pick_range<E: AsRef<Expression>>(x: E, s: u32, e: u32, d: u32) -> Expression {
+    expr_func_body!(dynetApplyPickRange, x.as_ref().as_ptr(), s, e, d)
+}
+
+/// Picks batch element
+pub fn pick_batch_elem<E: AsRef<Expression>>(x: E, v: u32) -> Expression {
+    expr_func_body!(dynetApplyPickBatchElem, x.as_ref().as_ptr(), v)
+}
+
+/// Picks batch elements
+pub fn pick_batch_elems<E: AsRef<Expression>>(x: E, v: &[u32]) -> Expression {
+    expr_func_body!(
+        dynetApplyPickBatchElems,
+        x.as_ref().as_ptr(),
+        v.as_ptr(),
+        v.len()
+    )
+}
+
+/// Stridingly selects in multiple dimensions
+pub fn strided_select<E: AsRef<Expression>>(
+    x: E,
+    strides: &[i32],
+    from: &[i32],
+    to: &[i32],
+) -> Expression {
+    expr_func_body!(
+        dynetApplyStridedSelect,
+        x.as_ref().as_ptr(),
+        strides.as_ptr(),
+        strides.len(),
+        from.as_ptr(),
+        from.len(),
+        to.as_ptr(),
+        to.len()
+    )
+}
+
+impl_expr_nary_func!(
+    concatenate_to_batch,
+    dynetApplyConcatenateToBatch,
+    "Concatenates list of expressions to a single batched expression"
+);
+impl_expr_nary_func!(
+    concatenate_cols,
+    dynetApplyConcatenateCols,
+    "Concatenates columns"
+);
+
+/// Concatenates expressions
+pub fn concatenate<ES: AsRef<[E]>, E: AsRef<Expression>>(xs: ES, d: u32) -> Expression {
+    let x_ptrs: Vec<_> = xs.as_ref().iter().map(|x| x.as_ref().as_ptr()).collect();
+    expr_func_body!(dynetApplyConcatenate, x_ptrs.as_ptr(), x_ptrs.len(), d)
+}
+
+/// Selects max out through a dimension
+pub fn max_dim<E: AsRef<Expression>>(x: E, d: u32) -> Expression {
+    expr_func_body!(dynetApplyMaxDim, x.as_ref().as_ptr(), d)
+}
+
+/// Selects min out through a dimension
+pub fn min_dim<E: AsRef<Expression>>(x: E, d: u32) -> Expression {
+    expr_func_body!(dynetApplyMinDim, x.as_ref().as_ptr(), d)
+}
