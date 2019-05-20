@@ -39,6 +39,8 @@ mod param_init;
 pub use param_init::*;
 mod rnn_builder;
 pub use rnn_builder::*;
+mod softmax_builder;
+pub use softmax_builder::*;
 mod tensor;
 pub use tensor::Tensor;
 mod training;
