@@ -797,3 +797,147 @@ pub fn colwise_add<E1: AsRef<Expression>, E2: AsRef<Expression>>(x: E1, bias: E2
         bias.as_ref().as_ptr()
     )
 }
+
+/// Computes softmax
+pub fn softmax<E: AsRef<Expression>>(x: E, d: u32) -> Expression {
+    expr_func_body!(dynetApplySoftmax, x.as_ref().as_ptr(), d)
+}
+
+impl_expr_unary_func!(log_softmax, dynetApplyLogSoftmax, "Computes log softmax");
+
+/// Computes restricted log softmax
+pub fn restricted_log_softmax<E: AsRef<Expression>>(x: E, restriction: &[u32]) -> Expression {
+    expr_func_body!(
+        dynetApplyRestrictedLogSoftmax,
+        x.as_ref().as_ptr(),
+        restriction.as_ptr(),
+        restriction.len()
+    )
+}
+
+/// Computes log, sum, and exp by dimension
+pub fn logsumexp_dim<E: AsRef<Expression>>(x: E, d: u32) -> Expression {
+    expr_func_body!(dynetApplyLogsumexpDim, x.as_ref().as_ptr(), d)
+}
+
+impl_expr_nary_func!(logsumexp, dynetApplyLogsumexp, "Computes log, sum, and exp");
+
+/// Computes negative softmax log likelihood
+pub fn pickneglogsoftmax_one<E: AsRef<Expression>>(x: E, v: u32) -> Expression {
+    expr_func_body!(dynetApplyPickneglogsoftmaxOne, x.as_ref().as_ptr(), v)
+}
+
+/// Computes batched negative softmax log likelihood
+pub fn pickneglogsoftmax<E: AsRef<Expression>>(x: E, v: &[u32]) -> Expression {
+    expr_func_body!(
+        dynetApplyPickneglogsoftmax,
+        x.as_ref().as_ptr(),
+        v.as_ptr(),
+        v.len()
+    )
+}
+
+/// Computes hinge loss
+pub fn hinge_one<E: AsRef<Expression>>(x: E, index: u32, m: f32) -> Expression {
+    expr_func_body!(dynetApplyHingeOne, x.as_ref().as_ptr(), index, m)
+}
+
+/// Computes batched hinge loss
+pub fn hinge<E: AsRef<Expression>>(x: E, indices: &[u32], m: f32) -> Expression {
+    expr_func_body!(
+        dynetApplyHinge,
+        x.as_ref().as_ptr(),
+        indices.as_ptr(),
+        indices.len(),
+        m
+    )
+}
+
+/// Computes dimensionwise hinge loss
+pub fn hinge_dim_one<E: AsRef<Expression>>(x: E, indices: &[u32], d: u32, m: f32) -> Expression {
+    expr_func_body!(
+        dynetApplyHingeDimOne,
+        x.as_ref().as_ptr(),
+        indices.as_ptr(),
+        indices.len(),
+        d,
+        m
+    )
+}
+
+/// Computes batched dimensionwise hinge loss
+pub fn hinge_dim<E: AsRef<Expression>>(x: E, indices: &[u32], d: u32, m: f32) -> Expression {
+    expr_func_body!(
+        dynetApplyHingeDim,
+        x.as_ref().as_ptr(),
+        indices.as_ptr(),
+        indices.len(),
+        d,
+        m
+    )
+}
+
+impl_expr_unary_func!(sparsemax, dynetApplySparsemax, "Computes sparsemax");
+
+/// Computes sparsemax loss
+pub fn sparsemax_loss<E: AsRef<Expression>>(x: E, target_support: &[u32]) -> Expression {
+    expr_func_body!(
+        dynetApplySparsemaxLoss,
+        x.as_ref().as_ptr(),
+        target_support.as_ptr(),
+        target_support.len()
+    )
+}
+
+impl_expr_binary_func!(
+    constrained_softmax,
+    dynetApplyConstrainedSoftmax,
+    "Computes constrained softmax"
+);
+impl_expr_unary_func!(squared_norm, dynetApplySquaredNorm, "Computes squared norm");
+impl_expr_unary_func!(l2_norm, dynetApplyL2Norm, "Computes L2 norm");
+impl_expr_binary_func!(
+    squared_distance,
+    dynetApplySquaredDistance,
+    "Computes squared distance"
+);
+impl_expr_binary_func!(l1_distance, dynetApplyL1Distance, "Computes L1 distance");
+
+/// Computes huber distance
+pub fn huber_distance<E1: AsRef<Expression>, E2: AsRef<Expression>>(
+    x: E1,
+    y: E2,
+    c: f32,
+) -> Expression {
+    expr_func_body!(
+        dynetApplyHuberDistance,
+        x.as_ref().as_ptr(),
+        y.as_ref().as_ptr(),
+        c
+    )
+}
+
+impl_expr_binary_func!(
+    binary_log_loss,
+    dynetApplyBinaryLogLoss,
+    "Computes binary log loss"
+);
+
+/// Computes pairwise rank loss
+pub fn pairwise_rank_loss<E1: AsRef<Expression>, E2: AsRef<Expression>>(
+    x: E1,
+    y: E2,
+    m: f32,
+) -> Expression {
+    expr_func_body!(
+        dynetApplyPairwiseRankLoss,
+        x.as_ref().as_ptr(),
+        y.as_ref().as_ptr(),
+        m
+    )
+}
+
+/// Computes Poisson loss
+pub fn poisson_loss<E: AsRef<Expression>>(x: E, y: u32) -> Expression {
+    expr_func_body!(dynetApplyPoissonLoss, x.as_ref().as_ptr(), y)
+}
