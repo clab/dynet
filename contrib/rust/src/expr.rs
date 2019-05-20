@@ -1092,7 +1092,7 @@ pub fn dropout_dim<E: AsRef<Expression>>(x: E, d: u32, p: f32) -> Expression {
 }
 
 /// Applies dropout to entire elements of a minibatch
-pub fn dropout_batch(<E: AsRef<Expression>>(x: E, p: f32) -> Expression {
+pub fn dropout_batch<E: AsRef<Expression>>(x: E, p: f32) -> Expression {
     expr_func_body!(dynetApplyDropoutBatch, x.as_ref().as_ptr(), p)
 }
 
