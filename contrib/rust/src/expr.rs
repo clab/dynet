@@ -1100,3 +1100,178 @@ pub fn dropout_batch<E: AsRef<Expression>>(x: E, p: f32) -> Expression {
 pub fn block_dropout<E: AsRef<Expression>>(x: E, p: f32) -> Expression {
     expr_func_body!(dynetApplyBlockDropout, x.as_ref().as_ptr(), p)
 }
+
+pub fn filter1d_narrow<E1: AsRef<Expression>, E2: AsRef<Expression>>(x: E1, f: E2) -> Expression {
+    expr_func_body!(
+        dynetApplyFilter1dNarrow,
+        x.as_ref().as_ptr(),
+        f.as_ref().as_ptr()
+    )
+}
+
+/// Selects out k maximum values along a given dimension
+pub fn kmax_pooling<E: AsRef<Expression>>(x: E, k: u32, d: u32) -> Expression {
+    expr_func_body!(dynetApplyKmaxPooling, x.as_ref().as_ptr(), k, d)
+}
+
+pub fn fold_rows<E: AsRef<Expression>>(x: E, nrows: u32) -> Expression {
+    expr_func_body!(dynetApplyFoldRows, x.as_ref().as_ptr(), nrows)
+}
+
+impl_expr_unary_func!(average_cols, dynetApplyAverageCols, "");
+
+pub fn kmh_ngram<E: AsRef<Expression>>(x: E, n: u32) -> Expression {
+    expr_func_body!(dynetApplyKmhNgram, x.as_ref().as_ptr(), n)
+}
+
+/// Applies 2D convolution operation without bias parameters
+pub fn conv2d<E1: AsRef<Expression>, E2: AsRef<Expression>>(
+    x: E1,
+    f: E2,
+    stride: &[u32],
+    is_valid: bool,
+) -> Expression {
+    expr_func_body!(
+        dynetApplyConv2d,
+        x.as_ref().as_ptr(),
+        f.as_ref().as_ptr(),
+        stride.as_ptr(),
+        stride.len(),
+        is_valid as u32
+    )
+}
+
+/// Applies 2D convolution operation with bias parameters
+pub fn conv2d_with_bias<E1: AsRef<Expression>, E2: AsRef<Expression>, E3: AsRef<Expression>>(
+    x: E1,
+    f: E2,
+    b: E3,
+    stride: &[u32],
+    is_valid: bool,
+) -> Expression {
+    expr_func_body!(
+        dynetApplyConv2dWithBias,
+        x.as_ref().as_ptr(),
+        f.as_ref().as_ptr(),
+        b.as_ref().as_ptr(),
+        stride.as_ptr(),
+        stride.len(),
+        is_valid as u32
+    )
+}
+
+/// Applies 2D maxpooling operation
+pub fn maxpooling2d<E: AsRef<Expression>>(
+    x: E,
+    ksize: &[u32],
+    stride: &[u32],
+    is_valid: bool,
+) -> Expression {
+    expr_func_body!(
+        dynetApplyMaxpooling2d,
+        x.as_ref().as_ptr(),
+        ksize.as_ptr(),
+        ksize.len(),
+        stride.as_ptr(),
+        stride.len(),
+        is_valid as u32
+    )
+}
+
+impl_expr_binary_func!(
+    contract3d_1d,
+    dynetApplyContract3d1d,
+    "Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor"
+);
+
+/// Contracts a rank 3 tensor and a rank 1 tensor into a rank 2 tensor with an additional bias
+/// parameter
+pub fn contract3d_1d_with_bias<
+    E1: AsRef<Expression>,
+    E2: AsRef<Expression>,
+    E3: AsRef<Expression>,
+>(
+    x: E1,
+    y: E2,
+    b: E3,
+) -> Expression {
+    expr_func_body!(
+        dynetApplyContract3d1dWithBias,
+        x.as_ref().as_ptr(),
+        y.as_ref().as_ptr(),
+        b.as_ref().as_ptr()
+    )
+}
+
+/// Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor
+pub fn contract3d_1d_1d<E1: AsRef<Expression>, E2: AsRef<Expression>, E3: AsRef<Expression>>(
+    x: E1,
+    y: E2,
+    z: E3,
+) -> Expression {
+    expr_func_body!(
+        dynetApplyContract3d1d1d,
+        x.as_ref().as_ptr(),
+        y.as_ref().as_ptr(),
+        z.as_ref().as_ptr()
+    )
+}
+
+/// Contracts a rank 3 tensor and two rank 1 tensor into a rank 1 tensor with an additional bias
+/// parameter
+pub fn contract3d_1d_1d_with_bias<
+    E1: AsRef<Expression>,
+    E2: AsRef<Expression>,
+    E3: AsRef<Expression>,
+    E4: AsRef<Expression>,
+>(
+    x: E1,
+    y: E2,
+    z: E3,
+    b: E3,
+) -> Expression {
+    expr_func_body!(
+        dynetApplyContract3d1d1dWithBias,
+        x.as_ref().as_ptr(),
+        y.as_ref().as_ptr(),
+        z.as_ref().as_ptr(),
+        b.as_ref().as_ptr()
+    )
+}
+
+impl_expr_unary_func!(inverse, dynetApplyInverse, "Takes the inverse of a matrix");
+impl_expr_unary_func!(
+    logdet,
+    dynetApplyLogdet,
+    "Takes the log of the determinant of a matrix"
+);
+impl_expr_binary_func!(
+    trace_of_product,
+    dynetApplyTraceOfProduct,
+    "Takes the trace of the product of matrices"
+);
+
+/// Performs layer normalization
+pub fn layer_norm<E1: AsRef<Expression>, E2: AsRef<Expression>, E3: AsRef<Expression>>(
+    x: E1,
+    g: E2,
+    b: E3,
+) -> Expression {
+    expr_func_body!(
+        dynetApplyLayerNorm,
+        x.as_ref().as_ptr(),
+        g.as_ref().as_ptr(),
+        b.as_ref().as_ptr()
+    )
+}
+
+impl_expr_binary_func!(
+    weight_norm,
+    dynetApplyWeightNorm,
+    "Performs weight normalization"
+);
+
+/// Copies tensor between devices
+pub fn to_device<E: AsRef<Expression>>(x: E, device: &mut Device) -> Expression {
+    expr_func_body!(dynetApplyToDevice, x.as_ref().as_ptr(), device.as_mut_ptr())
+}
