@@ -19,29 +19,63 @@ macro_rules! log_var(($var:ident) => (log!(concat!(stringify!($var), " = {:?}"),
 fn main() {
     let lib_dir = env::var("DYNET_C_LIBRARY_DIR").unwrap_or("/usr/local/lib".to_string());
     let library = format!("lib{}.so", LIBRARY);
+    let library_path = Path::new(&lib_dir).join(&library);
 
-    let find_library = Path::new(&lib_dir).join(&library).exists();
-    let force_install = match env::var("DYNET_FORCE_INSTALL") {
-        Ok(s) => s != "0",
-        Err(_) => false,
-    };
-    let force_build = match env::var("DYNET_FORCE_BUILD") {
-        Ok(s) => s != "0",
-        Err(_) => false,
-    };
+    if !library_path.exists() {
+        let no_install = match env::var("DYNET_NO_INSTALL") {
+            Ok(s) => s != "0",
+            Err(_) => false,
+        };
+        let force_build = match env::var("DYNET_FORCE_BUILD") {
+            Ok(s) => s != "0",
+            Err(_) => false,
+        };
 
-    if !find_library || force_install || force_build {
-        if force_build || true {
-            // currently only support building from source.
-            match build_from_src() {
-                Ok(_) => log!("Successfully built `{}`.", library),
-                Err(e) => panic!("Failed to build `{}`.\nreason: {}", library, e),
-            }
+        let (output_lib_dir, output_include_dir) = match if force_build || true {
+            // NOTE: currently only support building from source.
+            build_from_src()
         } else {
-            match install_prebuild() {
-                Ok(_) => log!("Successfully installed `{}`.", library),
-                Err(e) => panic!("Failed to install `{}`.\nreason: {}", library, e),
+            download_prebuild()
+        } {
+            Ok(dirs) => {
+                log!("Successfully created `{}`.", library);
+                dirs
             }
+            Err(e) => panic!("Failed to create `{}`.\nreason: {}", library, e),
+        };
+
+        if !no_install {
+            let include_dir =
+                env::var("DYNET_C_INCLUDE_DIR").unwrap_or("/usr/local/include".to_string());
+            let framework_library = format!("lib{}.so", FRAMEWORK_LIBRARY);
+            let framework_library_path = Path::new(&lib_dir).join(&framework_library);
+            let include_path = Path::new(&include_dir).join(LIBRARY);
+            let framework_include_path = Path::new(&include_dir).join(FRAMEWORK_LIBRARY);
+            if framework_include_path.exists() {
+                run("rm", |command| {
+                    command.arg("-rf").arg(&framework_include_path)
+                });
+            }
+            run("cp", |command| {
+                command
+                    .arg("-r")
+                    .arg(output_include_dir.join(FRAMEWORK_LIBRARY))
+                    .arg(&framework_include_path)
+            });
+            if include_path.exists() {
+                run("rm", |command| command.arg("-rf").arg(&include_path));
+            }
+            run("cp", |command| {
+                command
+                    .arg("-r")
+                    .arg(output_include_dir.join(LIBRARY))
+                    .arg(&include_path)
+            });
+            fs::copy(
+                output_lib_dir.join(framework_library),
+                framework_library_path,
+            ).unwrap();
+            fs::copy(output_lib_dir.join(library), library_path).unwrap();
         }
     }
 
@@ -54,11 +88,11 @@ fn main() {
     })
 }
 
-fn install_prebuild() -> Result<((String, String)), Box<Error>> {
+fn download_prebuild() -> Result<((PathBuf, PathBuf)), Box<Error>> {
     Err("Not supported.".into())
 }
 
-fn build_from_src() -> Result<(), Box<Error>> {
+fn build_from_src() -> Result<((PathBuf, PathBuf)), Box<Error>> {
     let tag = {
         let output = Command::new("git")
             .arg("rev-parse")
@@ -122,10 +156,8 @@ fn build_from_src() -> Result<(), Box<Error>> {
                 .arg(format!("--directory={}", build_dir_s))
         });
     }
-    env::set_var("DYNET_C_LIBRARY_DIR", out_dir.join("lib"));
-    env::set_var("DYNET_C_INCLUDE_DIR", out_dir.join("include"));
     assert!(library_path.exists());
-    Ok(())
+    Ok((out_dir.join("lib"), out_dir.join("include")))
 }
 
 fn run<F>(name: &str, mut configure: F)
