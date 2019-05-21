@@ -199,6 +199,7 @@ cdef extern from "dynet/dynet.h" namespace "dynet":
         void set_check_validity(bool cv)
 
         void print_graphviz() const
+        void dump(string filename, bool show_values, bool show_gradients, bool nan_check_only) const
 
 cdef extern from "dynet/training.h" namespace "dynet":
     cdef cppclass CTrainer "dynet::Trainer":
@@ -261,6 +262,11 @@ cdef extern from "dynet/expr.h" namespace "dynet":
         CDim dim() except +
         bool is_stale()
         const CTensor& gradient() except +
+
+    cdef enum c_GradientMode "dynet:GradientMode":
+        zero_gradient,
+        straight_through_gradient
+
     #CExpression c_input "dynet::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::input" (CComputationGraph& g, float *ps) except + #
     CExpression c_input "dynet::input" (CComputationGraph& g, float *ps, CDevice* device) except + #
@@ -292,13 +298,9 @@ cdef extern from "dynet/expr.h" namespace "dynet":
 
     CExpression c_nobackprop "dynet::nobackprop" (CExpression& x) except + #
     CExpression c_flip_gradient "dynet::flip_gradient" (CExpression& x) except + #
-    CExpression c_scale_gradient "dynet::scale_gradient" (CExpression& x, float lambd) except + #
-    
-    cdef enum c_ArgmaxGradient "dynet:ArgmaxGradient":
-        zero_gradient,
-        straight_through_gradient
+    CExpression c_scale_gradient "dynet::scale_gradient" (CExpression& x, float lambd) except + # 
 
-    CExpression c_argmax "dynet::argmax" (CExpression& x, c_ArgmaxGradient gradient_mode) except + #
+    CExpression c_argmax "dynet::argmax" (CExpression& x, c_GradientMode gradient_mode) except + #
     
     CExpression c_op_neg "dynet::operator-" (CExpression& x) except + #
     CExpression c_op_add "dynet::operator+" (CExpression& x, CExpression& y) except + #
@@ -428,6 +430,10 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_elu "dynet::elu" (CExpression& x, float alpha) except + #
     CExpression c_selu "dynet::selu" (CExpression& x) except + #
     CExpression c_silu "dynet::silu" (CExpression& x, float beta) except + #
+
+    CExpression c_round "dynet::round" (CExpression& x, c_GradientMode gradient_mode) except + #
+    CExpression c_ceil "dynet::ceil" (CExpression& x, c_GradientMode gradient_mode) except + #
+    CExpression c_floor "dynet::floor" (CExpression& x, c_GradientMode gradient_mode) except + #
     
     # expecting a vector of CExpression
     CExpression c_average     "dynet::average" (vector[CExpression]& xs) except +

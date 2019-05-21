@@ -28,7 +28,7 @@ struct NodeTest {
     ones3_vals = {1.f, 1.f, 1.f};
     first_one_vals = {1.f, 0.f, 0.f};
     ones2_vals = {1.f, 1.f};
-    batch_vals = {1.f, 2.f, 3.f, 4.f, 5.f, 6.f};
+    batch_vals = {1.1f, 2.6f, 3.3f, 4.0f, 5.1f, 6.6f};
     // Create parameters
     std::vector<float> param1_vals = {1.1f, -2.2f, 3.3f};
     std::vector<float> param2_vals = {2.2f, 3.4f, -1.2f};
@@ -79,6 +79,7 @@ struct NodeTest {
     TensorTools::set_elements(lookup1.get_storage().all_values, param_square1_vals);
     lookup2 = mod.add_lookup_parameters(10, {3});
     lookup3 = mod2.add_lookup_parameters(10, {3});
+    lookup4 = mod.add_lookup_parameters(10, {2,3,4,5});
   }
   ~NodeTest() {
     // for (auto x : av) free(x);
@@ -109,7 +110,7 @@ struct NodeTest {
   std::vector<char*> av;
   dynet::ParameterCollection mod, mod2;
   dynet::Parameter param1, param2, param3, param4, param5, param_scalar1, param_scalar2, param_kernel1, param_filter1, param_square1, param_cube1, param_cube2;
-  dynet::LookupParameter lookup1, lookup2, lookup3;
+  dynet::LookupParameter lookup1, lookup2, lookup3, lookup4;
 };
 
 // define the test suite
@@ -985,6 +986,51 @@ BOOST_AUTO_TEST_CASE( silu_gradient ) {
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 
+// Expression round(const Expression& x, GradientMode gradient_mode);
+BOOST_AUTO_TEST_CASE( round_forward ) {
+  // batch_vals = {1.1f, 2.6f, 3.3f, 4.0f, 5.1f, 6.6f};
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = round(x, zero_gradient);
+  std::vector<float> v = as_vector(y.value());
+  BOOST_CHECK_EQUAL(v[0], 1.0);
+  BOOST_CHECK_EQUAL(v[1], 3.0);
+  BOOST_CHECK_EQUAL(v[2], 3.0);
+  BOOST_CHECK_EQUAL(v[3], 4.0);
+  BOOST_CHECK_EQUAL(v[4], 5.0);
+  BOOST_CHECK_EQUAL(v[5], 7.0);
+}
+
+// Expression ceil(const Expression& x, GradientMode gradient_mode);
+BOOST_AUTO_TEST_CASE( ceil_forward ) {
+  // batch_vals = {1.1f, 2.6f, 3.3f, 4.0f, 5.1f, 6.6f};
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = ceil(x, zero_gradient);
+  std::vector<float> v = as_vector(y.value());
+  BOOST_CHECK_EQUAL(v[0], 2.0);
+  BOOST_CHECK_EQUAL(v[1], 3.0);
+  BOOST_CHECK_EQUAL(v[2], 4.0);
+  BOOST_CHECK_EQUAL(v[3], 4.0);
+  BOOST_CHECK_EQUAL(v[4], 6.0);
+  BOOST_CHECK_EQUAL(v[5], 7.0);
+}
+
+// Expression floor(const Expression& x, GradientMode gradient_mode);
+BOOST_AUTO_TEST_CASE( floor_forward ) {
+  // batch_vals = {1.1f, 2.6f, 3.3f, 4.0f, 5.1f, 6.6f};
+  dynet::ComputationGraph cg;
+  Expression x = input(cg, Dim({3}, 2), batch_vals);
+  Expression y = floor(x, zero_gradient);
+  std::vector<float> v = as_vector(y.value());
+  BOOST_CHECK_EQUAL(v[0], 1.0);
+  BOOST_CHECK_EQUAL(v[1], 2.0);
+  BOOST_CHECK_EQUAL(v[2], 3.0);
+  BOOST_CHECK_EQUAL(v[3], 4.0);
+  BOOST_CHECK_EQUAL(v[4], 5.0);
+  BOOST_CHECK_EQUAL(v[5], 6.0);
+}
+
 // Expression hinge(const Expression& x, unsigned index, float m = 1.0);
 BOOST_AUTO_TEST_CASE( hinge_gradient ) {
   unsigned index = 0;
@@ -1227,7 +1273,7 @@ BOOST_AUTO_TEST_CASE( dropout_dim_forward ) {
 // TODO: Dropout scales the gradients at training time, so they don't match.
 // Expression block_dropout(const Expression& x, real p);
 
-// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+// Expression argmax(const Expression& x, GradientMode gradient_mode);
 BOOST_AUTO_TEST_CASE( argmax_forward ) {
   dynet::ComputationGraph cg;
   Expression x = input(cg, Dim({3}, 2), batch_vals);
@@ -1241,7 +1287,7 @@ BOOST_AUTO_TEST_CASE( argmax_forward ) {
   BOOST_CHECK_EQUAL(v[5], 1.0);
 }
 
-// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+// Expression argmax(const Expression& x, GradientMode gradient_mode);
 BOOST_AUTO_TEST_CASE( argmax_backward ) {
   dynet::ComputationGraph cg;
   Expression x = input(cg, Dim({3}, 2), batch_vals);
@@ -1257,7 +1303,7 @@ BOOST_AUTO_TEST_CASE( argmax_backward ) {
   BOOST_CHECK_EQUAL(g_x[5], 0.0);
 }
 
-// Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+// Expression argmax(const Expression& x, GradientMode gradient_mode);
 BOOST_AUTO_TEST_CASE( straight_through_backward ) {
   dynet::ComputationGraph cg;
   Expression x = input(cg, Dim({3}, 2), batch_vals);
@@ -2442,6 +2488,14 @@ BOOST_AUTO_TEST_CASE( lookup_test ) {
   Expression x2 = lookup(cg, lookup1, (unsigned)2);
   Expression y = x1 + x2;
   Expression z = to_scalar(y);
+  BOOST_CHECK(check_grad(mod, z, 0));
+}
+
+// Expression lookup();
+BOOST_AUTO_TEST_CASE( lookup_highdim_batched_test ) {
+  dynet::ComputationGraph cg;
+  Expression x = lookup(cg, lookup4, {0, 2});
+  Expression z = sum_batches(to_scalar(x));
   BOOST_CHECK(check_grad(mod, z, 0));
 }
 

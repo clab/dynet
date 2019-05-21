@@ -25,6 +25,7 @@
 #include "dynet/nodes-norms.h"
 #include "dynet/nodes-pickneglogsoftmax.h"
 #include "dynet/nodes-random.h"
+#include "dynet/nodes-rounding.h"
 #include "dynet/nodes-select.h"
 #include "dynet/nodes-similarities.h"
 #include "dynet/nodes-softmaxes.h"

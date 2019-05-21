@@ -112,7 +112,6 @@ inline void MatrixMultiplyTranspAcc(const dynet::Device_GPU & dev, const dynet::
           r.v, r.d.rows(),
           dev.kSCALAR_ONE, y.v, y.d.rows()));
   } else {
-    DYNET_ARG_CHECK(false, "MatrixMultiplyTranspAcc");
     CUBLAS_CHECK(cublasSgemmStridedBatched(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
           y.d.rows(), y.d.cols(), l.d.cols(),
           dev.kSCALAR_ONE,

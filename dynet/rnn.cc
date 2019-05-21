@@ -147,14 +147,14 @@ Expression SimpleRNNBuilder::add_input_impl(int prev, const Expression &in) {
     }
 
     if(exists_h_prev) {
-      if(dropout_rate_h > 0.f)
-        h_prev = cmult(h_prev,masks[i][1]);
-        x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h_prev}) );
-    }
-    else{
+      if(dropout_rate_h > 0.f) {
+        h_prev = cmult(h_prev, masks[i][1]);
+      }
+      x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x, vars[1], h_prev}) );
+    } else {
       x = h[t][i] = tanh( affine_transform({vars[2], vars[0], x}) );
     }
-  } 
+  }
   return h[t].back();
 }
 

@@ -34,7 +34,7 @@ Create variables defining the input and output of the regression, and load them 
     dynet::real y_value;
     Expression y = input(cg, &y_value);
 
-Next, set up the structure to multiply the input by the weight vector,  then run the output of this through a logistic sigmoid function logistic regression).
+Next, set up the structure to multiply the input by the weight vector,  then run the output of this through a logistic sigmoid function (logistic regression).
 
 .. code:: cpp
 

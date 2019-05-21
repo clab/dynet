@@ -100,23 +100,11 @@ void AffineTransform::forward_dev_impl(const MyDevice & dev, const vector<const 
     }
 
     // Perform multiplication
-#ifdef __CUDACC__
-    for (unsigned i = 1; i < xs.size(); i += 2)
+    for (unsigned i = 1; i < xs.size(); i += 2) {
+      DYNET_ASSERT(xs[i+1]->d.bd == 1 || xs[i+1]->d.bd == xs[i]->d.bd, "Failed dimension check in AffineTransform::forward");
       // fx = (acc_sclar)*fx + xs[0] * xs[1]
       MatrixMultiply(dev, *xs[i], *xs[i + 1], fx, dev.kSCALAR_ONE);
-#else
-    // Multiply
-    for (unsigned i = 1; i < xs.size(); i += 2) {
-      if(xs[i]->d.bd == 1 && xs[i+1]->d.bd == fx.d.bd) {
-        colbatch_matrix(fx).noalias() += mat(*xs[i]) * colbatch_matrix(*xs[i+1]);
-      } else {
-        DYNET_ASSERT(xs[i+1]->d.bd == 1 || xs[i+1]->d.bd == xs[i]->d.bd, "Failed dimension check in AffineTransform::forward");
-        for(unsigned b = 0; b < fx.d.bd; ++b) {
-          batch_matrix(fx, b).noalias() += batch_matrix(*xs[i], b) * batch_matrix(*xs[i+1], b);
-        }
-      }
     }
-#endif
   }
 }
 
@@ -160,60 +148,9 @@ void AffineTransform::backward_dev_impl(const MyDevice & dev,
 
   // Left argument of matrix multiply
   } else if (i % 2 == 1) {
-    int max_b = max(dEdf.d.bd, xs[i+1]->d.bd);
-#ifdef __CUDACC__
-    if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[i+1]->d.bd)) {
-      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
-            dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols() * dEdf.d.batch_elems(),
-            dev.kSCALAR_ONE,
-            dEdf.v, dEdf.d.rows(),
-            xs[i+1]->v, xs[i+1]->d.rows(),
-            dev.kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
-    } else {
-      for(int b = 0; b < max_b; ++b)
-        CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
-              dEdxi.d.rows(), dEdxi.d.cols(), dEdf.d.cols(),
-              dev.kSCALAR_ONE,
-              dEdf.batch_ptr(b), dEdf.d.rows(),
-              xs[i+1]->batch_ptr(b), xs[i+1]->d.rows(),
-              dev.kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
-    }
-#else
-    if(dEdxi.d.bd == 1 && (dEdf.d.bd == xs[i+1]->d.bd)) {
-      mat(dEdxi).noalias() += colbatch_matrix(dEdf) * colbatch_matrix(*xs[i+1]).transpose();
-    } else {
-      for(int b = 0; b < max_b; ++b)
-        batch_matrix(dEdxi, b).noalias() += batch_matrix(dEdf, b) * batch_matrix(*xs[i+1], b).transpose();
-    }
-#endif
+    MatrixMultiplyTranspAcc(dev, dEdf, *xs[i+1], dEdxi);
   } else {  // right argument of matrix multiply
-    int max_b = max(xs[i-1]->d.bd, dEdf.d.bd);
-#ifdef __CUDACC__
-    // Do a single multiply if xs[i-1] has one batch
-    if(xs[i-1]->d.bd == 1 && dEdxi.d.bd == dEdf.d.bd) {
-      CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
-            dEdxi.d.rows(), dEdxi.d.cols()*dEdxi.d.batch_elems(), xs[i-1]->d.rows(),
-            dev.kSCALAR_ONE,
-            xs[i-1]->v, xs[i-1]->d.rows(),
-            dEdf.v, dEdf.d.rows(),
-            dev.kSCALAR_ONE, dEdxi.v, dEdxi.d.rows()));
-    } else {
-      for(int b = 0; b < max_b; ++b)
-        CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N,
-              dEdxi.d.rows(), dEdxi.d.cols(), xs[i-1]->d.rows(),
-              dev.kSCALAR_ONE,
-              xs[i-1]->batch_ptr(b), xs[i-1]->d.rows(),
-              dEdf.batch_ptr(b), dEdf.d.rows(),
-              dev.kSCALAR_ONE, dEdxi.batch_ptr(b), dEdxi.d.rows()));
-    }
-#else
-    if(xs[i-1]->d.bd == 1 && dEdxi.d.bd == dEdf.d.bd) {
-      colbatch_matrix(dEdxi).noalias() += mat(*xs[i-1]).transpose() * colbatch_matrix(dEdf);
-    } else {
-      for(int b = 0; b < max_b; ++b)
-        batch_matrix(dEdxi, b).noalias() += batch_matrix(*xs[i-1], b).transpose() * batch_matrix(dEdf, b);
-    }
-#endif
+    MatrixTranspMultiplyAcc(dev, *xs[i-1], dEdf, dEdxi);
   }
 }
 DYNET_NODE_INST_DEV_IMPL(AffineTransform)

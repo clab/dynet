@@ -30,12 +30,20 @@ bool Tensor::is_valid() const {
   if (device->type == DeviceType::CPU) {
     const size_t s = d.size();
     for (unsigned i = 0; i < s; ++i)
-      if (std::isnan(v[i]) || std::isinf(v[i])) return false;
+      if (std::isnan(v[i]) || std::isinf(v[i])) {
+        return false;
+      }
     return true;
   } else {
 #if HAVE_CUDA
     if (device->type == DeviceType::GPU) {
-      DYNET_NO_CUDA_IMPL_ERROR("is_valid()");
+      vector<real> vt = as_vector(*this);
+      for (unsigned i = 0; i < vt.size(); ++i) {
+        if (std::isnan(vt[i]) || std::isinf(vt[i])) {
+          return false;
+        }
+      }
+      return true;
     }
 #endif
   }

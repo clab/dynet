@@ -74,20 +74,54 @@ namespace dynet {
 template<typename Scalar> struct scalar_logistic_sigmoid_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_logistic_sigmoid_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
-    const Scalar one = Scalar(1.0);
-    if (x >= 0.0){
-        return one / (one + expf(-x));
-    }else{
-        return expf(x) / (one + expf(x));
-    }
+    const float one = 1.0f;
+    return one / (one + Eigen::numext::exp(-x));
   }
   template <typename Packet>
-  DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
+  DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& _x) const {
+    // This implementation is copied from Eigen
+    // See https://github.com/eigenteam/eigen-git-mirror/blob/1e1794c6020e54c932918192ac39285f8ed2d828/Eigen/src/Core/functors/UnaryFunctors.h#L916
+
+    // Clamp the inputs to the range [-18, 18] since anything outside
+    // this range is 0.0f or 1.0f in single-precision.
     using namespace Eigen::internal;
-    const Packet one = pset1<Packet>(1.0);
-    const Packet half = pset1<Packet>(0.5);
-    //return padd(pmul(half, ptanh(pmul(x, half))), half);
-    return psub(padd(pmin(half, pdiv(one, padd(one, pexp(pnegate(x))))), pmax(half, pdiv(pexp(x), padd(one, pexp(x))))), half);
+    const Packet x = pmax(pmin(_x, pset1<Packet>(18.0)), pset1<Packet>(-18.0));
+
+    // The monomial coefficients of the numerator polynomial (odd).
+    const Packet alpha_1 = pset1<Packet>(2.48287947061529e-01);
+    const Packet alpha_3 = pset1<Packet>(8.51377133304701e-03);
+    const Packet alpha_5 = pset1<Packet>(6.08574864600143e-05);
+    const Packet alpha_7 = pset1<Packet>(1.15627324459942e-07);
+    const Packet alpha_9 = pset1<Packet>(4.37031012579801e-11);
+
+    // The monomial coefficients of the denominator polynomial (even).
+    const Packet beta_0 = pset1<Packet>(9.93151921023180e-01);
+    const Packet beta_2 = pset1<Packet>(1.16817656904453e-01);
+    const Packet beta_4 = pset1<Packet>(1.70198817374094e-03);
+    const Packet beta_6 = pset1<Packet>(6.29106785017040e-06);
+    const Packet beta_8 = pset1<Packet>(5.76102136993427e-09);
+    const Packet beta_10 = pset1<Packet>(6.10247389755681e-13);
+
+    // Since the polynomials are odd/even, we need x^2.
+    const Packet x2 = pmul(x, x);
+
+    // Evaluate the numerator polynomial p.
+    Packet p = pmadd(x2, alpha_9, alpha_7);
+    p = pmadd(x2, p, alpha_5);
+    p = pmadd(x2, p, alpha_3);
+    p = pmadd(x2, p, alpha_1);
+    p = pmul(x, p);
+
+    // Evaluate the denominator polynomial p.
+    Packet q = pmadd(x2, beta_10, beta_8);
+    q = pmadd(x2, q, beta_6);
+    q = pmadd(x2, q, beta_4);
+    q = pmadd(x2, q, beta_2);
+    q = pmadd(x2, q, beta_0);
+
+    // Divide the numerator by the denominator and shift it up.
+    return pmax(pmin(padd(pdiv(p, q), pset1<Packet>(0.5)), pset1<Packet>(1.0)),
+                pset1<Packet>(0.0));
   }
 };
 }
@@ -96,10 +130,9 @@ namespace Eigen { namespace internal {
 template<typename Scalar>
 struct functor_traits<dynet::scalar_logistic_sigmoid_op<Scalar> > {
   enum {
-    Cost = NumTraits<Scalar>::AddCost * 3 + NumTraits<Scalar>::MulCost * 2,
-    PacketAccess = packet_traits<Scalar>::HasAdd && packet_traits<Scalar>::HasSub && 
-                   packet_traits<Scalar>::HasMax && packet_traits<Scalar>::HasNegate &&
-                   packet_traits<Scalar>::HasMin && packet_traits<Scalar>::HasExp 
+    Cost = NumTraits<Scalar>::AddCost * 2 + NumTraits<Scalar>::MulCost * 6,
+    PacketAccess = packet_traits<Scalar>::HasAdd && packet_traits<Scalar>::HasDiv &&
+                   packet_traits<Scalar>::HasNegate && packet_traits<Scalar>::HasExp
   };
 };
 } }
@@ -208,16 +241,18 @@ template<typename Scalar> struct scalar_asinh_forward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_asinh_forward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
 #ifndef __CUDACC__
-    using std::asinh;
+    return std::asinh(x);
+#else
+    return ::asinh(x);
 #endif
-    return asinh(x);
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
 #ifndef __CUDACC__
-    using std::asinh;
+    return std::asinh(x);
+#else
+    return ::asinh(x);
 #endif
-    return asinh(x);
   }
 };
 }
@@ -227,16 +262,18 @@ template<typename Scalar> struct scalar_acosh_forward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_acosh_forward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
 #ifndef __CUDACC__
-    using std::acosh;
+    return std::acosh(x);
+#else
+    return ::acosh(x);
 #endif
-    return acosh(x);
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
 #ifndef __CUDACC__
-    using std::acosh;
+    return std::acosh(x);
+#else
+    return ::acosh(x);
 #endif
-    return acosh(x);
   }
 };
 }
@@ -246,16 +283,18 @@ template<typename Scalar> struct scalar_atanh_forward_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_atanh_forward_op)
   DYNET_DEVICE_FUNC inline const Scalar operator() (const Scalar& x) const {
 #ifndef __CUDACC__
-    using std::atanh;
+    return std::atanh(x);
+#else
+    return ::atanh(x);
 #endif
-    return atanh(x);
   }
   template <typename Packet>
   DYNET_DEVICE_FUNC inline Packet packetOp(const Packet& x) const {
 #ifndef __CUDACC__
-    using std::atanh;
+    return std::atanh(x);
+#else
+    return ::atanh(x);
 #endif
-    return atanh(x);
   }
 };
 }

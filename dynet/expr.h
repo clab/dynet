@@ -93,6 +93,15 @@ struct Expression {
   }
 };
 
+/**
+ * \ingroup operations
+ * \brief Gradient modes for the discontinuous operations
+ */
+enum GradientMode {
+    zero_gradient,              /* Standard gradient (=no gradient) */
+    straight_through_gradient   /* Straight-through estimator (=gradient of the identity)*/
+};
+
 ////////////////////////////////////////////////
 // Input operations                           //
 ////////////////////////////////////////////////
@@ -1322,6 +1331,42 @@ Expression cdiv(const Expression& x, const Expression& y);
  */
 Expression colwise_add(const Expression& x, const Expression& bias);
 
+/**
+ * \ingroup arithmeticoperations
+ * \brief Rounding function
+ * \details Perform componentwise rounding of the input to the nearest integer
+ *
+ * \param x The input expression
+ * \param gradient_mode Specify the gradient type (zero or straight-through)
+ *
+ * \return An expression where each element is equal to the nearest integer of x
+ */
+Expression round(const Expression& x, GradientMode gradient_mode);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Ceiling function
+ * \details Convert to the nearest integer greater than or equal to x
+ *
+ * \param x The input expression
+ * \param gradient_mode Specify the gradient type (zero or straight-through)
+ *
+ * \return An expression where each element is equal to the nearest integer greater than or equal to x
+ */
+Expression ceil(const Expression& x, GradientMode gradient_mode);
+
+/**
+ * \ingroup arithmeticoperations
+ * \brief Floor function
+ * \details Convert to the nearest integer less than or equal to x
+ *
+ * \param x The input expression
+ * \param gradient_mode Specify the gradient type (zero or straight-through)
+ *
+ * \return An expression where each element is equal to the nearest integer less than or equal to x
+ */
+Expression floor(const Expression& x, GradientMode gradient_mode);
+
 ////////////////////////////////////////////////
 // Probability/loss operations                //
 ////////////////////////////////////////////////
@@ -1330,8 +1375,8 @@ Expression colwise_add(const Expression& x, const Expression& bias);
  * \ingroup lossoperations
  * \brief Softmax
  * \details The softmax function normalizes each column to ensure that all
- *          values are between 0 and 1 and add to one by applying the
- *          e^{x[i]}/{sum_j e^{x[j]}}.
+ *          values are between 0 and 1 and add to one by applying
+ *          \f$\frac{e^{x_i}}{\sum_j e^{x_j}}\f$.
  *
  * \param x A vector or matrix
  * \param d dimension to normalize over (default: 0)
@@ -1344,8 +1389,8 @@ Expression softmax(const Expression& x, unsigned d=0);
  * \ingroup lossoperations
  * \brief Log softmax
  * \details The log softmax function normalizes each column to ensure that all
- *          values are between 0 and 1 and add to one by applying the
- *          e^{x[i]}/{sum_j e^{x[j]}}, then takes the log
+ *          values are between 0 and 1 and add to one by applying
+ *          \f$\frac{e^{x_i}}{\sum_j e^{x_j}}\f$, then taking the log
  *
  * \param x A vector or matrix
  *
@@ -1795,15 +1840,6 @@ Expression scale_gradient(const Expression& x, float lambd = 1.0f);
 
 /**
  * \ingroup flowoperations
- * \brief Gradient modes for the argmax operation
- */
-enum ArgmaxGradient {
-    zero_gradient,              /* Standard gradient (=no gradient) */
-    straight_through_gradient   /* Straight-through estimator (=gradient of the identity)*/
-};
-
-/**
- * \ingroup flowoperations
  * \brief Argmax
  * \details This node takes an input vector \f$x\f$ and returns a one hot vector \f$y\f$ such that \f$y_{\text{argmax} x}=1\f$
  * 
@@ -1826,7 +1862,7 @@ enum ArgmaxGradient {
  *
  * \return The one hot argmax vector
  */
-Expression argmax(const Expression& x, ArgmaxGradient gradient_mode);
+Expression argmax(const Expression& x, GradientMode gradient_mode);
 
 /**
  * \ingroup flowoperations

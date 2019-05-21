@@ -1871,6 +1871,8 @@ def renew_cg(immediate_compute=False, check_validity=False, autobatching=None):
     return _cg.renew(immediate_compute, check_validity, autobatching)
 
 def print_text_graphviz(): return _cg.print_graphviz()
+def dump_cg(filename="", show_values=True, show_gradients=True, nan_check_only=False): return _cg.dump(filename.encode('utf-8'), show_values, show_gradients, nan_check_only)
+
 def cg_checkpoint(): 
     """
     Saves the state of the computation graph
@@ -1955,6 +1957,9 @@ cdef class ComputationGraph:
 
     cpdef print_graphviz(self):
         self.thisptr.print_graphviz()
+
+    cpdef dump(self, filename, show_values, show_gradients, nan_check_only):
+        self.thisptr.dump(filename, show_values, show_gradients, nan_check_only)
 
     cpdef void checkpoint(self):
         self.thisptr.checkpoint()
@@ -2908,9 +2913,9 @@ cpdef Expression argmax(Expression x, str gradient_mode):
         dynet.Expression: The one hot argmax vector
     """
     if gradient_mode == "zero_gradient":
-        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_ArgmaxGradient.zero_gradient))
+        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_GradientMode.zero_gradient))
     elif gradient_mode == "straight_through_gradient":
-        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_ArgmaxGradient.straight_through_gradient))
+        return Expression.from_cexpr(x.cg_version, c_argmax(x.c(), c_GradientMode.straight_through_gradient))
     else:
         raise ValueError("Unknown gradient mode for argmax: " + gradient_mode)
 
@@ -3222,7 +3227,7 @@ cpdef Expression conv2d_bias(Expression x, Expression f, Expression b, vector[un
     Args:
         x (dynet.Expression): The input feature maps: (H x W x Ci) x N (ColMaj), 3D tensor with an optional batch dimension
         f (dynet.Expression): 2D convolution filters: H x W x Ci x Co (ColMaj), 4D tensor
-        b (dynet.Expression): The bias (1D: Ci)
+        b (dynet.Expression): The bias (1D: Co)
         stride (list): the row and column strides
     
     Keyword Arguments:
@@ -3604,6 +3609,66 @@ cpdef Expression silu(Expression x, float beta=1.0):
     """
     return Expression.from_cexpr(x.cg_version, c_silu(x.c(), beta))
 
+cpdef Expression round(Expression x, str gradient_mode):
+    """Rounding
+    
+    This node takes an input vector :math:`x` and returns a vector where each element is rounded to the nearest integer.
+    The gradient_mode is either :code:`"zero_gradient"` or :code:`"straight_through_gradient"` (see "argmax" for more details)
+    
+    Args:
+        x (dynet.Expression): The input vector (can be batched)
+        gradient_mode (str): Gradient mode for the backward pass (one of :code:`"zero_gradient"` or :code:`"straight_through_gradient"`
+    
+    Returns:
+        dynet.Expression: The rounded vector
+    """
+    if gradient_mode == "zero_gradient":
+        return Expression.from_cexpr(x.cg_version, c_round(x.c(), c_GradientMode.zero_gradient))
+    elif gradient_mode == "straight_through_gradient":
+        return Expression.from_cexpr(x.cg_version, c_round(x.c(), c_GradientMode.straight_through_gradient))
+    else:
+        raise ValueError("Unknown gradient mode for round: " + gradient_mode)
+
+cpdef Expression ceil(Expression x, str gradient_mode):
+    """Ceiling
+    
+    This node takes an input vector :math:`x` and returns a vector where each element is rounded to the nearest integer greater than or equal to the input.
+    The gradient_mode is either :code:`"zero_gradient"` or :code:`"straight_through_gradient"` (see "argmax" for more details)
+    
+    Args:
+        x (dynet.Expression): The input vector (can be batched)
+        gradient_mode (str): Gradient mode for the backward pass (one of :code:`"zero_gradient"` or :code:`"straight_through_gradient"`
+    
+    Returns:
+        dynet.Expression: The ceiled vector
+    """
+    if gradient_mode == "zero_gradient":
+        return Expression.from_cexpr(x.cg_version, c_ceil(x.c(), c_GradientMode.zero_gradient))
+    elif gradient_mode == "straight_through_gradient":
+        return Expression.from_cexpr(x.cg_version, c_ceil(x.c(), c_GradientMode.straight_through_gradient))
+    else:
+        raise ValueError("Unknown gradient mode for ceil: " + gradient_mode)
+
+cpdef Expression floor(Expression x, str gradient_mode):
+    """Floor
+    
+    This node takes an input vector :math:`x` and returns a vector where each element is rounded to the nearest integer less than or equal to the input.
+    The gradient_mode is either :code:`"zero_gradient"` or :code:`"straight_through_gradient"` (see "argmax" for more details)
+    
+    Args:
+        x (dynet.Expression): The input vector (can be batched)
+        gradient_mode (str): Gradient mode for the backward pass (one of :code:`"zero_gradient"` or :code:`"straight_through_gradient"`
+    
+    Returns:
+        dynet.Expression: The floored vector
+    """
+    if gradient_mode == "zero_gradient":
+        return Expression.from_cexpr(x.cg_version, c_floor(x.c(), c_GradientMode.zero_gradient))
+    elif gradient_mode == "straight_through_gradient":
+        return Expression.from_cexpr(x.cg_version, c_floor(x.c(), c_GradientMode.straight_through_gradient))
+    else:
+        raise ValueError("Unknown gradient mode for floor: " + gradient_mode)
+
 cpdef Expression log_softmax(Expression x, list restrict=None):
     """Restricted log softmax
     
@@ -3626,7 +3691,7 @@ cpdef Expression log_softmax(Expression x, list restrict=None):
 cpdef Expression softmax(Expression x, unsigned d=0):
     """Softmax
     
-    The softmax function normalizes each column to ensure that all values are between 0 and 1 and add to one by applying the :math:`\\frac{e^{x_i}}{sum_j e^{x_j}}`.
+   The softmax function normalizes each column to ensure that all values are between 0 and 1 and add to one by applying :math:`\\frac{e^{x_i}}{\sum_j e^{x_j}}`.
     
     Args:
         x (dynet.Expression): Input expression
@@ -4993,7 +5058,7 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     .. math::
 
         \\begin{split}
-            h_t & =\tanh(W_{x}x_t+W_{h}h_{t-1}+b)\\\\
+            h_t & = \\tanh(W_{x}x_t+W_{h}h_{t-1}+b)\\\\
         \end{split}
 
     Args:
@@ -5380,7 +5445,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
                 i_t & =\sigma(W_{ix}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ih}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_i)\\\\
                 f_t & = \sigma(W_{fx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{fh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_f)\\\\
                 o_t & = \sigma(W_{ox}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{oh}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_o)\\\\
-                \\tilde{c_t} & = \tanh(W_{cx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ch}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_c)\\\\
+                \\tilde{c_t} & = \\tanh(W_{cx}(\\frac 1 {1-d_x}\mathbf{z_x} \circ x_t)+W_{ch}(\\frac 1 {1-d_h}\mathbf{z_h} \circ h_{t-1})+b_c)\\\\
                 c_t & = c_{t-1}\circ f_t + \\tilde{c_t}\circ i_t\\\\
                 h_t & = \\tanh(c_t)\circ o_t\\\\
             \end{split}
@@ -6189,6 +6254,7 @@ cdef class Trainer:
     cpdef set_clip_threshold(self,float thr):
         """Set clipping thershold
         
+        Gradients are clipped to 5 by default.
         To deactivate clipping, set the threshold to be <=0
         
         Args:

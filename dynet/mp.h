@@ -296,6 +296,8 @@ namespace dynet {
       return 0;
     }
 
+    void cleanup(const std::vector<Workload>& workloads);
+
     template<class D, class S>
     void run_multi_process(unsigned num_children, ILearner<D, S>* learner, Trainer* trainer, const std::vector<D>& train_data,
         const std::vector<D>& dev_data, unsigned num_iterations, unsigned dev_frequency, unsigned report_frequency) {
@@ -312,6 +314,7 @@ namespace dynet {
       }
       else {
         run_parent(train_data, dev_data, learner, workloads, num_iterations, dev_frequency, report_frequency);
+        cleanup(workloads);
       }
     }
 
@@ -369,7 +372,7 @@ namespace dynet {
             break;
           }
 
-          S dev_loss;
+          S dev_loss = S();
           for (auto it = dev_indices.begin(); it != dev_indices.end(); ++it) {
             unsigned i = *it;
             DYNET_ASSERT(i < dev_data.size(), "Out-of-bounds ID in dev set for multiprocessing");
@@ -393,8 +396,6 @@ namespace dynet {
         }
       }
     }
-
-    void cleanup(const std::vector<Workload>& workloads);
     
     template<class D, class S>
     S run_simple_parent(const std::vector<D>& train_data, ILearner<D, S>* learner, std::vector<Workload>& workloads) {

@@ -19,6 +19,7 @@ struct GaussianNoise : public Node {
 struct RandomNormal : public Node {
   explicit RandomNormal(const Dim& d, float m=0.f, float s=1.f) : dim(d), mean(m), stddev(s) {}
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   Dim dim;
   float mean, stddev;
 };
@@ -29,6 +30,7 @@ struct RandomBernoulli : public Node {
     DYNET_ASSERT(a.size() == 0, "RandomBernoulli doesn't accept nodes as input");
   }
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   Dim dim;
   real p;
   real scale;
@@ -40,16 +42,18 @@ struct RandomUniform : public Node {
     DYNET_ASSERT(a.size() == 0, "RandomUniform doesn't accept nodes as input");
   }
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   Dim dim;
   real left, right;
 };
 
-// draw a random real from Uniform(left, right)
+// draw a random real from Gubmel(mu, beta)
 struct RandomGumbel : public Node {
   explicit RandomGumbel(const std::initializer_list<VariableIndex>& a, const Dim& d, real mu, real beta) : dim(d), mu(mu), beta(beta) {
     DYNET_ASSERT(a.size() == 0, "RandomGumbel doesn't accept nodes as input");
   }
   DYNET_NODE_DEFINE_DEV_IMPL()
+  virtual bool supports_multibatch() const override { return true; }
   Dim dim;
   real mu, beta;
 };

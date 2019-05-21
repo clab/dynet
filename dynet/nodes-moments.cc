@@ -99,52 +99,6 @@ void Average::backward_dev_impl(const MyDevice & dev,
 }
 DYNET_NODE_INST_DEV_IMPL(Average)
 
-// ************* AverageColumns *************
-
-#ifndef __CUDACC__
-
-string AverageColumns::as_string(const vector<string>& arg_names) const {
-  ostringstream s;
-  s << "average_cols(matrix=" << arg_names[0] << ')';
-  return s.str();
-}
-
-Dim AverageColumns::dim_forward(const vector<Dim>& xs) const {
-  DYNET_ASSERT(xs.size() == 1 || xs.size() == 2, "Failed input count check in AverageColumns");
-  int bd = (xs.size() == 1 ? xs[0].bd : max(xs[0].bd, xs[1].bd));
-  return Dim({xs[0].rows()}, bd);
-}
-
-#endif
-
-template<class MyDevice>
-void AverageColumns::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
-  DYNET_ASSERT(xs.size() == 1, "Failed input count check in AverageColumns");
-  unsigned cols = xs[0]->d.cols();
-#ifdef __CUDACC__
-  // The reduction used on CPU is better, but not implemented in GPU
-  t<1>(fx).device(*dev.edevice) = t<2>(*xs[0]).chip<1>(0);
-  for(unsigned i = 1; i < cols; ++i)
-    t<1>(fx).device(*dev.edevice) += t<2>(*xs[0]).chip<1>(i);
-  t<1>(fx).device(*dev.edevice) = t<1>(fx) / (float)cols;
-#else
-  const Eigen::array<Eigen::DenseIndex, 1> reduction_axis = {1};
-  t<1>(fx).device(*dev.edevice) = t<2>(*xs[0]).sum(reduction_axis) / (float)cols;
-#endif
-}
-
-template<class MyDevice>
-void AverageColumns::backward_dev_impl(const MyDevice & dev,
-                             const vector<const Tensor*>& xs,
-                             const Tensor& fx,
-                             const Tensor& dEdf,
-                             unsigned i,
-                             Tensor& dEdxi) const {
-  const Eigen::array<Eigen::DenseIndex, 2> broadcasts = {1, xs[0]->d[1]};
-  t<2>(dEdxi).device(*dev.edevice) += (t<2>(dEdf) / (float)xs[0]->d[1]).broadcast(broadcasts);
-}
-DYNET_NODE_INST_DEV_IMPL(AverageColumns)
-
 // ************* MomentElements *************
 
 #ifndef __CUDACC__

@@ -24,6 +24,10 @@ unsigned TAG_DIM = 32;
 unsigned TAG_SIZE = 0;
 unsigned VOCAB_SIZE = 0;
 
+bool use_momentum = false;
+bool use_ema = false;
+bool use_cma = false;
+
 bool eval = false;
 dynet::Dict d;
 dynet::Dict td;
@@ -114,10 +118,69 @@ struct RNNLanguageModel {
 
 int main(int argc, char** argv) {
   dynet::initialize(argc, argv);
-  if (argc != 3 && argc != 4) {
-    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params]\n";
+
+  std::string path_corpus;
+  std::string path_dev;
+  std::string path_model;
+
+  bool opt_succeed = true;
+  unsigned n_pos_args = 0;
+  std::string* pos_args[]{&path_corpus, &path_dev, &path_model};
+  for (int argi = 1 ; argi < argc ; ++argi)
+  {
+    std::string opt(argv[argi]);
+    if (opt[0] != '-')
+    {
+        if (n_pos_args == 3)
+        {
+           opt_succeed = false;
+           break;
+        }
+        *(pos_args[n_pos_args]) = opt;
+        ++n_pos_args;
+    }
+    else if (opt == "--momentum")
+    {
+        use_momentum = true;
+    }
+    else if (opt == "--ema")
+    {
+        use_ema = true;
+    }
+    else if (opt == "--cma")
+    {
+        use_cma = true;
+    }
+    else
+    {
+        opt_succeed = false;
+        break;
+    }
+  }
+
+  if (use_ema && use_cma)
+  {
+    cerr << "Can not use both Exponential Moving Average and Cumulative Moving Average\n";
+    opt_succeed = false;
+  }
+  if (path_corpus.size() == 0 || path_dev.size() == 0)
+    opt_succeed = false;
+
+  if (!opt_succeed)
+  {
+    cerr << "Usage: " << argv[0] << " corpus.txt dev.txt [model.params] [--momentum] [--ema] [--cma]\n";
     return 1;
   }
+  cerr << "Training data: " << path_corpus << "\n";
+  cerr << "Dev data: " << path_dev << "\n";
+  if (path_model.size() != 0)
+    cerr << "Model params: " << path_corpus << "\n";
+  cerr << "Optimizer: SGD";
+  if (use_momentum) cerr << "+momentum";
+  if (use_ema) cerr << "+ema";
+  if (use_cma) cerr << "+cma";
+  cerr << "\n";
+
   kNONE = td.convert("*");
   kSOS = d.convert("<s>");
   kEOS = d.convert("</s>");
@@ -125,9 +188,9 @@ int main(int argc, char** argv) {
   string line;
   int tlc = 0;
   int ttoks = 0;
-  cerr << "Reading training data from " << argv[1] << "...\n";
+  cerr << "Reading training data from " << path_corpus << "...\n";
   {
-    ifstream in(argv[1]);
+    ifstream in(path_corpus);
     assert(in);
     while(getline(in, line)) {
       ++tlc;
@@ -157,9 +220,9 @@ int main(int argc, char** argv) {
 
   int dlc = 0;
   int dtoks = 0;
-  cerr << "Reading dev data from " << argv[2] << "...\n";
+  cerr << "Reading dev data from " << path_dev<< "...\n";
   {
-    ifstream in(argv[2]);
+    ifstream in(path_dev);
     assert(in);
     while(getline(in, line)) {
       ++dlc;
@@ -176,23 +239,29 @@ int main(int argc, char** argv) {
      << '_' << LAYERS
      << '_' << INPUT_DIM
      << '_' << HIDDEN_DIM
-     << "-pid" << getpid() << ".params";
+     << (use_momentum ? "-momentum" : "")
+     << (use_ema ? "-ema" : "")
+     << "-pid" << getpid()
+     << ".params";
   const string fname = os.str();
   cerr << "Parameters will be written to: " << fname << endl;
   double best = 9e+99;
 
   ParameterCollection model;
-  bool use_momentum = true;
   std::unique_ptr<Trainer> trainer;
   if (use_momentum)
     trainer.reset(new MomentumSGDTrainer(model));
   else
     trainer.reset(new SimpleSGDTrainer(model));
+  if (use_ema)
+    trainer->exponential_moving_average(0.999);
+  if (use_cma)
+    trainer->cumulative_moving_average();
 
   RNNLanguageModel<LSTMBuilder> lm(model);
   //RNNLanguageModel<SimpleRNNBuilder> lm(model);
-  if (argc == 4) {
-    TextFileLoader loader(argv[3]);
+  if (path_model.size() != 0) {
+    TextFileLoader loader(path_model);
     loader.populate(model);
   }
 
@@ -233,6 +302,8 @@ int main(int argc, char** argv) {
     // show score on dev data?
     report++;
     if (report % dev_every_i_reports == 0) {
+      if (use_ema || use_cma)
+        trainer->swap_params_to_moving_average(true, true);
       double dloss = 0;
       unsigned dtags = 0;
       double dcorr = 0;
@@ -251,6 +322,8 @@ int main(int argc, char** argv) {
         saver.save(model);
       }
       cerr << "\n***DEV [epoch=" << (lines / (double)training.size()) << "] E = " << (dloss / dtags) << " ppl=" << exp(dloss / dtags) << " acc=" << (dcorr / dtags) << ' ';
+      if (use_ema)
+        trainer->swap_params_to_weights();
     }
   }
 }
