@@ -315,7 +315,7 @@ impl SimpleRNNBuilder {
     }
 
     /// Adds auxiliary output.
-    fn add_auxiliary_input<E1: AsRef<Expression>, E2: AsRef<Expression>>(
+    pub fn add_auxiliary_input<E1: AsRef<Expression>, E2: AsRef<Expression>>(
         &mut self,
         x: E1,
         aux: E2,
@@ -333,7 +333,7 @@ impl SimpleRNNBuilder {
     }
 
     /// Sets the dropout rates.
-    fn set_variational_dropout(&mut self, d: f32, d_h: f32) {
+    pub fn set_variational_dropout(&mut self, d: f32, d_h: f32) {
         unsafe {
             check_api_status!(dynet_sys::dynetSetSimpleRNNBuilderDropout(
                 self.as_mut_ptr(),
@@ -344,7 +344,7 @@ impl SimpleRNNBuilder {
     }
 
     /// Sets dropout masks at the beginning of a sequence for a specific batch size.
-    fn set_dropout_masks(&mut self, batch_size: u32) {
+    pub fn set_dropout_masks(&mut self, batch_size: u32) {
         unsafe {
             check_api_status!(dynet_sys::dynetSetSimpleRNNBuilderDropoutMasks(
                 self.as_mut_ptr(),
@@ -391,7 +391,7 @@ impl CoupledLSTMBuilder {
     }
 
     /// Sets the dropout rates.
-    fn set_variational_dropout(&mut self, d: f32, d_h: f32, d_c: f32) {
+    pub fn set_variational_dropout(&mut self, d: f32, d_h: f32, d_c: f32) {
         unsafe {
             check_api_status!(dynet_sys::dynetSetCoupledLSTMBuilderDropout(
                 self.as_mut_ptr(),
@@ -403,7 +403,7 @@ impl CoupledLSTMBuilder {
     }
 
     /// Sets dropout masks at the beginning of a sequence for a specific batch size.
-    fn set_dropout_masks(&mut self, batch_size: u32) {
+    pub fn set_dropout_masks(&mut self, batch_size: u32) {
         unsafe {
             check_api_status!(dynet_sys::dynetSetCoupledLSTMBuilderDropoutMasks(
                 self.as_mut_ptr(),
@@ -457,7 +457,7 @@ impl VanillaLSTMBuilder {
     }
 
     /// Sets the dropout rates.
-    fn set_variational_dropout(&mut self, d: f32, d_r: f32) {
+    pub fn set_variational_dropout(&mut self, d: f32, d_r: f32) {
         unsafe {
             check_api_status!(dynet_sys::dynetSetVanillaLSTMBuilderDropout(
                 self.as_mut_ptr(),
@@ -468,7 +468,7 @@ impl VanillaLSTMBuilder {
     }
 
     /// Sets dropout masks at the beginning of a sequence for a specific batch size.
-    fn set_dropout_masks(&mut self, batch_size: u32) {
+    pub fn set_dropout_masks(&mut self, batch_size: u32) {
         unsafe {
             check_api_status!(dynet_sys::dynetSetVanillaLSTMBuilderDropoutMasks(
                 self.as_mut_ptr(),
@@ -516,7 +516,7 @@ impl CompactVanillaLSTMBuilder {
     }
 
     /// Sets the dropout rates.
-    fn set_variational_dropout(&mut self, d: f32, d_r: f32) {
+    pub fn set_variational_dropout(&mut self, d: f32, d_r: f32) {
         unsafe {
             check_api_status!(dynet_sys::dynetSetCompactVanillaLSTMBuilderDropout(
                 self.as_mut_ptr(),
@@ -527,7 +527,7 @@ impl CompactVanillaLSTMBuilder {
     }
 
     /// Sets dropout masks at the beginning of a sequence for a specific batch size.
-    fn set_dropout_masks(&mut self, batch_size: u32) {
+    pub fn set_dropout_masks(&mut self, batch_size: u32) {
         unsafe {
             check_api_status!(dynet_sys::dynetSetCompactVanillaLSTMBuilderDropoutMasks(
                 self.as_mut_ptr(),
@@ -537,7 +537,7 @@ impl CompactVanillaLSTMBuilder {
     }
 
     /// Sets the gaussian weight noise.
-    fn set_weightnoise(&mut self, std: f32) {
+    pub fn set_weightnoise(&mut self, std: f32) {
         unsafe {
             check_api_status!(dynet_sys::dynetSetCompactVanillaLSTMBuilderWeightnoise(
                 self.as_mut_ptr(),
