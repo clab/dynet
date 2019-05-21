@@ -7,6 +7,7 @@ use dynet_sys;
 
 use super::{ApiResult, LookupParameter, Parameter, ParameterCollection, Result, Wrap};
 
+/// A struct to save a model.
 #[derive(Debug)]
 pub struct TextFileSaver {
     inner: NonNull<dynet_sys::dynetTextFileSaver_t>,
@@ -16,6 +17,7 @@ impl_wrap_owned!(TextFileSaver, dynetTextFileSaver_t);
 impl_drop!(TextFileSaver, dynetDeleteTextFileSaver);
 
 impl TextFileSaver {
+    /// Create a new `TextFileSaver`.
     pub fn new<P: AsRef<Path>>(path: P, append: bool) -> std_io::Result<TextFileSaver> {
         unsafe {
             let mut saver_ptr: *mut dynet_sys::dynetTextFileSaver_t = ptr::null_mut();
@@ -29,6 +31,7 @@ impl TextFileSaver {
         }
     }
 
+    /// Save a model.
     pub fn save_model(
         &mut self,
         model: &ParameterCollection,
@@ -47,6 +50,7 @@ impl TextFileSaver {
         }
     }
 
+    /// Save a parameter.
     pub fn save_parameter(&mut self, param: &Parameter, key: Option<&str>) -> std_io::Result<()> {
         unsafe {
             let key_c = CString::new(key.unwrap_or("")).unwrap();
@@ -57,6 +61,7 @@ impl TextFileSaver {
         }
     }
 
+    /// Save a lookup parameter.
     pub fn save_lookup_parameter(
         &mut self,
         param: &LookupParameter,
@@ -76,10 +81,13 @@ impl TextFileSaver {
     }
 }
 
+/// `Save` trait
 pub trait Save {
+    /// Save itself.
     fn save<P: AsRef<Path>>(&self, path: P) -> std_io::Result<()>;
 }
 
+/// A struct to load a model.
 #[derive(Debug)]
 pub struct TextFileLoader {
     inner: NonNull<dynet_sys::dynetTextFileLoader>,
@@ -89,6 +97,7 @@ impl_wrap_owned!(TextFileLoader, dynetTextFileLoader_t);
 impl_drop!(TextFileLoader, dynetDeleteTextFileLoader);
 
 impl TextFileLoader {
+    /// Create a new `TextFileLoader`.
     pub fn new<P: AsRef<Path>>(path: P) -> std_io::Result<TextFileLoader> {
         unsafe {
             let mut loader_ptr: *mut dynet_sys::dynetTextFileLoader_t = ptr::null_mut();
@@ -102,6 +111,7 @@ impl TextFileLoader {
         }
     }
 
+    /// Load a model.
     pub fn populate_model(
         &mut self,
         model: &mut ParameterCollection,
@@ -120,6 +130,7 @@ impl TextFileLoader {
         }
     }
 
+    /// Load a parameter.
     pub fn populate_parameter(
         &mut self,
         param: &mut Parameter,
@@ -138,6 +149,7 @@ impl TextFileLoader {
         }
     }
 
+    /// Load a lookup parameter.
     pub fn populate_lookup_parameter(
         &mut self,
         param: &mut LookupParameter,
@@ -156,6 +168,7 @@ impl TextFileLoader {
         }
     }
 
+    /// Load a parameter from a model.
     pub fn load_param(
         &mut self,
         model: &mut ParameterCollection,
@@ -177,6 +190,7 @@ impl TextFileLoader {
         }
     }
 
+    /// Load a lookup parameter from a model.
     pub fn load_lookup_param(
         &mut self,
         model: &mut ParameterCollection,
@@ -199,6 +213,8 @@ impl TextFileLoader {
     }
 }
 
+/// `Load` trait
 pub trait Load {
+    /// Load itself.
     fn load<P: AsRef<Path>>(&mut self, path: P) -> std_io::Result<()>;
 }

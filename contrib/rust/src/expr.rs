@@ -1175,6 +1175,7 @@ pub fn block_dropout<E: AsRef<Expression>>(x: E, p: f32) -> Expression {
     expr_func_body!(dynetApplyBlockDropout, x.as_ref().as_ptr(), p)
 }
 
+/// Convolution operation
 pub fn filter1d_narrow<E1: AsRef<Expression>, E2: AsRef<Expression>>(x: E1, f: E2) -> Expression {
     expr_func_body!(
         dynetApplyFilter1dNarrow,
@@ -1188,12 +1189,14 @@ pub fn kmax_pooling<E: AsRef<Expression>>(x: E, k: u32, d: u32) -> Expression {
     expr_func_body!(dynetApplyKmaxPooling, x.as_ref().as_ptr(), k, d)
 }
 
+/// Convolution operation
 pub fn fold_rows<E: AsRef<Expression>>(x: E, nrows: u32) -> Expression {
     expr_func_body!(dynetApplyFoldRows, x.as_ref().as_ptr(), nrows)
 }
 
-impl_expr_unary_func!(average_cols, dynetApplyAverageCols, "");
+impl_expr_unary_func!(average_cols, dynetApplyAverageCols, "Convolution operation");
 
+/// Convolution operation
 pub fn kmh_ngram<E: AsRef<Expression>>(x: E, n: u32) -> Expression {
     expr_func_body!(dynetApplyKmhNgram, x.as_ref().as_ptr(), n)
 }

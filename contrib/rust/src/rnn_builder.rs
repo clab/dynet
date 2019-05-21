@@ -547,6 +547,7 @@ impl CompactVanillaLSTMBuilder {
     }
 }
 
+/// FastLSTMBuilder
 #[derive(Debug)]
 pub struct FastLSTMBuilder {
     inner: NonNull<dynet_sys::dynetRNNBuilder_t>,
@@ -716,6 +717,7 @@ impl_tree_lstm_builder!(
     and its children representations."
 );
 
+/// GRUBuilder
 #[derive(Debug)]
 pub struct GRUBuilder {
     inner: NonNull<dynet_sys::dynetRNNBuilder_t>,

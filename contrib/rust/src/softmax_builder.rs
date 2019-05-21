@@ -144,6 +144,7 @@ impl StandardSoftmaxBuilder {
         }
     }
 
+    /// Creates a new `StandardSoftmaxBuilder` from parameters.
     pub fn from_parameters(p_w: &mut Parameter, p_b: &mut Parameter) -> StandardSoftmaxBuilder {
         unsafe {
             let mut builder_ptr: *mut dynet_sys::dynetSoftmaxBuilder_t = ptr::null_mut();
