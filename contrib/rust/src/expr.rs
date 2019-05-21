@@ -422,6 +422,7 @@ macro_rules! impl_expr_binary_with_constant_op {
         impl ops::$name<Expression> for $scalar {
             type Output = Expression;
 
+            #[allow(trivial_numeric_casts)]
             fn $op_fn(self, rhs: Expression) -> Expression {
                 expr_func_body!($api_fn_cx, self as f32, rhs.as_ptr())
             }
@@ -430,6 +431,7 @@ macro_rules! impl_expr_binary_with_constant_op {
         impl<'a> ops::$name<&'a Expression> for $scalar {
             type Output = Expression;
 
+            #[allow(trivial_numeric_casts)]
             fn $op_fn(self, rhs: &'a Expression) -> Expression {
                 expr_func_body!($api_fn_cx, self as f32, rhs.as_ptr())
             }
@@ -439,6 +441,7 @@ macro_rules! impl_expr_binary_with_constant_op {
         impl ops::$name<$scalar> for Expression {
             type Output = Expression;
 
+            #[allow(trivial_numeric_casts)]
             fn $op_fn(self, rhs: $scalar) -> Expression {
                 expr_func_body!($api_fn_xc, self.as_ptr(), rhs as f32)
             }
@@ -447,6 +450,7 @@ macro_rules! impl_expr_binary_with_constant_op {
         impl<'a> ops::$name<$scalar> for &'a Expression {
             type Output = Expression;
 
+            #[allow(trivial_numeric_casts)]
             fn $op_fn(self, rhs: $scalar) -> Expression {
                 expr_func_body!($api_fn_xc, self.as_ptr(), rhs as f32)
             }

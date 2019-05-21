@@ -37,7 +37,7 @@ impl Code {
 
     #[allow(dead_code)]
     fn from_c(value: dynet_sys::DYNET_C_STATUS) -> Self {
-        Self::from_int(value as c_uint)
+        Self::from_int(value)
     }
 
     pub fn is_ok(value: c_uint) -> bool {
@@ -128,10 +128,10 @@ impl<T> ApiResult<T, Status> for result::Result<T, Status> {
                     _ => None,
                 };
                 let mut size: usize = 0;
-                let s = dynet_sys::dynetGetMessage(ptr::null_mut(), &mut size as *mut _);
+                let s = dynet_sys::dynetGetMessage(ptr::null_mut(), &mut size);
                 assert!(Code::is_ok(s));
                 let buffer = CString::new(vec![b'0'; size]).unwrap().into_raw();
-                let s = dynet_sys::dynetGetMessage(buffer, &mut size as *mut _);
+                let s = dynet_sys::dynetGetMessage(buffer, &mut size);
                 assert!(Code::is_ok(s));
                 let message = CString::from_raw(buffer).into_string().unwrap();
                 Err(Status::new(code, message, trace))

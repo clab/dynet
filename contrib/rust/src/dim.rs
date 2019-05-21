@@ -78,10 +78,7 @@ impl Dim {
     pub fn size(&self) -> u32 {
         unsafe {
             let mut retval: u32 = 0;
-            check_api_status!(dynet_sys::dynetGetDimTotalSize(
-                self.as_ptr(),
-                &mut retval as *mut _,
-            ));
+            check_api_status!(dynet_sys::dynetGetDimTotalSize(self.as_ptr(), &mut retval));
             retval
         }
     }
@@ -100,10 +97,7 @@ impl Dim {
     pub fn batch_size(&self) -> u32 {
         unsafe {
             let mut retval: u32 = 0;
-            check_api_status!(dynet_sys::dynetGetDimBatchSize(
-                self.as_ptr(),
-                &mut retval as *mut _,
-            ));
+            check_api_status!(dynet_sys::dynetGetDimBatchSize(self.as_ptr(), &mut retval));
             retval
         }
     }
@@ -120,10 +114,7 @@ impl Dim {
     pub fn sum_dims(&self) -> u32 {
         unsafe {
             let mut retval: u32 = 0;
-            check_api_status!(dynet_sys::dynetSumDimDimensions(
-                self.as_ptr(),
-                &mut retval as *mut _,
-            ));
+            check_api_status!(dynet_sys::dynetSumDimDimensions(self.as_ptr(), &mut retval));
             retval
         }
     }
@@ -180,7 +171,7 @@ impl Dim {
             let mut retval: u32 = 0;
             check_api_status!(dynet_sys::dynetGetDimNDimensions(
                 self.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval
         }
@@ -203,10 +194,7 @@ impl Dim {
     pub fn rows(&self) -> u32 {
         unsafe {
             let mut retval: u32 = 0;
-            check_api_status!(dynet_sys::dynetGetDimRows(
-                self.as_ptr(),
-                &mut retval as *mut _,
-            ));
+            check_api_status!(dynet_sys::dynetGetDimRows(self.as_ptr(), &mut retval));
             retval
         }
     }
@@ -231,10 +219,7 @@ impl Dim {
     pub fn cols(&self) -> u32 {
         unsafe {
             let mut retval: u32 = 0;
-            check_api_status!(dynet_sys::dynetGetDimCols(
-                self.as_ptr(),
-                &mut retval as *mut _,
-            ));
+            check_api_status!(dynet_sys::dynetGetDimCols(self.as_ptr(), &mut retval));
             retval
         }
     }
@@ -251,10 +236,7 @@ impl Dim {
     pub fn batch_elems(&self) -> u32 {
         unsafe {
             let mut retval: u32 = 0;
-            check_api_status!(dynet_sys::dynetGetDimBatchElems(
-                self.as_ptr(),
-                &mut retval as *mut _,
-            ));
+            check_api_status!(dynet_sys::dynetGetDimBatchElems(self.as_ptr(), &mut retval));
             retval
         }
     }
@@ -277,7 +259,7 @@ impl Dim {
             check_api_status!(dynet_sys::dynetGetDimDimensionSize(
                 self.as_ptr(),
                 i,
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval
         }
@@ -355,7 +337,7 @@ impl PartialEq for Dim {
             check_api_status!(dynet_sys::dynetIsDimEqualTo(
                 self.as_ptr(),
                 other.as_ptr(),
-                &mut retval as *mut _,
+                &mut retval,
             ));
             retval == 1
         }
@@ -392,13 +374,13 @@ impl fmt::Display for Dim {
             check_api_status!(dynet_sys::dynetRepresentDimAsString(
                 self.as_ptr(),
                 ptr::null_mut(),
-                &mut size as *mut _,
+                &mut size,
             ));
             let buffer = CString::new(vec![b'0'; size]).unwrap().into_raw();
             check_api_status!(dynet_sys::dynetRepresentDimAsString(
                 self.as_ptr(),
                 buffer,
-                &mut size as *mut _,
+                &mut size,
             ));
             f.write_str(CString::from_raw(buffer).to_str().unwrap())
         }

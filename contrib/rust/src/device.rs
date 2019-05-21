@@ -63,7 +63,7 @@ impl Device {
     pub fn num_devices() -> u32 {
         unsafe {
             let mut retval: u32 = 0;
-            check_api_status!(dynet_sys::dynetGetNumDevices(&mut retval as *mut _));
+            check_api_status!(dynet_sys::dynetGetNumDevices(&mut retval));
             retval
         }
     }
