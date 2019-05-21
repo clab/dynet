@@ -122,7 +122,7 @@ fn build_from_src() -> Result<((PathBuf, PathBuf)), Box<Error>> {
             .join(format!("target/build-dynet-{}", tag));
         log_var!(build_dir);
         if !build_dir.exists() {
-            fs::create_dir(&build_dir)?;
+            fs::create_dir_all(&build_dir)?;
         }
         let build_dir_s = build_dir.to_str().unwrap();
         let source = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?)
@@ -144,6 +144,14 @@ fn build_from_src() -> Result<((PathBuf, PathBuf)), Box<Error>> {
                     env::var("EIGEN3_INCLUDE_DIR").unwrap_or("/usr/local/lib".to_string())
                 ))
                 .arg("-DENABLE_C=ON")
+                .arg(format!(
+                    "-DBACKEND={}",
+                    if cfg!(feature = "cuda") {
+                        "cuda"
+                    } else {
+                        "eigen"
+                    }
+                ))
         });
         run("make", |command| {
             command
