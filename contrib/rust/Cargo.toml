@@ -16,6 +16,9 @@ libc = "0.2"
 [dev-dependencies]
 rand = "0.6"
 
+[features]
+cuda = ["dynet-sys/cuda"]
+
 [[example]]
 name = "xor"
 path = "examples/xor/xor.rs"
