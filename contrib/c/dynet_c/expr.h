@@ -958,6 +958,60 @@ DYNET_C_API DYNET_C_STATUS dynetApplyColwiseAdd(
     dynetExpression_t **newobj);
 
 /**
+ * Computes componentwise rounding.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyRoundWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise rounding.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyRoundWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise ceiling.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyCeilWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise ceiling.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyCeilWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise floor.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyFloorWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise floor.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyFloorWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
  * Computes softmax.
  * @param x A vector or matrix.
  * @param d Dimension to normalize over.

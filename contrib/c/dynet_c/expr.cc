@@ -649,6 +649,60 @@ DYNET_C_STATUS dynetApplyColwiseAdd(
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
+DYNET_C_STATUS dynetApplyRoundWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::round(*to_cpp_ptr(x), dynet::zero_gradient));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyRoundWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::round(*to_cpp_ptr(x), dynet::straight_through_gradient));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyCeilWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::ceil(*to_cpp_ptr(x), dynet::zero_gradient));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyCeilWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::ceil(*to_cpp_ptr(x), dynet::straight_through_gradient));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyFloorWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::floor(*to_cpp_ptr(x), dynet::zero_gradient));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetApplyFloorWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(x);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr_from_value(
+      dynet::floor(*to_cpp_ptr(x), dynet::straight_through_gradient));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
 DYNET_C_STATUS dynetApplySoftmax(
     const dynetExpression_t *x, uint32_t d, dynetExpression_t **newobj) try {
   DYNET_C_CHECK_NOT_NULL(x);
