@@ -827,6 +827,51 @@ pub fn colwise_add<E1: AsRef<Expression>, E2: AsRef<Expression>>(x: E1, bias: E2
     )
 }
 
+/// Computes rounding
+pub fn round<E: AsRef<Expression>>(x: E) -> Expression {
+    round_with_zero_gradient_mode(x)
+}
+impl_expr_unary_func!(
+    round_with_zero_gradient_mode,
+    dynetApplyRoundWithZeroGradientMode,
+    "Computes rounding with zero gradient mode"
+);
+impl_expr_unary_func!(
+    round_with_straight_through_gradient_mode,
+    dynetApplyRoundWithStraightThroughGradientMode,
+    "Computes rounding with straight through gradient mode"
+);
+
+/// Computes ceiling
+pub fn ceil<E: AsRef<Expression>>(x: E) -> Expression {
+    ceil_with_zero_gradient_mode(x)
+}
+impl_expr_unary_func!(
+    ceil_with_zero_gradient_mode,
+    dynetApplyCeilWithZeroGradientMode,
+    "Computes ceiling with zero gradient mode"
+);
+impl_expr_unary_func!(
+    ceil_with_straight_through_gradient_mode,
+    dynetApplyCeilWithStraightThroughGradientMode,
+    "Computes ceiling with straight through gradient mode"
+);
+
+/// Computes floor
+pub fn floor<E: AsRef<Expression>>(x: E) -> Expression {
+    floor_with_zero_gradient_mode(x)
+}
+impl_expr_unary_func!(
+    floor_with_zero_gradient_mode,
+    dynetApplyFloorWithZeroGradientMode,
+    "Computes floor with zero gradient mode"
+);
+impl_expr_unary_func!(
+    floor_with_straight_through_gradient_mode,
+    dynetApplyFloorWithStraightThroughGradientMode,
+    "Computes floor with straight through gradient mode"
+);
+
 /// Computes softmax
 pub fn softmax<E: AsRef<Expression>>(x: E, d: u32) -> Expression {
     expr_func_body!(dynetApplySoftmax, x.as_ref().as_ptr(), d)

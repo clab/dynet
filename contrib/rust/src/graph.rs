@@ -1,3 +1,6 @@
+use std::ffi::CString;
+use std::io as std_io;
+use std::path::Path;
 use std::ptr::{self, NonNull};
 
 use dynet_sys;
@@ -110,6 +113,29 @@ impl ComputationGraph {
     pub fn print_graphviz(&self) {
         unsafe {
             check_api_status!(dynet_sys::dynetPrintComputationGraphViz(self.as_ptr()));
+        }
+    }
+
+    /// Dump the ComputationGraph.
+    pub fn dump<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        show_values: bool,
+        show_gradients: bool,
+        nan_check_only: bool,
+    ) -> std_io::Result<()> {
+        unsafe {
+            let path_c = CString::new(path.as_ref().to_str().unwrap()).unwrap();
+            Result::from_api_status(
+                dynet_sys::dynetDumpComputationGraph(
+                    self.as_mut_ptr(),
+                    path_c.as_ptr(),
+                    show_values as u32,
+                    show_gradients as u32,
+                    nan_check_only as u32,
+                ),
+                (),
+            ).map_err(|status| std_io::Error::new(std_io::ErrorKind::Other, status.message()))
         }
     }
 }
