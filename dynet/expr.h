@@ -409,12 +409,13 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vecto
  *
  * \param g Computation graph
  * \param d The dimensions of the input
+ * \param device The place device for the input value, default_device by default
  *
  * \return A `d` dimensioned zero tensor
  */
-Expression zeros(ComputationGraph& g, const Dim& d);
+Expression zeros(ComputationGraph& g, const Dim& d, Device *device = dynet::default_device);
 // For backward compatibility
-inline Expression zeroes(ComputationGraph& g, const Dim& d) {return zeros(g, d);}
+inline Expression zeroes(ComputationGraph& g, const Dim& d, Device *device = dynet::default_device) {return zeros(g, d, device);}
 
 /**
  * \ingroup inputoperations
@@ -423,10 +424,11 @@ inline Expression zeroes(ComputationGraph& g, const Dim& d) {return zeros(g, d);
  *
  * \param g Computation graph
  * \param d The dimensions of the input
+ * \param device The place device for the input value, default_device by default
  *
  * \return A `d` dimensioned tensor of ones
  */
-Expression ones(ComputationGraph& g, const Dim& d);
+Expression ones(ComputationGraph& g, const Dim& d, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -436,10 +438,11 @@ Expression ones(ComputationGraph& g, const Dim& d);
  * \param g Computation graph
  * \param d The dimensions of the input
  * \param val The value of the input
+ * \param device The place device for the input value, default_device by default
  *
  * \return A `d` dimensioned tensor filled with value `val`
  */
-Expression constant(ComputationGraph& g, const Dim& d, float val);
+Expression constant(ComputationGraph& g, const Dim& d, float val, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -450,10 +453,11 @@ Expression constant(ComputationGraph& g, const Dim& d, float val);
  * \param d The dimensions of the input
  * \param mean The mean of the distribution (default: 0.0)
  * \param stddev The standard deviation of the distribution (default: 1.0)
+ * \param device The place device for the input value, default_device by default
  *
  * \return A "d" dimensioned normally distributed vector
  */
-Expression random_normal(ComputationGraph& g, const Dim& d, float mean=0.f, float stddev=1.0);
+Expression random_normal(ComputationGraph& g, const Dim& d, float mean=0.f, float stddev=1.0, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -464,15 +468,17 @@ Expression random_normal(ComputationGraph& g, const Dim& d, float mean=0.f, floa
  * \param d The dimensions of the input
  * \param p The bernoulli p parameter
  * \param scale A scaling factor for the output ("active" elements will receive this value)
+ * \param device The place device for the input value, default_device by default
  *
  * \return A "d" dimensioned bernoulli distributed vector
  */
-Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale = 1.0f);
+Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale = 1.0f, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
  * \brief Create a random uniform vector
  * \details Create a vector distributed according to uniform distribution with boundaries left and right.
+ * \param device The place device for the input value, default_device by default
  *
  * \param g Computation graph
  * \param d The dimensions of the input
@@ -481,7 +487,7 @@ Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scal
  *
  * \return A "d" dimensioned uniform distributed vector
  */
-Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right);
+Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right, Device *device = dynet::default_device);
 
 /**
  * \ingroup inputoperations
@@ -492,10 +498,11 @@ Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real rig
  * \param d The dimensions of the input
  * \param mu The mu parameter
  * \param beta The beta parameter
+ * \param device The place device for the input value, default_device by default
  *
  * \return A "d" dimensioned Gumbel distributed vector
  */
-Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu = 0.0, real beta = 1.0);
+Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu = 0.0, real beta = 1.0, Device *device = dynet::default_device);
 
 ////////////////////////////////////////////////
 // Arithmetic operations                      //

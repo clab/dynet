@@ -36,19 +36,21 @@ namespace DynetSharpExamples {
             // For good practice, renew the computation graph
             dy.RenewCG();
 
+            /*/ In the past, we need to explicitly convert Parameters to Expressions, now
+            // it's all done automatically.
             // Build the graph
             Expression W = dy.parameter(p_W); // Can also do: p_W.ToExpression();
             Expression b = dy.parameter(p_b);
             Expression V = dy.parameter(p_V);
-            Expression a = dy.parameter(p_a);
+            Expression a = dy.parameter(p_a); */
 
             // Set x_values to change the inputs to the network.
-            Expression x = dy.input(new[] { 0f, 0f });
+            Expression x = dy.inputVector(2);
             // Set y_value to change the target output
             Expression y = dy.input(0f);
 
-            Expression h = dy.tanh(W * x + b);
-            Expression y_pred = V * h + a;
+            Expression h = dy.tanh(p_W * x + p_b);
+            Expression y_pred = p_V * h + p_a;
             Expression loss_expr = dy.squared_distance(y_pred, y);
 
             // Show the computation graph, just for fun.

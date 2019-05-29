@@ -47,14 +47,14 @@ Expression const_lookup(ComputationGraph& g, LookupParameter p, unsigned index) 
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const unsigned* pindex) { return Expression(&g, g.add_const_lookup(p, pindex)); }
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>& indices) { return Expression(&g, g.add_const_lookup(p, indices)); }
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const vector<unsigned>* pindices) { return Expression(&g, g.add_const_lookup(p, pindices)); }
-Expression zeros(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Constant>(d, 0.f)); }
+Expression zeros(ComputationGraph& g, const Dim& d, Device *device) { return Expression(&g, g.add_function<Constant>(device, d, 0.f)); }
 // Expression zeroes(ComputationGraph& g, const Dim& d) {return zeros(g, d);}
-Expression ones(ComputationGraph& g, const Dim& d) { return Expression(&g, g.add_function<Constant>(d, 1.f)); }
-Expression constant(ComputationGraph& g, const Dim& d, float val) { return Expression(&g, g.add_function<Constant>(d, val)); }
-Expression random_normal(ComputationGraph& g, const Dim& d, float mean, float stddev) { return Expression(&g, g.add_function<RandomNormal>(d, mean, stddev)); }
-Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale) { return Expression(&g, g.add_function<RandomBernoulli>({}, d, p, scale)); }
-Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right) { return Expression(&g, g.add_function<RandomUniform>({}, d, left, right)); }
-Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu, real beta) { return Expression(&g, g.add_function<RandomGumbel>({}, d, mu, beta)); }
+Expression ones(ComputationGraph& g, const Dim& d, Device *device) { return Expression(&g, g.add_function<Constant>(device, d, 1.f)); }
+Expression constant(ComputationGraph& g, const Dim& d, float val, Device *device) { return Expression(&g, g.add_function<Constant>(device, d, val)); }
+Expression random_normal(ComputationGraph& g, const Dim& d, float mean, float stddev, Device *device) { return Expression(&g, g.add_function<RandomNormal>(device, d, mean, stddev)); }
+Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale, Device *device) { return Expression(&g, g.add_function<RandomBernoulli>(device, {}, d, p, scale)); }
+Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right, Device *device) { return Expression(&g, g.add_function<RandomUniform>(device, {}, d, left, right)); }
+Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu, real beta, Device *device) { return Expression(&g, g.add_function<RandomGumbel>(device, {}, d, mu, beta)); }
 
 Expression nobackprop(const Expression& x) { return Expression(x.pg, x.pg->add_function<NoBackprop>({x.i})); }
 Expression flip_gradient(const Expression& x) { return Expression(x.pg, x.pg->add_function<ScaleGradient>({x.i}, -1.f)); }

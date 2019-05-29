@@ -114,14 +114,14 @@ void ComputationGraph::clear() {
   ee->invalidate();
 }
 
-VariableIndex ComputationGraph::add_function_node(Node *node) {
+VariableIndex ComputationGraph::add_function_node(Node *node, Device *device) {
   VariableIndex new_node_index((VariableIndex)nodes.size());
   nodes.push_back(node);
   if (node->device == nullptr) {
     if (node->arity() > 0) {
       node->device = nodes[node->args[0]]->device;
     } else {
-      node->device = dynet::default_device;
+      node->device = device == nullptr ? dynet::default_device : device;
     }
   }
   if (node->device->type == DeviceType::GPU && !node->has_cuda_implemented)
