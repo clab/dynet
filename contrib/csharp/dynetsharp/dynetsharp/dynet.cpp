@@ -1951,6 +1951,52 @@ namespace dynetsharp {
 			return gcnew Expression(dynet::input(*cg, ConvertArrToDim(tensor->Shape()), *tensor->_vec, str2dev(device)));
 		)
 	}
+	/// <summary>
+	/// <para>Create a modifiable Expression object with certain dimensions</para>
+	/// <remarks>You must call "SetValue" on the Expression before doing a forward pass</remarks>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the Expression</param>
+	Expression ^DynetFunctions::inputTensor(array<long> ^dim) {
+		ExceptionWrap(
+			return inputTensor(dim, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a modifiable Expression object with certain dimensions</para>
+	/// <remarks>You must call "SetValue" on the Expression before doing a forward pass</remarks>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the Expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::inputTensor(array<long> ^dim, String ^device) {
+		ExceptionWrap(
+			std::vector<real> *val = new std::vector<real>();
+			_vecInputs.push_back(val);
+			return gcnew Expression(dynet::input(*cg, ConvertArrToDim(dim), val, str2dev(device)), val);
+		)
+	}
+	/// <summary>
+	/// <para>Create a modifiable Expression vector of a certain dimension</para>
+	/// <remarks>You must call "SetValue" on the Expression before doing a forward pass</remarks>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the Expression</param>
+	Expression ^DynetFunctions::inputVector(long dim) {
+		ExceptionWrap(
+			return inputVector(dim, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a modifiable Expression vector of a certain dimension</para>
+	/// <remarks>You must call "SetValue" on the Expression before doing a forward pass</remarks>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the Expression</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::inputVector(long dim, String ^device) {
+		ExceptionWrap(
+			std::vector<real> *val = new std::vector<real>();
+			_vecInputs.push_back(val);
+			return gcnew Expression(dynet::input(*cg, { (unsigned int)dim }, val, str2dev(device)), val);
+		)
+	}
 	Expression ^DynetFunctions::average(List<Expression^> ^l) {
 		ExceptionWrap(
 			return average(l->ToArray());
@@ -2593,9 +2639,25 @@ namespace dynetsharp {
 			return gcnew Expression(dynet::logistic(x->__thisptr));
 		)
 	}
+	/// <summary>
+	/// <para>Alias to logistic</para>
+	/// </summary>
+	Expression ^DynetFunctions::sigmoid(Expression ^x) {
+		ExceptionWrap(
+			return logistic(x);
+		)
+	}
 	Expression ^DynetFunctions::rectify(Expression ^x) {
 		ExceptionWrap(
 			return gcnew Expression(dynet::rectify(x->__thisptr));
+		)
+	}
+	/// <summary>
+	/// <para>Alias to rectify</para>
+	/// </summary>
+	Expression ^DynetFunctions::relu(Expression ^x) {
+		ExceptionWrap(
+			return rectify(x);
 		)
 	}
 	Expression ^DynetFunctions::elu(Expression ^x) {

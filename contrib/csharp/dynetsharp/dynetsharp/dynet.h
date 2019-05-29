@@ -154,7 +154,7 @@ namespace dynetsharp {
 		bool fHasFloatVal = false;
 		std::vector<float> *floatArrVal = NULL;
 		bool fHasFloatArrVal = false;
-
+			
 		// Initialize
 		void Init(dynet::Expression &inexpr) {
 			CheckForInitialized();
@@ -1498,6 +1498,10 @@ namespace dynetsharp {
 		static Expression ^input(array<array<float>^>^ num, String ^device);
 		static Expression ^inputTensor(Tensor ^tensor);
 		static Expression ^inputTensor(Tensor ^tensor, String ^device);
+		static Expression ^inputVector(long dim);
+		static Expression ^inputTensor(array<long> ^dim);
+		static Expression ^inputVector(long dim, String ^device);
+		static Expression ^inputTensor(array<long> ^dim, String ^device);
 		static Expression ^average(List<Expression^> ^l);
 		static Expression ^average(... array<Expression^> ^arr);
 		static Expression ^esum(List<Expression^> ^l);
@@ -1574,7 +1578,9 @@ namespace dynetsharp {
 		static Expression ^log_sigmoid(Expression ^x);
 		static Expression ^lgamma(Expression ^x);
 		static Expression ^logistic(Expression ^x);
+		static Expression ^sigmoid(Expression ^x);
 		static Expression ^rectify(Expression ^x);
+		static Expression ^relu(Expression ^x);
 		static Expression ^elu(Expression ^x);
 		static Expression ^elu(Expression ^x, float alpha);
 		static Expression ^selu(Expression ^x);

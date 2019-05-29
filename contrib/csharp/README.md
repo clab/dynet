@@ -524,7 +524,7 @@ e = dy.huber_distance(e1, e2, c: 1.345);
 // ty must be a vector that takes values between 0 and 1
 e = -(ty * dy.log(e1) + (1 - ty) * dy.log(1 - e1));
 ty = dy.input(new[] { 0f, 0.5f, 0.5f, 1f });
-Expression e_scale = ty = dy.input(new[] { 0f, 0f, 0f, 0f });
+Expression e_scale = dy.inputVector(4);
 e_scale.SetValue(new[] { 0.5f, 0.5f, 0.5f, 0.5f });
 e = dy.binary_log_loss(e_scale, ty);
 // The binary_log_loss is equivalent to the following:
