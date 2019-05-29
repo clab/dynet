@@ -1,0 +1,32 @@
+[package]
+name = "dynet"
+version = "0.1.0"
+authors = ["Hiroki Teranishi <teranishihiroki@gmail.com>"]
+description = "DyNet: The Dynamic Neural Network Toolkit"
+keywords = ["deep-learning", "neural-networks", "machine-learning"]
+license = "Apache-2.0"
+repository = "https://github.com/clab/dynet"
+readme = "README.md"
+
+[dependencies]
+backtrace = "0.3"
+dynet-sys = { path = "dynet-sys" }
+libc = "0.2"
+
+[dev-dependencies]
+rand = "0.6"
+
+[features]
+cuda = ["dynet-sys/cuda"]
+
+[[example]]
+name = "xor"
+path = "examples/xor/xor.rs"
+
+[[example]]
+name = "mnist"
+path = "examples/mnist/mnist.rs"
+
+[[example]]
+name = "rnnlm"
+path = "examples/rnnlm/rnnlm.rs"

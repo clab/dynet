@@ -21,6 +21,15 @@ typedef struct dynetExpression dynetExpression_t;
 DYNET_C_API DYNET_C_STATUS dynetCreateExpression(dynetExpression_t **newobj);
 
 /**
+ * Creates a clone of the existing Expression object.
+ * @param src Pointer to a source Expression.
+ * @param newobj Pointer to receive a handler.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetCloneExpression(
+    const dynetExpression_t *src, dynetExpression_t **newobj);
+
+/**
  * Deletes the Expression object.
  * @param expr Pointer of a handler.
  * @return Status code.
@@ -147,7 +156,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyLookupParameter(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyConstParameter(
-    dynetComputationGraph_t *g, dynetParameter_t *p,
+    dynetComputationGraph_t *g, const dynetParameter_t *p,
     dynetExpression_t **newobj);
 
 /**
@@ -158,7 +167,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyConstParameter(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyConstLookupParameter(
-    dynetComputationGraph_t *g, dynetLookupParameter_t *p,
+    dynetComputationGraph_t *g, const dynetLookupParameter_t *p,
     dynetExpression_t **newobj);
 
 /**
@@ -187,7 +196,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyLookup(
     const uint32_t *indices, size_t n, dynetExpression_t **newobj);
 
 /**
- * Looks up parameter.
+ * Looks up constant parameter.
  * @param g Computation graph.
  * @param p LookupParameter object from which to load.
  * @param index Index of the parameters within p.
@@ -195,11 +204,11 @@ DYNET_C_API DYNET_C_STATUS dynetApplyLookup(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyConstLookupOne(
-    dynetComputationGraph_t *g, dynetLookupParameter_t *p, uint32_t index,
-    dynetExpression_t **newobj);
+    dynetComputationGraph_t *g, const dynetLookupParameter_t *p,
+    uint32_t index, dynetExpression_t **newobj);
 
 /**
- * Looks up parameters.
+ * Looks up constant parameters.
  * @param g Computation graph.
  * @param p LookupParameter object from which to load.
  * @param indices Index of the parameters at each position in the batch.
@@ -208,7 +217,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyConstLookupOne(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplyConstLookup(
-    dynetComputationGraph_t *g, dynetLookupParameter_t *p,
+    dynetComputationGraph_t *g, const dynetLookupParameter_t *p,
     const uint32_t *indices, size_t n, dynetExpression_t **newobj);
 
 /**
@@ -442,7 +451,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplySum(
     const dynetExpression_t *const *xs, size_t n, dynetExpression_t **newobj);
 
 /**
- * Applies sum all elements operation.
+ * Sums all elements.
  * @param x Input expression.
  * @param newobj Pointer to receive an Expression.
  * @return Status code.
@@ -775,7 +784,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyLgamma(
     const dynetExpression_t *x, dynetExpression_t **newobj);
 
 /**
- * Computes log.
+ * Computes logarithm.
  * @param x Input expression.
  * @param newobj Pointer to receive an Expression.
  * @return Status code.
@@ -831,7 +840,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplySilu(
     const dynetExpression_t *x, float beta, dynetExpression_t **newobj);
 
 /**
- * Computes absolute value.
+ * Computes soft sign.
  * @param x Input expression.
  * @param newobj Pointer to receive an Expression.
  * @return Status code.
@@ -949,6 +958,60 @@ DYNET_C_API DYNET_C_STATUS dynetApplyColwiseAdd(
     dynetExpression_t **newobj);
 
 /**
+ * Computes componentwise rounding.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyRoundWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise rounding.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyRoundWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise ceiling.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyCeilWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise ceiling.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyCeilWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise floor.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyFloorWithZeroGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
+ * Computes componentwise floor.
+ * @param x Input expression.
+ * @param newobj Pointer to receive an Expression.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetApplyFloorWithStraightThroughGradientMode(
+    const dynetExpression_t *x, dynetExpression_t **newobj);
+
+/**
  * Computes softmax.
  * @param x A vector or matrix.
  * @param d Dimension to normalize over.
@@ -1035,7 +1098,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyHingeOne(
     dynetExpression_t **newobj);
 
 /**
- * Computes hinge loss.
+ * Computes batched hinge loss.
  * @param x A mini-batch of vectors of scores.
  * @param indices The indices of the correct candidates for each batch element.
  * @param n Number of indices.
@@ -1094,7 +1157,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplySparsemax(
  * @return Status code.
  */
 DYNET_C_API DYNET_C_STATUS dynetApplySparsemaxLoss(
-    const dynetExpression_t *x, const uint32_t target_support, size_t n,
+    const dynetExpression_t *x, const uint32_t *target_support, size_t n,
     dynetExpression_t **newobj);
 
 /**
@@ -1184,7 +1247,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyPairwiseRankLoss(
     dynetExpression_t **newobj);
 
 /**
- * Computes poisson loss.
+ * Computes Poisson loss.
  * @param x The parameter of the Poisson distribution.
  * @param y The target value.
  * @param newobj Pointer to receive an Expression.
@@ -1348,7 +1411,7 @@ DYNET_C_API DYNET_C_STATUS dynetApplyPickBatchElems(
     dynetExpression_t **newobj);
 
 /**
- * Stridingly selects in multiple dimensions
+ * Stridingly selects in multiple dimensions.
  * @param x Input expression.
  * @param strides List of strides for each dimension, must be >= 1. Dimensions
  *                not included default to 1. Batch dimension can be included as

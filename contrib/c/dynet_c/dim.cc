@@ -4,6 +4,7 @@
 #include <dynet_c/internal.h>
 #include <dynet_c/dim.h>
 
+#include <sstream>
 #include <vector>
 
 using dynet_c::internal::to_c_ptr;
@@ -33,6 +34,14 @@ DYNET_C_STATUS dynetCreateDimWithDimensionsAndBatch(
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
+DYNET_C_STATUS dynetCloneDim(
+    const dynetDim_t *src, dynetDim_t **newobj) try {
+  DYNET_C_CHECK_NOT_NULL(src);
+  DYNET_C_CHECK_NOT_NULL(newobj);
+  *newobj = to_c_ptr(new dynet::Dim(*to_cpp_ptr(src)));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
 DYNET_C_STATUS dynetDeleteDim(dynetDim_t *dim) try {
   DYNET_C_CHECK_NOT_NULL(dim);
   delete to_cpp_ptr(dim);
@@ -44,6 +53,14 @@ DYNET_C_STATUS dynetGetDimTotalSize(
   DYNET_C_CHECK_NOT_NULL(dim);
   DYNET_C_CHECK_NOT_NULL(retval);
   *retval = to_cpp_ptr(dim)->size();
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetGetDimBatchSize(
+    const dynetDim_t *dim, uint32_t *retval) try {
+  DYNET_C_CHECK_NOT_NULL(dim);
+  DYNET_C_CHECK_NOT_NULL(retval);
+  *retval = to_cpp_ptr(dim)->batch_size();
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
 
@@ -119,5 +136,33 @@ DYNET_C_STATUS dynetTransposeDim(
   DYNET_C_CHECK_NOT_NULL(dim);
   DYNET_C_CHECK_NOT_NULL(new_dim);
   *new_dim = to_c_ptr_from_value(to_cpp_ptr(dim)->transpose());
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetIsDimEqualTo(
+    const dynetDim_t *dim, const dynetDim_t *other, DYNET_C_BOOL *retval) try {
+  DYNET_C_CHECK_NOT_NULL(dim);
+  DYNET_C_CHECK_NOT_NULL(other);
+  DYNET_C_CHECK_NOT_NULL(retval);
+  *retval = dynet::operator==(*to_cpp_ptr(dim), *to_cpp_ptr(other));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetIsNotDimEqualTo(
+    const dynetDim_t *dim, const dynetDim_t *other, DYNET_C_BOOL *retval) try {
+  DYNET_C_CHECK_NOT_NULL(dim);
+  DYNET_C_CHECK_NOT_NULL(other);
+  DYNET_C_CHECK_NOT_NULL(retval);
+  *retval = dynet::operator!=(*to_cpp_ptr(dim), *to_cpp_ptr(other));
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_API DYNET_C_STATUS dynetRepresentDimAsString(
+    const dynetDim_t *dim, char *retval, size_t *size) try {
+  DYNET_C_CHECK_NOT_NULL(dim);
+  DYNET_C_CHECK_NOT_NULL(size);
+  std::stringstream ss;
+  dynet::operator<<(ss, *to_cpp_ptr(dim));
+  dynet_c::internal::copy_string_to_array(ss.str(), retval, size);
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS

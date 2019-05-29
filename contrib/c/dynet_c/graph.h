@@ -86,7 +86,7 @@ DYNET_C_API DYNET_C_STATUS dynetGetExprValueFromComputationGraph(
     const dynetTensor_t **retval);
 
 /**
- * Get gradient for the given expression.
+ * Gets the gradient for the given expression.
  * @param cg Pointer of a handler.
  * @param expr Expression to evaluate.
  * @param retval Pointer to receive a calculated value.
@@ -120,5 +120,18 @@ DYNET_C_API DYNET_C_STATUS dynetBackwardExprOnComputationGraph(
  */
 DYNET_C_API DYNET_C_STATUS dynetPrintComputationGraphViz(
     const dynetComputationGraph_t *cg);
+
+/**
+ * Dump the ComputationGraph to a file.
+ * @param cg Pointer of a handler.
+ * @param show_values Show internal values.
+ * @param show_gradients Show gradient values.
+ * @param nan_check_only Only check whether each gradient is nan.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetDumpComputationGraph(
+    dynetComputationGraph_t *cg, const char *filename,
+    DYNET_C_BOOL show_values, DYNET_C_BOOL show_gradients,
+    DYNET_C_BOOL nan_check_only);
 
 #endif  // DYNET_C_GRAPH_H_

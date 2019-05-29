@@ -1,0 +1,6 @@
+/target/
+/dynet-sys/target/
+**/*.rs.bk
+Cargo.lock
+*.model
+/examples/*/data
