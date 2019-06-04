@@ -3493,14 +3493,14 @@ cpdef Expression log(Expression x):
 cpdef Expression log_sigmoid(Expression x): 
     """Log sigmoid
     
-    Calculate elementwise log sigmoid function :math:`y_i = \ln(\\frac{1}{1+e^{x_i}})`
+    Calculate elementwise log sigmoid function :math:`y_i = \ln(\\frac{1}{1+e^{-x_i}})`
     This is more numerically stable than `log(logistic(x))`
     
     Args:
         x (dynet.Expression): Input expression
     
     Returns:
-        dynet.Expression: :math:`y_i = \ln(\\frac{1}{1+e^{x_i}})`
+        dynet.Expression: :math:`y_i = \ln(\\frac{1}{1+e^{-x_i}})`
     """
     return Expression.from_cexpr(x.cg_version, c_log_sigmoid(x.c()))
 cpdef Expression lgamma(Expression x): 
