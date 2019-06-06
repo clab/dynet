@@ -65,6 +65,24 @@ int main(int argc, char** argv) {
     cerr << "E = " << loss << endl;
   }
 
+  // Check whether the ComputationGraph learns correctly or not.
+  x_values[0] = -1;
+  x_values[1] = -1;
+  cg.forward(loss_expr);
+  std::cout << "[-1,-1] -1 : " << as_scalar(y_pred.value()) << std::endl;
+  x_values[0] = -1;
+  x_values[1] =  1;
+  cg.forward(loss_expr);
+  std::cout << "[-1, 1]  1 : " << as_scalar(y_pred.value()) << std::endl;
+  x_values[0] =  1;
+  x_values[1] = -1;
+  cg.forward(loss_expr);
+  std::cout << "[ 1,-1]  1 : " << as_scalar(y_pred.value()) << std::endl;
+  x_values[0] =  1;
+  x_values[1] =  1;
+  cg.forward(loss_expr);
+  std::cout << "[ 1, 1] -1 : " << as_scalar(y_pred.value()) << std::endl;
+
   // Output the model and parameter objects to a file.
   TextFileSaver saver("xor.model");
   saver.save(m);
