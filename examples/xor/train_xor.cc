@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
     cerr << "E = " << loss << endl;
   }
 
-  // Check whether the ComputationGraph learns correctly or not.
+  // Check whether our ComputationGraph learns correctly or not.
   x_values[0] = -1;
   x_values[1] = -1;
   cg.forward(loss_expr);
