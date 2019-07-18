@@ -21,7 +21,7 @@ set(SCALA_VERSION "2.11.11" CACHE STRING "Scala version to compile the swig wrap
 string(REGEX MATCH "[0-9]+\\.[0-9]+" SCALA_BIN_VERSION "${SCALA_VERSION}")
 
 # Set java package (+cuda flag, if appropriate)
-set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet.internal)
+set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet.internal -Dfinal)
 
 # Run swig
 set_source_files_properties(dynet_swig.i PROPERTIES CPLUSPLUS ON)
@@ -60,6 +60,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/CompactVanillaLSTMBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/CyclicalSGDTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/Device.java"
+    "${CMAKE_SWIG_OUTDIR}/DeviceManager.java"
     "${CMAKE_SWIG_OUTDIR}/DeviceMempool.java"
     "${CMAKE_SWIG_OUTDIR}/DeviceMempoolSizes.java"
     "${CMAKE_SWIG_OUTDIR}/DeviceType.java"
@@ -112,6 +113,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_p_p_char.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_size_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__AlignedMemoryPool_p_t.java"
+    "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Device_p_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Node_p_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Tensor_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__VariableIndex_t.java"

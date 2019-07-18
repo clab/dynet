@@ -14,7 +14,7 @@ class Dim private[dynet] (private[dynet] val dim: internal.Dim) {
   def truncate(): Dim = new Dim(dim.truncate())
   def singleBatch(): Dim = new Dim(dim.single_batch())
 
-  def resize(i: Long) = dim.resize(i)
+  def resize(i: Long): Unit = dim.resize(i)
   def nDims(): Long = dim.ndims()
   def rows(): Long = dim.rows()
   def cols(): Long = dim.cols()
@@ -31,7 +31,7 @@ class Dim private[dynet] (private[dynet] val dim: internal.Dim) {
   /** We override `equals` so that `Dim` objects should be equal whenever all of their dimension
     * sizes match.
     */
-  override def equals(that: Any) = that match {
+  override def equals(that: Any): Boolean = that match {
     case that: Dim => dim == that.dim
     case _ => false
   }
@@ -39,7 +39,7 @@ class Dim private[dynet] (private[dynet] val dim: internal.Dim) {
 
   override def toString: String = "Dim(" + (0 until nDims.toInt).map(get(_)).mkString(", ") + ")"
 
-  def debugString(): String = s"(Dim: ${size} ${nDims} ${(0 until nDims.toInt).map(get(_))} )"
+  def debugString(): String = s"(Dim: $size $nDims ${(0 until nDims.toInt).map(get(_))} )"
 }
 
 /** Factory for [[edu.cmu.dynet.Dim]] instances. */

@@ -160,6 +160,8 @@ struct Node;
 struct ParameterStorage;
 struct LookupParameterStorage;
 
+struct Device;
+
 ///////////////////////////////////
 // declarations from dynet/dim.h //
 ///////////////////////////////////
@@ -327,9 +329,12 @@ private:
 
 struct ParameterStorageBase {
   virtual void scale_parameters(float a) = 0;
+  virtual void scale_gradient(float a) = 0;
   virtual void zero() = 0;
   virtual void squared_l2norm(float* sqnorm) const = 0;
   virtual void g_squared_l2norm(float* sqnorm) const = 0;
+  virtual bool is_updated() const = 0;
+  virtual bool has_grad() const = 0;
   virtual size_t size() const = 0;
   virtual ~ParameterStorageBase();
 };
@@ -390,11 +395,16 @@ class ParameterCollection {
   float gradient_l2_norm() const;
   void reset_gradient();
 
-  Parameter add_parameters(const Dim& d, float scale = 0.0f);
-  Parameter add_parameters(const Dim& d, const ParameterInit & init);
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d);
-  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init);
-
+  Parameter add_parameters(const Dim& d, float scale = 0.0f,
+                           const std::string & name = "", Device *device = dynet::default_device);
+  Parameter add_parameters(const Dim& d, Device *device);
+  Parameter add_parameters(const Dim& d, const std::string & name, Device *device = dynet::default_device);
+  Parameter add_parameters(const Dim& d, const ParameterInit & init,
+                           const std::string & name = "", Device *device = dynet::default_device);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d,
+                                        const std::string & name = "", Device *device = dynet::default_device);
+  LookupParameter add_lookup_parameters(unsigned n, const Dim& d, const ParameterInit & init,
+                                        const std::string & name = "", Device *device = dynet::default_device);
   void project_weights(float radius = 1.0f);
   void set_weight_decay_lambda(float lambda);
 
@@ -439,6 +449,7 @@ struct Expression {
   ComputationGraph *pg;
   VariableIndex i;
   Expression(ComputationGraph *pg, VariableIndex i) : pg(pg), i(i) { };
+  std::string get_device_name();
   const Tensor& value();
   const Dim& dim() const { return pg->get_dimension(i); }
 };
@@ -453,10 +464,13 @@ Expression f(const T& xs, const T1& arg1);
 
 /* INPUT OPERATIONS */
 
-Expression input(ComputationGraph& g, real s);
-Expression input(ComputationGraph& g, const real *ps);
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata);
-Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f);
+Expression input(ComputationGraph& g, real s, Device *device = dynet::default_device);
+Expression input(ComputationGraph& g, const real *ps, Device *device = dynet::default_device);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>& data, Device *device = dynet::default_device);
+// Expression input(ComputationGraph& g, const Dim& d, const std::vector<float>* pdata, Device *device = dynet::default_device);
+Expression input(ComputationGraph& g, const Dim& d, const std::vector<unsigned int>& ids, const std::vector<float>& data, float defdata = 0.f, Device *device = dynet::default_device);
+Expression one_hot(ComputationGraph& g, unsigned int d, unsigned int idx, Device *device = dynet::default_device);
+Expression one_hot(ComputationGraph& g, unsigned int d, const std::vector<unsigned int>& ids, Device *device = dynet::default_device);
 Expression parameter(ComputationGraph& g, Parameter p);
 Expression parameter(ComputationGraph& g, LookupParameter lp);
 Expression const_parameter(ComputationGraph& g, Parameter p);
@@ -470,14 +484,14 @@ Expression lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsi
 Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>& indices);
 //Expression const_lookup(ComputationGraph& g, LookupParameter p, const std::vector<unsigned>* pindices);
 
-Expression zeros(ComputationGraph& g, const Dim& d);
-Expression zeroes(ComputationGraph& g, const Dim& d);
-Expression ones(ComputationGraph& g, const Dim& d);
-Expression constant(ComputationGraph& g, const Dim& d, float val);
-Expression random_normal(ComputationGraph& g, const Dim& d);
-Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale = 1.0f);
-Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right);
-Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu = 0.0, real beta = 1.0);
+Expression zeros(ComputationGraph& g, const Dim& d, Device *device = dynet::default_device);
+Expression zeroes(ComputationGraph& g, const Dim& d, Device *device = dynet::default_device);
+Expression ones(ComputationGraph& g, const Dim& d, Device *device = dynet::default_device);
+Expression constant(ComputationGraph& g, const Dim& d, float val, Device *device = dynet::default_device);
+Expression random_normal(ComputationGraph& g, const Dim& d, float mean=0.f, float stddev=1.0, Device *device = dynet::default_device);
+Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p, real scale = 1.0f, Device *device = dynet::default_device);
+Expression random_uniform(ComputationGraph& g, const Dim& d, real left, real right, Device *device = dynet::default_device);
+Expression random_gumbel(ComputationGraph& g, const Dim& d, real mu = 0.0, real beta = 1.0, Device *device = dynet::default_device);
 
 /* ARITHMETIC OPERATIONS */
 
@@ -682,6 +696,8 @@ Expression trace_of_product(const Expression& x, const Expression& y);
 Expression layer_norm(const Expression& x, const Expression& g, const Expression& b);
 Expression weight_norm(const Expression& w, const Expression& g);
 
+Expression to_device(const Expression & x, Device *device);
+
 /////////////////////////////////////
 // declarations from dynet/dynet.h //
 /////////////////////////////////////
@@ -775,6 +791,7 @@ class Device {
   Device& operator=(const Device&) = delete;
   virtual ~Device();
  public:
+  void reset_rng(unsigned seed) {};
   int device_id;
   DeviceType type;
   MemAllocator* mem;
@@ -789,6 +806,36 @@ class Device {
 };
 
 extern Device* default_device; // where parameters go by default
+
+class DeviceManager final {
+ public:
+  DeviceManager();
+  ~DeviceManager();
+
+  void clear();
+
+  void add(Device* d);
+
+  Device* get(size_t i) { return devices[i]; }
+
+  size_t num_devices() const { return devices.size(); }
+
+  const std::vector<Device*>& get_devices() const { return devices; }
+
+  Device* get_global_device(const std::string & name);
+
+  // no copying allowed
+  DeviceManager(const DeviceManager &) = delete;
+  void operator=(const DeviceManager &) = delete;
+
+ private:
+  std::vector<Device*> devices;
+  std::unordered_map<std::string, Device*> devices_map;
+};
+
+DeviceManager* get_device_manager();
+
+inline void show_pool_mem_info();
 
 ////////////////////////////////////////
 // declarations from dynet/training.h //
