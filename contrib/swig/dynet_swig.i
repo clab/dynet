@@ -97,7 +97,6 @@ VECTORCONSTRUCTOR(std::vector<unsigned>, UnsignedVector, UnsignedVectorVector)
 VECTORCONSTRUCTOR(std::vector<dynet::Expression>, ExpressionVector, ExpressionVectorVector)
 VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVectorVector)
 
-
 // Useful SWIG libraries
 %include "std_vector.i"
 %include "std_string.i"
@@ -107,11 +106,17 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 
 %shared_ptr(dynet::ParameterStorage)
 %shared_ptr(dynet::LookupParameterStorage)
+%shared_ptr(dynet::ParameterStorageBase)
 
 // Convert C++ exceptions into Java exceptions. This provides
 // nice error messages for each listed exception, and a default
 // "unknown error" message for all others.
-%catches(std::invalid_argument, ...);
+%catches(std::invalid_argument,
+         std::runtime_error,
+         std::domain_error,
+         dynet::out_of_memory,
+         dynet::cuda_exception,
+         ...);
 
 %pointer_functions(unsigned, uintp);
 %pointer_functions(int, intp);
@@ -1233,12 +1238,10 @@ struct DynetParams {
   int profiling = 0; /**< Whether to show profiling info or not */
   bool shared_parameters = false; /**< TO DOCUMENT */
 
-#ifdef SWIG_USE_CUDA
   bool ngpus_requested = false; /**< GPUs requested by number */
   bool ids_requested = false; /**< GPUs requested by ids */
   int requested_gpus = -1; /**< Number of requested GPUs */
   std::vector<int> gpu_mask; /**< List of required GPUs by ids */
-#endif
 };
 
 
