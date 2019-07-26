@@ -105,6 +105,7 @@ VECTORCONSTRUCTOR(std::vector<dynet::Parameter>, ParameterVector, ParameterVecto
 %include "cpointer.i"
 %include <std_shared_ptr.i>
 
+%shared_ptr(dynet::ParameterStorageBase)
 %shared_ptr(dynet::ParameterStorage)
 %shared_ptr(dynet::LookupParameterStorage)
 
