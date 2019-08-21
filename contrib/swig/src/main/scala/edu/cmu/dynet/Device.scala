@@ -6,9 +6,9 @@ object Device {
     else DeviceManager.getGlobalDevice(str)
   }
 
-  def default(): internal.Device = internal.dynet_swig.getDefault_device
+  lazy val default: internal.Device = internal.dynet_swig.getDefault_device
 
-  def available(): Vector[internal.Device] = {
+  lazy val available: Vector[internal.Device] = {
     val tmp = for(l <- 0L until DeviceManager.numDevices()) yield DeviceManager.get(l)
     tmp.toVector
   }

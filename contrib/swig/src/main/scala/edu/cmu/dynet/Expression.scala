@@ -59,25 +59,25 @@ object Expression {
     new Expression(expr, references)
   }
 
-  def input(s: Float): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, s, Device.default()))
+  def input(s: Float): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, s, Device.default))
   def input(s: Float, device: internal.Device): Expression =  makeExpr(cg => dn.input(ComputationGraph.cg, s, device))
   def input(fp: FloatPointer): Expression =
-    makeExpr(cg => dn.input(ComputationGraph.cg, fp.floatp, Device.default()), Seq(fp))
+    makeExpr(cg => dn.input(ComputationGraph.cg, fp.floatp, Device.default), Seq(fp))
   def input(fp: FloatPointer, device: internal.Device): Expression =
     makeExpr(cg => dn.input(ComputationGraph.cg, fp.floatp, device), Seq(fp))
   def input(d: Dim, pdata: FloatVector): Expression =
-    makeExpr(cg => dn.input(cg, d.dim, pdata.vector, Device.default()), Seq(d, pdata))
+    makeExpr(cg => dn.input(cg, d.dim, pdata.vector, Device.default), Seq(d, pdata))
   def input(d: Dim, pdata: FloatVector, device: internal.Device): Expression =
     makeExpr(cg => dn.input(cg, d.dim, pdata.vector, device), Seq(d, pdata))
   def input(d: Dim, ids: UnsignedVector, data: FloatVector, defdata: Float = 0f,
-            device: internal.Device = Device.default()): Expression =
+            device: internal.Device = Device.default): Expression =
     makeExpr(cg => dn.input(cg, d.dim, ids.vector, data.vector, defdata, device), Seq(d, ids, data))
   def oneHot(d:Long, idx:Long): Expression =
-    makeExpr(cg => dn.one_hot(cg, d, idx, Device.default()))
+    makeExpr(cg => dn.one_hot(cg, d, idx, Device.default))
   def oneHot(d:Long, idx:Long, device: internal.Device): Expression =
     makeExpr(cg => dn.one_hot(cg, d, idx, device))
   def oneHot(d:Long, ids:UnsignedVector): Expression =
-    makeExpr(cg => dn.one_hot(cg, d, ids.vector, Device.default()))
+    makeExpr(cg => dn.one_hot(cg, d, ids.vector, Device.default))
   def oneHot(d:Long, ids:UnsignedVector, device: internal.Device): Expression =
     makeExpr(cg => dn.one_hot(cg, d, ids.vector, device))
 
@@ -101,17 +101,17 @@ object Expression {
   def constLookup(p: LookupParameter, indices: UnsignedVector): Expression =
     makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, indices.vector), Seq(p, indices))
 
-  def zeros(d: Dim, device: internal.Device = Device.default()): Expression = makeExpr(cg => dn.zeros(cg, d.dim, device), Seq(d))
-  def zeroes(d: Dim, device: internal.Device = Device.default()): Expression = makeExpr(cg => dn.zeros(cg, d.dim, device), Seq(d))
-  def ones(d: Dim, device: internal.Device = Device.default()): Expression = makeExpr(cg => dn.ones(cg, d.dim, device), Seq(d))
-  def constant(d: Dim, v: Float, device: internal.Device = Device.default()): Expression = makeExpr(cg => dn.constant(cg, d.dim, v, device), Seq(d))
-  def randomNormal(d: Dim, mean: Float = 0f, stdDev: Float = 1f, device: internal.Device = Device.default()): Expression =
+  def zeros(d: Dim, device: internal.Device = Device.default): Expression = makeExpr(cg => dn.zeros(cg, d.dim, device), Seq(d))
+  def zeroes(d: Dim, device: internal.Device = Device.default): Expression = makeExpr(cg => dn.zeros(cg, d.dim, device), Seq(d))
+  def ones(d: Dim, device: internal.Device = Device.default): Expression = makeExpr(cg => dn.ones(cg, d.dim, device), Seq(d))
+  def constant(d: Dim, v: Float, device: internal.Device = Device.default): Expression = makeExpr(cg => dn.constant(cg, d.dim, v, device), Seq(d))
+  def randomNormal(d: Dim, mean: Float = 0f, stdDev: Float = 1f, device: internal.Device = Device.default): Expression =
     makeExpr(cg => dn.random_normal(cg, d.dim, mean, stdDev, device), Seq(d))
-  def randomBernoulli(d: Dim, p: Float, scale: Float = 1.0f, device: internal.Device = Device.default()): Expression =
+  def randomBernoulli(d: Dim, p: Float, scale: Float = 1.0f, device: internal.Device = Device.default): Expression =
     makeExpr(cg => dn.random_bernoulli(cg, d.dim, p, scale, device), Seq(d))
-  def randomUniform(d: Dim, left: Float, right: Float, device: internal.Device = Device.default()): Expression =
+  def randomUniform(d: Dim, left: Float, right: Float, device: internal.Device = Device.default): Expression =
     makeExpr(cg => dn.random_uniform(cg, d.dim, left, right, device), Seq(d))
-  def randomGumbel(d: Dim, mu: Float, beta: Float, device: internal.Device = Device.default()): Expression =
+  def randomGumbel(d: Dim, mu: Float, beta: Float, device: internal.Device = Device.default): Expression =
     makeExpr(cg => dn.random_gumbel(cg, d.dim, mu, beta, device), Seq(d))
 
   /* ARITHMETIC OPERATIONS */
@@ -285,7 +285,12 @@ object Expression {
   def concatenateCols(v: ExpressionVector): Expression = vectory(v, dn.concatenate_cols)
   def concatenateCols(exprs: Expression*): Expression = concatenateCols(new ExpressionVector(exprs))
 
-  def concatenate(v: ExpressionVector): Expression = vectory(v, dn.concatenate)
+  def concatenate(v: ExpressionVector, d: Int = 0): Expression = {
+    assert(v.nonEmpty, "Operation requires > 0 expression arguments")
+    v.ensureFresh()
+    new Expression(dn.concatenate(v.vector, d), Seq(v))
+  }
+
   def concatenate(exprs: Expression*): Expression = concatenate(new ExpressionVector(exprs))
 
   /* NOISE OPERATIONS */
