@@ -22,3 +22,9 @@ Scala/Java
 DyNet has `Scala/Java Bindings <https://github.com/clab/dynet/tree/master/contrib/swig>`_
 developed by Joel Grus at the Allen Institute for Artificial Intelligence. Please see
 the README linked above for details.
+
+The `CLU Lab <http://clulab.cs.arizona.edu/>`_ at the University of Arizona has packaged
+the Scala/Java bindings into a single, multi-platform jar file that can be incorporated
+into a project as a simple library dependency.  This
+`fatdynet <https://github.com/clulab/fatdynet>`_ is also able to read models directly
+from jar or zip files so that they can be similarly deployed.
