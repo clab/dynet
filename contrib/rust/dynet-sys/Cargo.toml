@@ -1,0 +1,19 @@
+[package]
+name = "dynet-sys"
+version = "0.1.0"
+authors = ["Hiroki Teranishi <teranishihiroki@gmail.com>"]
+description = "The package provides bindings to dynet."
+keywords = ["deep-learning", "neural-networks", "machine-learning", "dynet"]
+license = "Apache-2.0"
+repository = "https://github.com/clab/dynet"
+readme = "README.md"
+
+build = "build.rs"
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.42"
+
+[features]
+cuda = []

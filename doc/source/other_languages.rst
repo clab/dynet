@@ -9,6 +9,13 @@ C APIs
 
 DyNet provides the `C APIs <https://github.com/clab/dynet/tree/master/contrib/c>`_ that can be used to build bindings for other languages. Please see the README linked above for details.
 
+Rust
+----------
+
+DyNet has `Rust Bindings <https://github.com/clab/dynet/tree/master/contrib/rust>`_
+developed by Hiroki Teranishi at Nara Institute of Science and Technology. Please see
+the README linked above for details.
+
 Scala/Java
 ----------
 

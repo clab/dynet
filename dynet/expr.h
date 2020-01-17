@@ -55,7 +55,7 @@ struct Expression {
 
   /**
    * \brief Get value of the expression
-   * \details Throws a tuntime_error exception if no computation graph is available
+   * \details Throws a runtime_error exception if no computation graph is available
    * \return Value of the expression as a tensor
    */
   const Tensor& value() const {
@@ -66,7 +66,7 @@ struct Expression {
   }
   /**
    * \brief Get gradient of the expression
-   * \details Throws a tuntime_error exception if no computation graph is available
+   * \details Throws a runtime_error exception if no computation graph is available
    *
    * Make sure to call `backward` on a downstream expression before calling this.
    *
@@ -82,7 +82,7 @@ struct Expression {
   }
   /**
    * \brief Get dimension of the expression
-   * \details Throws a tuntime_error exception if no computation graph is available
+   * \details Throws a runtime_error exception if no computation graph is available
    * \return Dimension of the expression
    */
   const Dim& dim() const {

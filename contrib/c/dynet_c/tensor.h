@@ -44,4 +44,14 @@ DYNET_C_API DYNET_C_STATUS dynetEvaluateTensorAsScalar(
 DYNET_C_API DYNET_C_STATUS dynetEvaluateTensorAsArray(
     const dynetTensor_t *tensor, float *retval, size_t *size);
 
+/**
+ * Returns a string representation of the tensor.
+ * @param tensor Pointer of a handler.
+ * @param retval Pointer to receive the encoded string.
+ * @param size Pointer to receive a length of the char sequence.
+ * @return Status code.
+ */
+DYNET_C_API DYNET_C_STATUS dynetRepresentTensorAsString(
+    const dynetTensor_t *tensor, char *retval, size_t *size);
+
 #endif  // DYNET_C_TENSOR_H_

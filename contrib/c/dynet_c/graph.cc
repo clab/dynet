@@ -100,3 +100,13 @@ DYNET_C_STATUS dynetPrintComputationGraphViz(
   to_cpp_ptr(cg)->print_graphviz();
   return DYNET_C_OK;
 } DYNET_C_HANDLE_EXCEPTIONS
+
+DYNET_C_STATUS dynetDumpComputationGraph(
+    dynetComputationGraph_t *cg, const char *filename,
+    DYNET_C_BOOL show_values, DYNET_C_BOOL show_gradients,
+    DYNET_C_BOOL nan_check_only) try {
+  DYNET_C_CHECK_NOT_NULL(cg);
+  DYNET_C_CHECK_NOT_NULL(filename);
+  to_cpp_ptr(cg)->dump(filename, show_values, show_gradients, nan_check_only);
+  return DYNET_C_OK;
+} DYNET_C_HANDLE_EXCEPTIONS

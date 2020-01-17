@@ -25,7 +25,7 @@ else
   hash -r
   conda config --set always_yes yes --set changeps1 no
   conda update -q conda
-  conda create -q -n "$PYVER" python="$PYVER" numpy cython
+  conda create -c conda-forge -q -n "$PYVER" python="$PYVER" numpy cython
   # Useful for debugging any issues with conda
   conda info -a
   source activate "$PYVER"

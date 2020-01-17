@@ -77,7 +77,7 @@ DYNET_C_API DYNET_C_STATUS dynetSetDynetParamsSharedParameters(
     dynetDynetParams_t *params, DYNET_C_BOOL shared_parameters);
 
 /**
- * Specifies the number of requested GPUs
+ * Specifies the number of requested GPUs.
  * @param params Pointer of a handler.
  * @param requested_gpus Number of requested GPUs.
  * @return Status code.

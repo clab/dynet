@@ -20,7 +20,7 @@ DYNET_C_API DYNET_C_STATUS dynetDeleteSoftmaxBuilder(
     dynetSoftmaxBuilder_t *builder);
 
 /**
- * Resets the builder for a new sequence.
+ * Initializes the parameters in the computation graph.
  * @param builder Pointer of a handler.
  * @param h_0 Vector to initialize hidden layers at timestep 0.
  * @param n The number of `h_0` elements.
