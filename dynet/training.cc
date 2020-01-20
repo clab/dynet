@@ -1031,19 +1031,25 @@ void AdamTrainer::populate(std::istream& is)
 // Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=mean, ts[3]=variance
 template <class MyDevice>
 void NoamTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
-	adam_optimizer.learning_rate = pow(factor, -0.5) * min(pow(updates, -0.5), pow(updates * warmup, -1.5));
 	adam_optimizer.update_rule_dev(dev, gscale, ts);
 }
 DYNET_TRAINER_INST_DEV_IMPL(NoamTrainer)
 
 #ifndef __CUDACC__
+void NoamTrainer::update_lr() {
+	this->learning_rate = factor * pow((float)model_size, -0.5f) * min<float>(pow((float)updates + 1, -0.5), (updates + 1) * pow(warmup, -1.5f));
+	adam_optimizer.learning_rate = this->learning_rate;// update both so the learningRate property can be seen
+}
 void NoamTrainer::update_params(real gscale, size_t idx) {
+	update_lr();
 	adam_optimizer.update_params(gscale, idx);
 }
 void NoamTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
+	update_lr();
 	adam_optimizer.update_lookup_params(gscale, idx, lidx);
 }
 void NoamTrainer::update_lookup_params(real gscale, size_t idx) {
+	update_lr();
 	adam_optimizer.update_lookup_params(gscale, idx);
 }
 unsigned NoamTrainer::alloc_impl() {

@@ -628,6 +628,7 @@ protected:
 	DYNET_TRAINER_DEFINE_DEV_IMPL()
 		virtual unsigned alloc_impl() override;
 	virtual unsigned alloc_lookup_impl() override;
+	void update_lr();
 
 	int model_size;
 	int factor;
