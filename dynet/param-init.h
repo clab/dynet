@@ -96,6 +96,24 @@ private:
   float cnst;
 };
 
+
+/**
+ * \ingroup params
+ * \brief Initialize parameters with samples from a Le Cun's uniform distribution
+ * \details Reference: LeCun 98, Efficient Backprop [http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf] 
+ */
+struct ParameterInitLeCunUniform : public ParameterInit {
+	ParameterInitLeCunUniform(float fan_in, float scale = 1.f)
+		: fan_in(fan_in), scale(scale) {
+		if (scale == 0.0f) throw std::domain_error("Scale of the Le Cun uniform distribution cannot be 0 in ParameterInitLeCunUniform");
+	}
+
+	virtual void initialize_params(Tensor & values) const override;
+
+private:
+	float fan_in, scale;
+} typedef ParameterInitHe;
+
 /**
  * \ingroup params
  * \brief Initialize as the identity

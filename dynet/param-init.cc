@@ -19,6 +19,11 @@ void ParameterInitConst::initialize_params(Tensor & values) const {
   TensorTools::constant(values, cnst);
 }
 
+void ParameterInitLeCunUniform::initialize_params(Tensor & values) const {
+	float s = scale * std::sqrt(3.f / fan_in);
+	TensorTools::randomize_uniform(values, -s, s);
+}
+
 void ParameterInitIdentity::initialize_params(Tensor & values) const {
   TensorTools::identity(values);
 }

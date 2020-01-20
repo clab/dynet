@@ -150,6 +150,9 @@ cdef extern from "dynet/param-init.h" namespace "dynet":
     cdef cppclass CParameterInitConst "dynet::ParameterInitConst" (CParameterInit):
         CParameterInitConst(float c)
 
+    cdef cppclass CParameterInitLeCunUniform "dynet::ParameterInitLeCunUniform" (CParameterInit):
+        CParameterInitLeCunUniform(float fan_in, float scale)
+
     cdef cppclass CParameterInitIdentity "dynet::ParameterInitIdentity" (CParameterInit):
         CParameterInitIdentity()
 
@@ -236,6 +239,9 @@ cdef extern from "dynet/training.h" namespace "dynet":
 
     cdef cppclass CAdamTrainer "dynet::AdamTrainer" (CTrainer):
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs
+
+    cdef cppclass CNoamTrainer "dynet::NoamTrainer" (CTrainer):
+        CNoamTrainer(CModel& m, unsigned model_size, unsigned factor, unsigned warmup) # TODO removed lam, update docs
 
     cdef cppclass CAmsgradTrainer "dynet::AmsgradTrainer" (CTrainer):
         CAmsgradTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps) # TODO removed lam, update docs

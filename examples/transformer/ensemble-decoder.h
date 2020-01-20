@@ -143,7 +143,7 @@ std::vector<EnsembleDecoderHypPtr> EnsembleDecoder::generate_nbest(dynet::Comput
 	for (auto & tf : v_models){
 		v_src_reps.push_back(tf.get()->compute_source_rep(cg, WordIdSentences(1, sent_src)/*pseudo batch (1)*/));
 	}
-
+	
 	// The n-best hypotheses
 	std::vector<EnsembleDecoderHypPtr> nbest;
 
