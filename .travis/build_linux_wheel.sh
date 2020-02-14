@@ -8,7 +8,9 @@ cd "$TRAVIS_BUILD_DIR"
 # Compile wheels
 for PYBIN in /opt/python/*${PYVER/./}*/bin; do
   "$PYBIN/pip" install -U numpy pypandoc twine cython
-  if [[ "$BUILD_ARCH" != i686 ]]; then
+  if [[ "$BUILD_ARCH" == i686 ]]; then
+    yum install -y openssl-devel
+  else
     yum install -y gmp-devel
     "$PYBIN/python" -c 'from pypandoc.pandoc_download import *; download_pandoc()'
   fi || true  # It's ok if we fail installing pandoc; only important for deployment
