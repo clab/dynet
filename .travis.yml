@@ -29,16 +29,6 @@ jobs:
     - os: osx
       compiler: clang
       language: cpp
-      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
-      if: type = cron OR tag IS present
-    - os: osx
-      compiler: clang
-      language: cpp
-      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
-      if: type = cron OR tag IS present
-    - os: osx
-      compiler: clang
-      language: cpp
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
       if: type = cron OR tag IS present
     - os: osx
