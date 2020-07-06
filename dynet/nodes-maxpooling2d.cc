@@ -69,8 +69,8 @@ void MaxPooling2D::forward_dev_impl(const MyDevice & dev, const vector<const Ten
   AlignedMemoryPool* scratch_allocator = default_device->pools[(int)DeviceMempool::SCS];
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  if (cudnn_maxpool_op_ == NULL)
-    cudnn_maxpool_op_ = new CudnnMaxPooling2DOp(ksize, stride, is_valid);
+  if (!cudnn_maxpool_op_)
+    cudnn_maxpool_op_.reset(new CudnnMaxPooling2DOp(ksize, stride, is_valid));
   cudnn_maxpool_op_->forward_impl(dev, xs, fx);
 #else
   throw std::runtime_error("MaxPooling2D::forward_dev_impl not supported without CUDNN");
@@ -106,8 +106,8 @@ void MaxPooling2D::backward_dev_impl(const MyDevice & dev,
   DYNET_ASSERT(i == 0, "Failed dimension check in MaxPooling2D::backward: i must be 0");
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  if (cudnn_maxpool_op_ == NULL)
-    cudnn_maxpool_op_ = new CudnnMaxPooling2DOp(ksize, stride, is_valid);
+  if (!cudnn_maxpool_op_)
+    cudnn_maxpool_op_.reset(new CudnnMaxPooling2DOp(ksize, stride, is_valid));
   cudnn_maxpool_op_->backward_impl(dev, xs, fx, dEdf, i, dEdxi);
 #else
   throw std::runtime_error("MaxPooling2D::backward_dev_impl not supported without CUDNN");

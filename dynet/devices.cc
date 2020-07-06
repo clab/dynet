@@ -120,7 +120,12 @@ Device_GPU::Device_GPU(int my_id, const DeviceMempoolSizes & mbs,
   pools[3] = new AlignedMemoryPool("GPU scratch memory", (mbs.used[3] << 20), &gpu_mem);
 }
 
-Device_GPU::~Device_GPU() {}
+Device_GPU::~Device_GPU()
+{
+#if HAVE_CUDNN
+  CUDNN_CHECK(cudnnDestroy(cudnnHandle));
+#endif
+}
 
 void Device_GPU::reset_rng(unsigned seed) {
   CURAND_CHECK(curandCreateGenerator(&curandeng,

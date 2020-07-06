@@ -6,6 +6,7 @@
 
 #if HAVE_CUDNN
 #include "dynet/cudnn-ops.h"
+#include <memory>
 #endif
 
 namespace dynet {
@@ -30,7 +31,7 @@ struct MaxPooling2D: public Node {
 
  private:
 #if HAVE_CUDNN
-  mutable CudnnMaxPooling2DOp* cudnn_maxpool_op_ = NULL;
+  mutable std::unique_ptr<CudnnMaxPooling2DOp> cudnn_maxpool_op_;
 #endif
 };
 
