@@ -118,8 +118,8 @@ void Conv2D::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>&
   AlignedMemoryPool* scratch_allocator = default_device->pools[(int)DeviceMempool::SCS];
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  if (cudnn_conv_op_ == NULL)
-    cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
+  if (!cudnn_conv_op_)
+    cudnn_conv_op_.reset(new CudnnConvOp(stride, is_valid));
   cudnn_conv_op_->forward_impl(dev, xs, fx);
 #else
   throw std::runtime_error("Conv2D::forward_dev_impl not supported without CUDNN");
@@ -168,8 +168,8 @@ void Conv2D::backward_dev_impl(const MyDevice & dev,
   AlignedMemoryPool* scratch_allocator = default_device->pools[(int)DeviceMempool::SCS];
 #ifdef __CUDACC__
 #if HAVE_CUDNN
-  if (cudnn_conv_op_ == NULL)
-    cudnn_conv_op_ = new CudnnConvOp(stride, is_valid);
+  if (!cudnn_conv_op_)
+    cudnn_conv_op_.reset(new CudnnConvOp(stride, is_valid));
   cudnn_conv_op_->backward_impl(dev, xs, fx, dEdf, i, dEdxi);
 #else
   throw std::runtime_error("Conv2D::backward_dev_impl not supported without CUDNN");

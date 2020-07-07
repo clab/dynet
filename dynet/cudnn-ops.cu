@@ -104,10 +104,25 @@ void CudnnConvOp::forward_impl(const Device_GPU& dev, const std::vector<const Te
   // However, as DyNet changes CG for every sample (or every iteration),
   // This autotune function seems to be unnecessary.
   // Note: this following computations are *NON-DETERMINISTIC*
+#if CUDNN_MAJOR > 7
+  int returnedAlgoCount = 0;
+  cudnnConvolutionFwdAlgoPerf_t algoResult;
+  CUDNN_CHECK(cudnnGetConvolutionForwardAlgorithm_v7(dev.cudnnHandle,
+                                                     x_desc_, filter_desc_, conv_desc_, y_desc_,
+                                                     1, &returnedAlgoCount, &algoResult));
+  if (returnedAlgoCount < 1)
+  {
+    DYNET_RUNTIME_ERR("cudnnGetConvolutionForwardAlgorithm_v7 returned no algorithms.");
+  }
+  // else
+
+  fwd_algo_ = algoResult.algo;
+#else
   CUDNN_CHECK(cudnnGetConvolutionForwardAlgorithm(dev.cudnnHandle,
               x_desc_, filter_desc_, conv_desc_, y_desc_,
               CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, workspace_size_limit_bytes,
               &fwd_algo_));
+#endif
   CUDNN_CHECK(cudnnGetConvolutionForwardWorkspaceSize(dev.cudnnHandle,
               x_desc_, filter_desc_, conv_desc_, y_desc_,
               fwd_algo_, &workspace_fwd_size_));
@@ -187,10 +202,25 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
   switch(i) {
     case 0: { // grad w.r.t. feature maps
       dxi = scratch_allocator->allocate(sizeof(float) * XH * XW * XC * XN);
+#if CUDNN_MAJOR > 7
+      int returnedAlgoCount = 0;
+      cudnnConvolutionBwdDataAlgoPerf_t algoResult;
+      CUDNN_CHECK(cudnnGetConvolutionBackwardDataAlgorithm_v7(dev.cudnnHandle,
+                                                              filter_desc_, y_desc_, conv_desc_, x_desc_,
+                                                              1, &returnedAlgoCount, &algoResult));
+      if (returnedAlgoCount < 1)
+      {
+        DYNET_RUNTIME_ERR("cudnnGetConvolutionBackwardDataAlgorithm_v7 returned no algorithms.");
+      }
+      // else
+
+      bwd_d_algo_ = algoResult.algo;
+#else
       CUDNN_CHECK(cudnnGetConvolutionBackwardDataAlgorithm(dev.cudnnHandle,
                   filter_desc_, y_desc_, conv_desc_, x_desc_,
                   CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
                   workspace_size_limit_bytes, &bwd_d_algo_));
+#endif
       CUDNN_CHECK(cudnnGetConvolutionBackwardDataWorkspaceSize(dev.cudnnHandle,
                   filter_desc_, y_desc_, conv_desc_, x_desc_,
                   bwd_d_algo_, &workspace_bwd_data_size_));
@@ -206,6 +236,28 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
     } break;
     case 1: {// grad w.r.t. filters
       dxi = scratch_allocator->allocate(sizeof(float) * FYC * FXC * FW * FH);
+#if CUDNN_MAJOR > 7
+      int returnedFilterCount = 0;
+      cudnnConvolutionBwdFilterAlgoPerf_t filterResult;
+      CUDNN_CHECK(cudnnGetConvolutionBackwardFilterAlgorithm_v7(dev.cudnnHandle,
+                                                              x_desc_, y_desc_, conv_desc_, filter_desc_,
+                                                              1, &returnedFilterCount, &filterResult));
+      if (returnedFilterCount < 1)
+      {
+        DYNET_RUNTIME_ERR("cudnnGetConvolutionBackwardFilterAlgorithm_v7 returned no algorithms.");
+      }
+      // else
+
+      bwd_f_algo_ = filterResult.algo;
+      auto cudnnRes = cudnnGetConvolutionBackwardFilterWorkspaceSize(dev.cudnnHandle,
+                                                                     x_desc_, y_desc_, conv_desc_, filter_desc_,
+                                                                     bwd_f_algo_, &workspace_bwd_filter_size_);
+      if (cudnnRes != CUDNN_STATUS_SUCCESS)
+      {
+        DYNET_RUNTIME_ERR("cudnnGetConvolutionBackwardFilterWorkspaceSize() Failed with "
+                          << cudnnGetErrorString(cudnnRes) << " on algorithm " << bwd_f_algo_);
+      }
+#else
       CUDNN_CHECK(cudnnGetConvolutionBackwardFilterAlgorithm(dev.cudnnHandle,
                   x_desc_, y_desc_, conv_desc_, filter_desc_,
                   CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST,
@@ -213,6 +265,7 @@ void CudnnConvOp::backward_impl(const Device_GPU & dev,
       CUDNN_CHECK(cudnnGetConvolutionBackwardFilterWorkspaceSize(dev.cudnnHandle,
                   x_desc_, y_desc_, conv_desc_, filter_desc_,
                   bwd_f_algo_, &workspace_bwd_filter_size_));
+#endif
       bwd_filter_workspace = scratch_allocator->allocate(workspace_bwd_filter_size_);
       CUDNN_CHECK(cudnnConvolutionBackwardFilter(dev.cudnnHandle,
                   &alpha, x_desc_, x->v, y_desc_, dy->v,
