@@ -12,6 +12,8 @@ else
 fi
 # Compile wheels
 for PYBIN in /opt/python/*${PYVER/./}*/bin; do
+  "$PYBIN/pip" install -U pip
+  "$PYBIN/pip" install --prefer-binary cryptography
   "$PYBIN/pip" install -U numpy pypandoc twine cython
   if [[ "$BUILD_ARCH" != i686 ]]; then
     "$PYBIN/python" -c 'from pypandoc.pandoc_download import *; download_pandoc()'
