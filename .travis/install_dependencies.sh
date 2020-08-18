@@ -12,6 +12,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     sudo -H pip install -U $PYTHON_PACKAGES
   else
     sudo apt-get install -y pandoc
+    pip install -U pip
     pip install --prefer-binary cryptography
     pip install -U $PYTHON_PACKAGES
   fi
