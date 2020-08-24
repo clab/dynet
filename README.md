@@ -39,9 +39,8 @@ The `example` folder contains a variety of examples in C++ and python.
 
 ## Installation
 
-DyNet relies on a number of external programs/libraries including CMake,
-Eigen, and Mercurial (to install Eigen). CMake, and Mercurial can
-be installed from standard repositories.
+DyNet relies on a number of external programs/libraries including CMake and
+Eigen. CMake can be installed from standard repositories.
 
 For example on **Ubuntu Linux**:
 
@@ -57,12 +56,14 @@ get CMake, and Mercurial with either homebrew or macports:
 On **Windows**, see [documentation](http://dynet.readthedocs.io/en/latest/install.html#windows-support).
 
 To compile DyNet you also need the [development version of the Eigen
-library](https://bitbucket.org/eigen/eigen). **If you use any of the
+library](https://gitlab.com/libeigen/eigen). **If you use any of the
 released versions, you may get assertion failures or compile errors.**
 If you don't have Eigen already, you can get it easily using the
 following command:
 
-    hg clone https://bitbucket.org/eigen/eigen/ -r b2e267d
+    git clone https://gitlab.com/libeigen/eigen
+    cd eigen
+    git checkout 603e213d13311af286c8c1abd4ea14a8bd3d204e
 
 The `-r NUM` specified a revision number that is known to work.  Adventurous
 users can remove it and use the very latest version, at the risk of the code

@@ -28,14 +28,16 @@ get CMake, and Mercurial with either homebrew or macports:
 On **Windows**, see :ref:`windows-cpp-install`.
 
 To compile DyNet you also need the `development version of the Eigen
-library <https://bitbucket.org/eigen/eigen>`__. **If you use any of the
+library <https://gitlab.com/libeigen/eigen>`__. **If you use any of the
 released versions, you may get assertion failures or compile errors.**
 If you don't have Eigen already, you can get it easily using the
 following command:
 
 ::
 
-    hg clone https://bitbucket.org/eigen/eigen/ -r b2e267d
+    git clone https://gitlab.com/libeigen/eigen/
+    cd eigen
+    git checkout 603e213d13311af286c8c1abd4ea14a8bd3d204e
     
 The `-r NUM` specified a revision number that is known to work.  Adventurous
 users can remove it and use the very latest version, at the risk of the code
