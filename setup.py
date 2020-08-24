@@ -117,7 +117,7 @@ if (EIGEN3_INCLUDE_DIR is not None and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
 
-EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://gitlab.com/libeigen/eigen/-/archive/603e213d13311af286c8c1abd4ea14a8bd3d204e/eigen-603e213d13311af286c8c1abd4ea14a8bd3d204e.zip") 
+EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://gitlab.com/libeigen/eigen/-/archive/1c8b9e10a791cb43b4f730dcb5d7889099cc1c68/eigen-1c8b9e10a791cb43b4f730dcb5d7889099cc1c68.zip") 
     
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()

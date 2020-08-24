@@ -37,7 +37,7 @@ following command:
 
     git clone https://gitlab.com/libeigen/eigen/
     cd eigen
-    git checkout 603e213d13311af286c8c1abd4ea14a8bd3d204e
+    git checkout 1c8b9e10a791cb43b4f730dcb5d7889099cc1c68
     
 The `-r NUM` specified a revision number that is known to work.  Adventurous
 users can remove it and use the very latest version, at the risk of the code

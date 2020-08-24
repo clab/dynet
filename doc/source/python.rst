@@ -91,7 +91,7 @@ The following is a list of all the commands needed to perform a manual install:
     git clone https://github.com/clab/dynet.git
     git clone https://gitlab.com/libeigen/eigen
     cd eigen
-    git checkout 603e213d13311af286c8c1abd4ea14a8bd3d204e
+    git checkout 1c8b9e10a791cb43b4f730dcb5d7889099cc1c68
     cd ../dynet
     mkdir build
     cd build
@@ -132,7 +132,7 @@ Then get Eigen:
     cd dynet-base
     git clone https://gitlab.com/libeigen/eigen
     cd eigen
-    git checkout 603e213d13311af286c8c1abd4ea14a8bd3d204e
+    git checkout 1c8b9e10a791cb43b4f730dcb5d7889099cc1c68
     
 (`git checkout` specifies a known working revision of Eigen. You can remove this in order to get the bleeding
 edge Eigen, with the risk of some compile breaks, and the possible benefit of added optimizations.)

@@ -27,9 +27,9 @@ init:
 
 install:
   - cmd: git submodule update --init --recursive
-  - ps: wget https://gitlab.com/libeigen/eigen/-/archive/603e213d13311af286c8c1abd4ea14a8bd3d204e/eigen-603e213d13311af286c8c1abd4ea14a8bd3d204e.zip -OutFile eigen.zip
+  - ps: wget https://gitlab.com/libeigen/eigen/-/archive/1c8b9e10a791cb43b4f730dcb5d7889099cc1c68/eigen-1c8b9e10a791cb43b4f730dcb5d7889099cc1c68.zip -OutFile eigen.zip
   - cmd: 7z x eigen.zip -o"C:\projects" -y > nul
-  - cmd: rename C:\projects\eigen-603e213d13311af286c8c1abd4ea14a8bd3d204e eigen
+  - cmd: rename C:\projects\eigen-1c8b9e10a791cb43b4f730dcb5d7889099cc1c68 eigen
   - set PATH=%MINICONDA%;%MINICONDA%\Scripts;C:\Program Files (x86)\Pandoc;%PATH%
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda

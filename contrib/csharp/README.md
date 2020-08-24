@@ -31,7 +31,7 @@ Most of these instructions are copied out of the documentation for compiling DyN
 ```bash
 git clone https://gitlab.com/libeigen/eigen
 cd eigen
-git checkout 603e213d13311af286c8c1abd4ea14a8bd3d204e
+git checkout 1c8b9e10a791cb43b4f730dcb5d7889099cc1c68
 cd ..
 git clone https://github.com/clab/dynet.git
 cd dynet
