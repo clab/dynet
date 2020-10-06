@@ -49,10 +49,10 @@ if [[ "$BACKEND" == cuda ]]; then
 fi
 
 # Eigen
-wget http://gitlab.com/libeigen/eigen/-/archive/1c8b9e10a791cb43b4f730dcb5d7889099cc1c68/eigen-1c8b9e10a791cb43b4f730dcb5d7889099cc1c68.zip
-unzip eigen-1c8b9e10a791cb43b4f730dcb5d7889099cc1c68.zip
-mv eigen-1c8b9e10a791cb43b4f730dcb5d7889099cc1c68 eigen
+mkdir eigen
 cd eigen
+wget https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip
+unzip eigen-b2e267dc99d4.zip
 mkdir build && cd build
 cmake ..
 sudo make install

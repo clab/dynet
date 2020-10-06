@@ -117,7 +117,7 @@ if (EIGEN3_INCLUDE_DIR is not None and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
 
-EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://gitlab.com/libeigen/eigen/-/archive/1c8b9e10a791cb43b4f730dcb5d7889099cc1c68/eigen-1c8b9e10a791cb43b4f730dcb5d7889099cc1c68.zip") 
+EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip") 
     
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()
@@ -251,16 +251,10 @@ class build(_build):
                     log.info("Fetching Eigen...")
                     urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
                     log.info("Unpacking Eigen...")
-                    #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
-                    with zipfile.ZipFile("eigen.zip") as zfile:
-                        for zipinfo in zfile.infolist():
-                            try:
-                                i = zipinfo.filename.index("/")
-                                zipinfo.filename = zipinfo.filename[i+1:]
-                                zfile.extract(zipinfo, "eigen")
-                            except ValueError:
-                                pass
                     EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
+                    os.mkdir(EIGEN3_INCLUDE_DIR)
+                    with zipfile.ZipFile("eigen.zip") as zfile:
+                        zfile.extractall(EIGEN3_INCLUDE_DIR)
                 except:
                     raise DistutilsSetupError("Could not download Eigen from %r" % EIGEN3_DOWNLOAD_URL)
 

@@ -44,34 +44,27 @@ Eigen. CMake can be installed from standard repositories.
 
 For example on **Ubuntu Linux**:
 
-    sudo apt-get install build-essential cmake mercurial
+    sudo apt-get install build-essential cmake
 
 Or on **macOS**, first make sure the Apple Command Line Tools are installed, then
 get CMake, and Mercurial with either homebrew or macports:
 
     xcode-select --install
-    brew install cmake hg  # Using homebrew.
-    sudo port install cmake mercurial # Using macports.
+    brew install cmake  # Using homebrew.
+    sudo port install cmake # Using macports.
 
 On **Windows**, see [documentation](http://dynet.readthedocs.io/en/latest/install.html#windows-support).
 
-To compile DyNet you also need the [development version of the Eigen
-library](https://gitlab.com/libeigen/eigen). **If you use any of the
+To compile DyNet you also need a [specific version of the Eigen
+library](https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip). **If you use any of the
 released versions, you may get assertion failures or compile errors.**
-If you don't have Eigen already, you can get it easily using the
-following command:
+You can get it easily using the following command:
 
-    git clone https://gitlab.com/libeigen/eigen
+    mkdir eigen
     cd eigen
-    git checkout 1c8b9e10a791cb43b4f730dcb5d7889099cc1c68
+    wget https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip
+    unzip eigen-b2e267dc99d4.zip
 
-The `-r NUM` specified a revision number that is known to work.  Adventurous
-users can remove it and use the very latest version, at the risk of the code
-breaking / not compiling. On macOS, you can install the latest development
-of Eigen using Homebrew:
-
-
-    brew install --HEAD eigen
 
 ### C++ installation
 

@@ -89,9 +89,10 @@ The following is a list of all the commands needed to perform a manual install:
     cd dynet-base
     # getting dynet and eigen
     git clone https://github.com/clab/dynet.git
-    git clone https://gitlab.com/libeigen/eigen
+    mkdir eigen
     cd eigen
-    git checkout 1c8b9e10a791cb43b4f730dcb5d7889099cc1c68
+    wget https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip
+    unzip eigen-b2e267dc99d4.zip
     cd ../dynet
     mkdir build
     cd build
@@ -130,13 +131,11 @@ Then get Eigen:
 
     cd $HOME
     cd dynet-base
-    git clone https://gitlab.com/libeigen/eigen
+    mkdir eigen
     cd eigen
-    git checkout 1c8b9e10a791cb43b4f730dcb5d7889099cc1c68
+    wget https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip
+    unzip eigen-b2e267dc99d4.zip
     
-(`git checkout` specifies a known working revision of Eigen. You can remove this in order to get the bleeding
-edge Eigen, with the risk of some compile breaks, and the possible benefit of added optimizations.)
-
 We also need to make sure the ``cython`` module is installed. (you can
 replace ``pip`` with your favorite package manager, such as ``conda``,
 or install within a virtual environment)
