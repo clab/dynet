@@ -29,13 +29,12 @@ install:
   - ps: wget https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip -OutFile eigen.zip
   - cmd: mkdir C:\projects\eigen
   - cmd: 7z x eigen.zip -o"C:\projects\eigen" -y > nul
-  - set PATH=%MINICONDA%;%MINICONDA%\Scripts;C:\Program Files (x86)\Pandoc;%PATH%
+  - set PATH=%MINICONDA%;%MINICONDA%\Scripts;%PATH%
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda create -q -n test-env python=%PYTHON_VERSION% cython numpy pypandoc
+  - conda create -q -n test-env python=%PYTHON_VERSION% cython numpy
   - activate test-env
-  - cinst pandoc
   - ps: if ($env:APPVEYOR_REPO_TAG -eq $True) { (gc setup.py) -replace '. (version=.)0.0.0', "`${1}$env:APPVEYOR_REPO_TAG_NAME" | Out-File -encoding 'UTF8' setup.py }
 
 before_build:

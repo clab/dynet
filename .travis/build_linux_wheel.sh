@@ -14,10 +14,7 @@ fi
 for PYBIN in /opt/python/*${PYVER/./}*/bin; do
   "$PYBIN/pip" install -U pip
   "$PYBIN/pip" install --prefer-binary cryptography
-  "$PYBIN/pip" install -U numpy pypandoc twine cython
-  if [[ "$BUILD_ARCH" != i686 ]]; then
-    "$PYBIN/python" -c 'from pypandoc.pandoc_download import *; download_pandoc()'
-  fi || true  # It's ok if we fail installing pandoc; only important for deployment
+  "$PYBIN/pip" install -U numpy twine cython
   if [[ -n "$DYNET_TEST" ]]; then
     "$TRAVIS_BUILD_DIR"/.travis/test_dynet.sh
   else  # build
