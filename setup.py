@@ -348,9 +348,8 @@ class build_ext(_build_ext):
 
 
 try:
-    import pypandoc
-    long_description = pypandoc.convert_file("README.md", "rst")
-    long_description = "\n".join(line for line in long_description.splitlines() if "<#" not in line)
+    with open(os.path.join(SCRIPT_DIR, 'README.md'), encoding='utf-8') as f:
+        long_description = f.read()
 except:
     long_description = ""
 
@@ -360,6 +359,7 @@ setup(
     install_requires=["cython", "numpy"],
     description="The Dynamic Neural Network Toolkit",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
