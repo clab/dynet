@@ -250,13 +250,15 @@ class build(_build):
                     # tfile.extractall('eigen')
                     log.info("Fetching Eigen...")
                     urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
+                except Exception as e:
+                    raise DistutilsSetupError("Could not download Eigen from %r: %s" % (EIGEN3_DOWNLOAD_URL, e))
+                try:
                     log.info("Unpacking Eigen...")
-                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
                     os.mkdir(EIGEN3_INCLUDE_DIR)
                     with zipfile.ZipFile("eigen.zip") as zfile:
                         zfile.extractall(EIGEN3_INCLUDE_DIR)
-                except:
-                    raise DistutilsSetupError("Could not download Eigen from %r" % EIGEN3_DOWNLOAD_URL)
+                except Exception as e:
+                    raise DistutilsSetupError("Could not extract Eigen to %r: %s" % (EIGEN3_INCLUDE_DIR, e))
 
             os.environ["CXX"] = CXX_PATH
             os.environ["CC"] = CC_PATH
@@ -347,7 +349,7 @@ class build_ext(_build_ext):
 
 try:
     import pypandoc
-    long_description = pypandoc.convert("README.md", "rst")
+    long_description = pypandoc.convert_file("README.md", "rst")
     long_description = "\n".join(line for line in long_description.splitlines() if "<#" not in line)
 except:
     long_description = ""
