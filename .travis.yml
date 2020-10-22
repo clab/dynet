@@ -78,11 +78,6 @@ jobs:
     - os: linux
       compiler: gcc
       language: cpp
-      env: PYVER=3.4 PYNUM=3 PYTHON_INSTALL=manual
-      if: type = cron OR tag IS present
-    - os: linux
-      compiler: gcc
-      language: cpp
       env: PYVER=3.5 PYNUM=3 PYTHON_INSTALL=manual
       if: type = cron OR tag IS present
     - os: linux
@@ -164,10 +159,6 @@ jobs:
       before_script: pip install dynet
       script: python tests/python/test.py
     - os: osx
-      env: PYVER=3.4 PYNUM=3
-      before_script: pip install dynet
-      script: python tests/python/test.py
-    - os: osx
       env: PYVER=3.5 PYNUM=3
       before_script: pip install dynet
       script: python tests/python/test.py
@@ -186,11 +177,6 @@ jobs:
     - os: linux
       language: python
       python: 2.7
-      before_script: pip install dynet
-      script: python tests/python/test.py
-    - os: linux
-      language: python
-      python: 3.4
       before_script: pip install dynet
       script: python tests/python/test.py
     - os: linux
