@@ -196,22 +196,26 @@ jobs:
       script: python setup.py sdist
       if: tag IS present
     - os: linux
+      dist: xenial
       language: python
       python: 3.7
       before_script: pip install dynet
       script: python tests/python/test.py
     - os: linux
+      dist: xenial
       language: python
       python: 3.8
       before_script: pip install dynet
       script: python tests/python/test.py
     - os: linux
+      dist: xenial
       language: python
       python: 3.7
       before_script: .travis/fix_version.sh
       script: python setup.py sdist
       if: tag IS present
     - os: linux
+      dist: xenial
       language: python
       python: 3.8
       before_script: .travis/fix_version.sh
