@@ -272,7 +272,7 @@ void ParameterCollectionStorage::project_weights(float radius) {
   auto scratch_size = all_params.size() * sizeof(float);
   if (project_scratch == nullptr || sizeof(project_scratch) < scratch_size) {
     if (project_scratch != nullptr) {
-      default_device->mem->free(gradient_norm_scratch);
+      default_device->mem->free(project_scratch);
     }
     project_scratch = (float *) default_device->mem->malloc(scratch_size);
   }
