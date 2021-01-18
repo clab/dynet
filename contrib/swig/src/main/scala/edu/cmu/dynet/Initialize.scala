@@ -29,7 +29,27 @@ object Initialize {
         .foreach(arg => params.setAutobatch(arg.asInstanceOf[Int]))
 
     args.get("profiling")
-        .foreach(arg => params.setProfiling(arg.asInstanceOf[Int]))
+      .foreach(arg => params.setProfiling(arg.asInstanceOf[Int]))
+
+    args.get("gpus")
+      .foreach(arg => params.setRequested_gpus(arg.asInstanceOf[Int]))
+
+    if(args.contains("devices")){
+      require(!params.getIds_requested)
+      params.setIds_requested(true)
+      args.get("devices")
+        .foreach(arg => arg.asInstanceOf[String].split(',').foreach(
+          s =>
+            if(s.startsWith("CPU:")){
+              Console.err.println("DyNet doesn't support specifying CPU id")
+            }else if(s.startsWith("GPU:")){
+              val gpuID = s.split(":")(1).toInt
+              params.getGpu_mask.set(gpuID, params.getGpu_mask.get(gpuID) + 1)
+              params.setRequested_gpus(params.getRequested_gpus + 1)
+              require(params.getGpu_mask.get(gpuID) == 1)
+            }
+        ))
+    }
 
     initialize(params)
   }

@@ -21,30 +21,30 @@ set(SCALA_VERSION "2.11.11" CACHE STRING "Scala version to compile the swig wrap
 string(REGEX MATCH "[0-9]+\\.[0-9]+" SCALA_BIN_VERSION "${SCALA_VERSION}")
 
 # Set java package (+cuda flag, if appropriate)
-if(WITH_CUDA_BACKEND)
-  set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet.internal -DSWIG_USE_CUDA)
-else(WITH_CUDA_BACKEND)
-  set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet.internal)
-endif(WITH_CUDA_BACKEND)
+set(CMAKE_SWIG_FLAGS -package edu.cmu.dynet.internal -Dfinal)
 
 # Run swig
 set_source_files_properties(dynet_swig.i PROPERTIES CPLUSPLUS ON)
-swig_add_module(dynet_swig java dynet_swig.i)
+if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
+  swig_add_module(dynet_swig java dynet_swig.i)
+else()
+  swig_add_library(dynet_swig LANGUAGE java SOURCES dynet_swig.i)
+endif()
 
 # add C++ compiler flags
 if(WITH_CUDA_BACKEND)
   set_target_properties(dynet_swig PROPERTIES
                         COMPILE_DEFINITIONS HAVE_CUDA)
-endif(WITH_CUDA_BACKEND)
+endif()
 
 # Link with dynet library
 if(WITH_CUDA_BACKEND)
   MESSAGE("-- swig link with GPU library")
   swig_link_libraries(dynet_swig dynet)
-else(WITH_CUDA_BACKEND)
+else()
   MESSAGE("-- swig link with CPU library")
   swig_link_libraries(dynet_swig dynet)
-endif(WITH_CUDA_BACKEND)
+endif()
 
 # Create jar file
 add_jar(
@@ -60,6 +60,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/CompactVanillaLSTMBuilder.java"
     "${CMAKE_SWIG_OUTDIR}/CyclicalSGDTrainer.java"
     "${CMAKE_SWIG_OUTDIR}/Device.java"
+    "${CMAKE_SWIG_OUTDIR}/DeviceManager.java"
     "${CMAKE_SWIG_OUTDIR}/DeviceMempool.java"
     "${CMAKE_SWIG_OUTDIR}/DeviceMempoolSizes.java"
     "${CMAKE_SWIG_OUTDIR}/DeviceType.java"
@@ -112,6 +113,7 @@ add_jar(
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_p_p_char.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_size_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__AlignedMemoryPool_p_t.java"
+    "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Device_p_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Node_p_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__Tensor_t.java"
     "${CMAKE_SWIG_OUTDIR}/SWIGTYPE_p_std__vectorT_dynet__VariableIndex_t.java"

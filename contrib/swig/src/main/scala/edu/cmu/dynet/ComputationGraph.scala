@@ -6,7 +6,7 @@ package edu.cmu.dynet
 object ComputationGraph {
   private[dynet] var cg: internal.ComputationGraph = internal.ComputationGraph.getNew
   var version: Long = 0L
-  private var defaultDevice: internal.Device = internal.dynet_swig.getDefault_device()
+  private val defaultDevice: internal.Device = internal.dynet_swig.getDefault_device()
 
   /** Gets rid of the singleton Computation Graph and replaces it with a fresh one. Increments
     * `version` to make sure we don't use any stale expressions.
