@@ -1,4 +1,4 @@
 Cython==0.28
 dyNET==2.0.3
 numpy==1.14.2
-Pillow==6.2.0
+Pillow==7.1.0
