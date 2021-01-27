@@ -8,7 +8,7 @@ class Expression private[dynet](
   // Expressions sometimes rely on things (e.g. wrapped C++ vectors) that get deleted when the JVM
   // garbage collector runs. By explicitly grabbing references to them, we can prevent this
   // premature garbage collection.
-  val references: Seq[AnyRef] = Seq.empty
+  val reference: AnyRef = null
 ) {
   // Give it the current version
   val version = ComputationGraph.version
@@ -52,34 +52,34 @@ object Expression {
     * graph */
   private def makeExpr(
     f: internal.ComputationGraph => internal.Expression,
-    references: Seq[AnyRef] = Seq.empty
+    reference: AnyRef = null
   ): Expression = {
     val version = ComputationGraph.version
     val expr = f(ComputationGraph.cg)
-    new Expression(expr, references)
+    new Expression(expr, reference)
   }
 
   def input(s: Float): Expression = makeExpr(cg => dn.input(ComputationGraph.cg, s))
   def input(fp: FloatPointer): Expression =
-    makeExpr(cg => dn.input(ComputationGraph.cg, fp.floatp), Seq(fp))
+    makeExpr(cg => dn.input(ComputationGraph.cg, fp.floatp), fp)
   def input(d: Dim, pdata: FloatVector): Expression =
     makeExpr(cg => dn.input(cg, d.dim, pdata.vector), Seq(d, pdata))
   def input(d: Dim, ids: UnsignedVector, data: FloatVector, defdata: Float = 0f) =
     makeExpr(cg => dn.input(cg, d.dim, ids.vector, data.vector, defdata), Seq(d, ids, data))
 
-  def parameter(p: Parameter): Expression = makeExpr(cg => dn.parameter(cg, p.parameter), Seq(p))
-  def parameter(lp: LookupParameter): Expression = makeExpr(cg => dn.parameter(cg, lp.lookupParameter), Seq(lp))
+  def parameter(p: Parameter): Expression = makeExpr(cg => dn.parameter(cg, p.parameter), p)
+  def parameter(lp: LookupParameter): Expression = makeExpr(cg => dn.parameter(cg, lp.lookupParameter), lp)
   def constParameter(p: Parameter): Expression =
-    makeExpr(cg => dn.const_parameter(cg, p.parameter), Seq(p))
+    makeExpr(cg => dn.const_parameter(cg, p.parameter), p)
   def constParameter(lp: LookupParameter): Expression =
-    makeExpr(cg => dn.const_parameter(cg, lp.lookupParameter), Seq(lp))
+    makeExpr(cg => dn.const_parameter(cg, lp.lookupParameter), lp)
 
   def lookup(p: LookupParameter, index: Long) =
-    makeExpr(cg => dn.lookup(cg, p.lookupParameter, index), Seq(p))
+    makeExpr(cg => dn.lookup(cg, p.lookupParameter, index), p)
   def lookup(p: LookupParameter, pindex: UnsignedPointer) =
     makeExpr(cg => dn.lookup(cg, p.lookupParameter, pindex.uintp), Seq(p, pindex))
   def constLookup(p: LookupParameter, index: Long) =
-    makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, index), Seq(p))
+    makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, index), p)
   def constLookup(p: LookupParameter, pindex: UnsignedPointer) =
     makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, pindex.uintp), Seq(p, pindex))
   def lookup(p: LookupParameter, indices: UnsignedVector) =
@@ -87,17 +87,17 @@ object Expression {
   def constLookup(p: LookupParameter, indices: UnsignedVector) =
     makeExpr(cg => dn.const_lookup(cg, p.lookupParameter, indices.vector), Seq(p, indices))
 
-  def zeros(d: Dim) = makeExpr(cg => dn.zeros(cg, d.dim), Seq(d))
-  def zeroes(d: Dim) = makeExpr(cg => dn.zeros(cg, d.dim), Seq(d))
-  def ones(d: Dim) = makeExpr(cg => dn.ones(cg, d.dim), Seq(d))
-  def constant(d: Dim, v: Float) = makeExpr(cg => dn.constant(cg, d.dim, v), Seq(d))
-  def randomNormal(d: Dim) = makeExpr(cg => dn.random_normal(cg, d.dim), Seq(d))
+  def zeros(d: Dim) = makeExpr(cg => dn.zeros(cg, d.dim), d)
+  def zeroes(d: Dim) = makeExpr(cg => dn.zeros(cg, d.dim), d)
+  def ones(d: Dim) = makeExpr(cg => dn.ones(cg, d.dim), d)
+  def constant(d: Dim, v: Float) = makeExpr(cg => dn.constant(cg, d.dim, v), d)
+  def randomNormal(d: Dim) = makeExpr(cg => dn.random_normal(cg, d.dim), d)
   def randomBernoulli(d: Dim, p: Float, scale: Float = 1.0f) = makeExpr(
-    cg => dn.random_bernoulli(cg, d.dim, p, scale), Seq(d))
+    cg => dn.random_bernoulli(cg, d.dim, p, scale), d)
   def randomUniform(d: Dim, left: Float, right: Float) = makeExpr(
-    cg => dn.random_uniform(cg, d.dim, left, right), Seq(d))
+    cg => dn.random_uniform(cg, d.dim, left, right), d)
   def randomGumbel(d: Dim, mu: Float, beta: Float) = makeExpr(
-    cg => dn.random_gumbel(cg, d.dim, mu, beta), Seq(d))
+    cg => dn.random_gumbel(cg, d.dim, mu, beta), d)
 
   /* ARITHMETIC OPERATIONS */
 
@@ -114,7 +114,7 @@ object Expression {
   private def unary(e: Expression, transformer: UnaryTransform) = {
     e.ensureFresh()
     // Specify e as reference so it can't get prematurely garbage collected.
-    new Expression(transformer(e.expr), Seq(e))
+    new Expression(transformer(e.expr), e)
   }
 
   def exprMinus(e: Expression): Expression = unary(e, dn.exprMinus)
@@ -136,7 +136,7 @@ object Expression {
     assert(v.nonEmpty, "Operation requires > 0 expression arguments")
     v.ensureFresh()
     // Specify v as reference so it can't get prematurely garbage collected.
-    new Expression(transformer(v.vector), Seq(v))
+    new Expression(transformer(v.vector), v)
   }
 
   def affineTransform(ev: ExpressionVector): Expression = vectory(ev, dn.affine_transform)
