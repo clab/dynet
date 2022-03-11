@@ -82,7 +82,7 @@ You can install dynet for C++ with the following commands
     # Compile using 2 processes
     make -j 2
     # Test with an example
-    ./examples/train_xor
+    ./examples/xor
 
 For more details refer to the [documentation](http://dynet.readthedocs.io/en/latest/install.html#building)
 
