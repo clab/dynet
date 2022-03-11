@@ -74,6 +74,10 @@ endif()
 ######## Platform-specific options
 if(WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOMINMAX")   # Disable min/max macros in windef.h
+elseif(APPLE AND (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm.*" OR ${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64.*"))
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=apple-m1")   # Clang on ARM-based Macs does not support -march=native
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
 ######## Compiler-specific options
@@ -89,7 +93,7 @@ else()
 
   set(CMAKE_CXX_FLAGS_DEBUG "-pedantic -O0 -g -fno-omit-frame-pointer")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Og -g")
-  set(CMAKE_CXX_FLAGS_RELEASE "-funroll-loops -O${RELEASE_OPT_LEVEL} -march=native -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_RELEASE "-funroll-loops -O${RELEASE_OPT_LEVEL} -DNDEBUG")
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
