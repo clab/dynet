@@ -55,11 +55,27 @@ jobs:
     - os: osx
       compiler: clang
       language: cpp
+      env: PYVER=3.9 PYNUM=3 PYTHON_INSTALL=manual
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.10 PYNUM=3 PYTHON_INSTALL=manual
+    - os: osx
+      compiler: clang
+      language: cpp
       env: PYVER=3.7 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
     - os: osx
       compiler: clang
       language: cpp
       env: PYVER=3.8 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.9 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - os: osx
+      compiler: clang
+      language: cpp
+      env: PYVER=3.10 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
     - os: linux
       compiler: gcc
       language: cpp
@@ -120,6 +136,14 @@ jobs:
       language: cpp
       env: PYVER=3.8 PYNUM=3 PYTHON_INSTALL=manual
     - os: linux
+      compiler: gcc
+      language: cpp
+      env: PYVER=3.9 PYNUM=3 PYTHON_INSTALL=manual
+    - os: linux
+      compiler: gcc
+      language: cpp
+      env: PYVER=3.10 PYNUM=3 PYTHON_INSTALL=manual
+    - os: linux
       dist: xenial
       compiler: gcc
       language: python
@@ -137,6 +161,20 @@ jobs:
       dist: xenial
       compiler: gcc
       language: python
+      python: 3.9
+      env: PYVER=3.9 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: type = cron OR tag IS present
+    - os: linux
+      dist: xenial
+      compiler: gcc
+      language: python
+      python: 3.10
+      env: PYVER=3.10 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=i686
+      if: type = cron OR tag IS present
+    - os: linux
+      dist: xenial
+      compiler: gcc
+      language: python
       python: 3.7
       env: PYVER=3.7 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
     - os: linux
@@ -146,6 +184,18 @@ jobs:
       python: 3.8
       env: PYVER=3.8 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
     - os: linux
+      dist: xenial
+      compiler: gcc
+      language: python
+      python: 3.9
+      env: PYVER=3.9 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - os: linux
+      dist: xenial
+      compiler: gcc
+      language: python
+      python: 3.10
+      env: PYVER=3.10 PYNUM=3 PYTHON_INSTALL=pip BUILD_ARCH=x86_64
+    - os: linux
       compiler: gcc
       language: cpp
       env: PYVER=3.7 PYNUM=3 PYTHON_INSTALL=manual BACKEND=cuda
@@ -153,6 +203,14 @@ jobs:
       compiler: gcc
       language: cpp
       env: PYVER=3.8 PYNUM=3 PYTHON_INSTALL=manual BACKEND=cuda
+    - os: linux
+      compiler: gcc
+      language: cpp
+      env: PYVER=3.9 PYNUM=3 PYTHON_INSTALL=manual BACKEND=cuda
+    - os: linux
+      compiler: gcc
+      language: cpp
+      env: PYVER=3.10 PYNUM=3 PYTHON_INSTALL=manual BACKEND=cuda
     - stage: test_pip
       os: osx
       env: PYVER=2.7 PYNUM=2
@@ -172,6 +230,14 @@ jobs:
       script: python tests/python/test.py
     - os: osx
       env: PYVER=3.8 PYNUM=3
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: osx
+      env: PYVER=3.9 PYNUM=3
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: osx
+      env: PYVER=3.10 PYNUM=3
       before_script: pip install dynet
       script: python tests/python/test.py
     - os: linux
@@ -210,6 +276,18 @@ jobs:
     - os: linux
       dist: xenial
       language: python
+      python: 3.9
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      dist: xenial
+      language: python
+      python: 3.10
+      before_script: pip install dynet
+      script: python tests/python/test.py
+    - os: linux
+      dist: xenial
+      language: python
       python: 3.7
       before_script: .travis/fix_version.sh
       script: python setup.py sdist
@@ -218,6 +296,20 @@ jobs:
       dist: xenial
       language: python
       python: 3.8
+      before_script: .travis/fix_version.sh
+      script: python setup.py sdist
+      if: tag IS present
+    - os: linux
+      dist: xenial
+      language: python
+      python: 3.9
+      before_script: .travis/fix_version.sh
+      script: python setup.py sdist
+      if: tag IS present
+    - os: linux
+      dist: xenial
+      language: python
+      python: 3.10
       before_script: .travis/fix_version.sh
       script: python setup.py sdist
       if: tag IS present
