@@ -506,19 +506,6 @@ cdef class ConstInitializer(PyInitializer):
     def __init__(self, float c):
         self.initializer = new CParameterInitConst(c)
 
-cdef class LeCunUniformInitializer(PyInitializer):
-    """Initialize parameters with samples from a Le Cun's uniform distribution
-    
-    Reference: LeCun 98, Efficient Backprop [http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf] 
-    Args:
-        fan_in (number): Dimension of the parameter to generate the uniform distribution
-    Keyword Arguments:
-        scale (bool): scale to apply to the orthonormal matrix (default: 1.0)
-    """
-    def __init__(self, float fan_in, float scale=1.0):
-        self.initializer = new CParameterInitLeCunUniform(fan_in, scale)
-HeInitializer = LeCunUniformInitializer #known alias
-
 cdef class IdentityInitializer(PyInitializer):
     """Initialize the parameters as the identity
     
@@ -6436,24 +6423,6 @@ cdef class AdamTrainer(Trainer):
         self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps)
     def whoami(self):
         return "AdamTrainer"
-
-cdef class NoamTrainer(Trainer):
-    """Noam optimizer
-    
-    The Noam optimizer is similar to Adam but varies the learning rate over the course of training
-    
-    Args:
-        m(dynet.ParameterCollection): ParameterCollection to be trained
-        model_size(number): Main dimension of the model (used mainly by Transformers)
-    
-    Keyword Args:
-        factor(number): todo (default: 2)
-        warmup(number): todo (default: 4000)
-    """
-    def __cinit__(self, ParameterCollection m, unsigned model_size, unsigned factor=2, unsigned warmup=4000):
-        self.thisptr = new CNoamTrainer(m.thisptr, model_size, factor, warmup)
-    def whoami(self):
-        return "NoamTrainer"
 
 cdef class AmsgradTrainer(Trainer):
     """AMSGrad optimizer

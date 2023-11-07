@@ -560,7 +560,6 @@ private:
  * Reference : [Adam: A Method for Stochastic Optimization](https://arxiv.org/pdf/1412.6980v8)
  *
  */
-struct NoamTrainer;// define it here so we can mark it as a friend
 struct AdamTrainer : public Trainer {
   /**
    * \brief Constructor
@@ -580,7 +579,6 @@ struct AdamTrainer : public Trainer {
   void save(std::ostream& os) override;
   void populate(std::istream& is) override;
   using Trainer::populate;
-  friend NoamTrainer;
 protected:
   DYNET_TRAINER_DEFINE_DEV_IMPL()
   virtual unsigned alloc_impl() override;
@@ -594,46 +592,7 @@ protected:
   std::vector<ShadowParameters> v; // History of deltas
   std::vector<ShadowLookupParameters> lv;
 private:
-	AdamTrainer() {}
-};
-
-/**
- * \ingroup optimizers
- *
- * \brief Noam optimizer
- * \details The Noam optimizer is similar to Adam but varies the learning rate over the course of training
- *
- * Reference : todo
- *
- */
-struct NoamTrainer : public Trainer {
-	/**
-	 * \brief Constructor
-	 *
-	 * \param m ParameterCollection to be trained
-	 * \param model_size main dimension of the model (used mainly by Transformers)
-	 * \param factor 
-	 * \param warmup 
-	 */
-	explicit NoamTrainer(ParameterCollection& m, int model_size, int factor = 2, int warmup = 4000) :
-		Trainer(m, 0.0), model_size(model_size), factor(factor), warmup(warmup), adam_optimizer(AdamTrainer(m, 0, 0.9, 0.98)) { }
-
-	void restart() override;
-	using Trainer::restart;
-
-	void save(std::ostream& os) override;
-	void populate(std::istream& is) override;
-	using Trainer::populate;
-protected:
-	DYNET_TRAINER_DEFINE_DEV_IMPL()
-		virtual unsigned alloc_impl() override;
-	virtual unsigned alloc_lookup_impl() override;
-	void update_lr();
-
-	int model_size;
-	int factor;
-	int warmup;
-	AdamTrainer adam_optimizer;
+  AdamTrainer() {}
 };
 
 /**

@@ -1024,66 +1024,6 @@ void AdamTrainer::populate(std::istream& is)
     std::istringstream iss(line);
     iss >> beta_1 >> beta_2 >> epsilon;
 }
-#endif
-
-// --- NoamTrainer
-
-// Perform update of ts[0]=parameters, ts[1]=gradients, ts[2]=mean, ts[3]=variance
-template <class MyDevice>
-void NoamTrainer::update_rule_dev(const MyDevice & dev, real gscale, const std::vector<Tensor*> & ts) {
-	adam_optimizer.update_rule_dev(dev, gscale, ts);
-}
-DYNET_TRAINER_INST_DEV_IMPL(NoamTrainer)
-
-#ifndef __CUDACC__
-void NoamTrainer::update_lr() {
-	this->learning_rate = factor * pow((float)model_size, -0.5f) * min<float>(pow((float)updates + 1, -0.5), (updates + 1) * pow(warmup, -1.5f));
-	adam_optimizer.learning_rate = this->learning_rate;// update both so the learningRate property can be seen
-}
-void NoamTrainer::update_params(real gscale, size_t idx) {
-	update_lr();
-	adam_optimizer.update_params(gscale, idx);
-}
-void NoamTrainer::update_lookup_params(real gscale, size_t idx, size_t lidx) {
-	update_lr();
-	adam_optimizer.update_lookup_params(gscale, idx, lidx);
-}
-void NoamTrainer::update_lookup_params(real gscale, size_t idx) {
-	update_lr();
-	adam_optimizer.update_lookup_params(gscale, idx);
-}
-unsigned NoamTrainer::alloc_impl() {
-	return adam_optimizer.alloc_impl();
-}
-unsigned NoamTrainer::alloc_lookup_impl() {
-	return adam_optimizer.alloc_lookup_impl();
-}
-
-void NoamTrainer::restart() {
-	adam_optimizer.restart();
-}
-
-void NoamTrainer::save(std::ostream& os)
-{
-	Trainer::save(os);
-
-	write_trainer_header(os, "#NoamTrainer#", aux_allocated, aux_allocated_lookup);
-	os << model_size << ' ' << factor << ' ' << warmup << std::endl;
-	adam_optimizer.save(os);
-}
-
-void NoamTrainer::populate(std::istream& is)
-{
-	Trainer::populate(is);
-
-	unsigned np, nlp;
-	read_trainer_header(is, "#NoamTrainer#", &np, &nlp);
-	std::string line;
-	std::getline(is, line);
-	std::istringstream iss(line);
-	iss >> model_size >> factor >> warmup;
-	adam_optimizer.populate(is);
-}
 
 #endif
 

@@ -26,13 +26,6 @@ public:
   void freeze() { frozen = true; }
   bool is_frozen() const { return frozen; }
 
-  inline void set_map_and_words_(Map _d, std::vector<std::string> _words) {
-	  if (frozen)
-		  DYNET_RUNTIME_ERR("Cannot update after freezing");
-	  d_ = _d;
-	  words_ = _words;
-  }
-
   inline int convert(const std::string& word) {
     auto i = d_.find(word);
     if (i == d_.end()) {
