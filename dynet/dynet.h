@@ -112,7 +112,7 @@ struct ComputationGraph {
   VariableIndex add_input(const real* ps,
                           Device* device);  // add pointer to scalar
   /**
-   * \brief Add multidimentsional input
+   * \brief Add multidimensional input
    * \details The computational network will pull inputs in from the user's data
    * structures and make them available to the computation
    *
@@ -125,7 +125,7 @@ struct ComputationGraph {
   VariableIndex add_input(const Dim& d, const std::vector<float>& data,
                           Device* device);
   /**
-   * \brief Add multidimentsional input by pointer
+   * \brief Add multidimensional input by pointer
    * \details The computational network will pull inputs in from the user's data
    * structures and make them available to the computation
    *

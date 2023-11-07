@@ -1,22 +1,22 @@
 #!/bin/bash
 set -xe
 
-# Boost, Pandoc, Python packages
+# Boost, Python packages
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
   sudo apt-get -qq update
-  sudo apt-get install -y gcc-4.8 g++-4.8
-  PYTHON_PACKAGES="numpy pypandoc twine auditwheel cython"
+  sudo apt-get install -y gcc-4.8 g++-4.8 libssl-dev
+  PYTHON_PACKAGES="numpy twine auditwheel cython"
   if [[ "$PYTHON_INSTALL" == manual ]]; then
     sudo apt-get install -y --allow-unauthenticated libboost-filesystem1.55-dev libboost-program-options1.55-dev libboost-serialization1.55-dev libboost-test1.55-dev libboost-regex1.55-dev
     sudo -H pip install -U $PYTHON_PACKAGES
   else
-    sudo apt-get install -y pandoc
+    pip install -U pip
+    pip install --prefer-binary cryptography
     pip install -U $PYTHON_PACKAGES
   fi
 else
   brew update
-  brew install pandoc
   # Install Miniconda
   export MINICONDA_OS_NAME=MacOSX MINICONDA_ARCH=x86_64
   wget "https://repo.continuum.io/miniconda/Miniconda3-latest-$MINICONDA_OS_NAME-$MINICONDA_ARCH.sh" -O miniconda.sh
@@ -29,7 +29,7 @@ else
   # Useful for debugging any issues with conda
   conda info -a
   source activate "$PYVER"
-  pip install pypandoc twine
+  pip install twine
 fi
 
 # CUDA
@@ -47,10 +47,10 @@ if [[ "$BACKEND" == cuda ]]; then
 fi
 
 # Eigen
-wget https://bitbucket.org/eigen/eigen/get/b2e267dc99d4.zip
-unzip b2e267dc99d4.zip
-mv eigen-eigen-b2e267dc99d4 eigen
+mkdir eigen
 cd eigen
+wget https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip
+unzip eigen-b2e267dc99d4.zip
 mkdir build && cd build
 cmake ..
 sudo make install

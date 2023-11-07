@@ -117,8 +117,7 @@ if (EIGEN3_INCLUDE_DIR is not None and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
     EIGEN3_INCLUDE_DIR = os.path.join(os.pardir, EIGEN3_INCLUDE_DIR)
 
-EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/b2e267dc99d4.zip") 
-# EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://bitbucket.org/eigen/eigen/get/3.3.4.tar.bz2")
+EIGEN3_DOWNLOAD_URL = ENV.get("EIGEN3_DOWNLOAD_URL", "https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip") 
     
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 cfg_vars = distutils.sysconfig.get_config_vars()
@@ -251,19 +250,15 @@ class build(_build):
                     # tfile.extractall('eigen')
                     log.info("Fetching Eigen...")
                     urlretrieve(EIGEN3_DOWNLOAD_URL, "eigen.zip")
+                except Exception as e:
+                    raise DistutilsSetupError("Could not download Eigen from %r: %s" % (EIGEN3_DOWNLOAD_URL, e))
+                try:
                     log.info("Unpacking Eigen...")
-                    #BitBucket packages everything in a tarball with a changing root directory, so grab the only child
+                    os.mkdir(EIGEN3_INCLUDE_DIR)
                     with zipfile.ZipFile("eigen.zip") as zfile:
-                        for zipinfo in zfile.infolist():
-                            try:
-                                i = zipinfo.filename.index("/")
-                                zipinfo.filename = zipinfo.filename[i+1:]
-                                zfile.extract(zipinfo, "eigen")
-                            except ValueError:
-                                pass
-                    EIGEN3_INCLUDE_DIR = os.path.join(BUILD_DIR, "eigen")
-                except:
-                    raise DistutilsSetupError("Could not download Eigen from %r" % EIGEN3_DOWNLOAD_URL)
+                        zfile.extractall(EIGEN3_INCLUDE_DIR)
+                except Exception as e:
+                    raise DistutilsSetupError("Could not extract Eigen to %r: %s" % (EIGEN3_INCLUDE_DIR, e))
 
             os.environ["CXX"] = CXX_PATH
             os.environ["CC"] = CC_PATH
@@ -353,9 +348,8 @@ class build_ext(_build_ext):
 
 
 try:
-    import pypandoc
-    long_description = pypandoc.convert("README.md", "rst")
-    long_description = "\n".join(line for line in long_description.splitlines() if "<#" not in line)
+    with open(os.path.join(SCRIPT_DIR, 'README.md'), encoding='utf-8') as f:
+        long_description = f.read()
 except:
     long_description = ""
 
@@ -365,6 +359,7 @@ setup(
     install_requires=["cython", "numpy"],
     description="The Dynamic Neural Network Toolkit",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
@@ -390,6 +385,9 @@ setup(
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     author="Graham Neubig",

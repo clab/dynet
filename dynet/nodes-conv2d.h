@@ -6,6 +6,7 @@
 
 #if HAVE_CUDNN
 #include "dynet/cudnn-ops.h"
+#include <memory>
 #endif
 
 namespace dynet {
@@ -37,7 +38,7 @@ struct Conv2D: public Node {
 
  private:
 #if HAVE_CUDNN
-  mutable CudnnConvOp* cudnn_conv_op_ = NULL;
+  mutable std::unique_ptr<CudnnConvOp> cudnn_conv_op_;
 #endif
 };
 

@@ -29,7 +29,11 @@ Most of these instructions are copied out of the documentation for compiling DyN
 
 ##### Downloading the source code: 
 ```bash
-hg clone https://bitbucket.org/eigen/eigen/ -r b2e267d
+mkdir eigen
+cd eigen
+wget https://github.com/clab/dynet/releases/download/2.1/eigen-b2e267dc99d4.zip
+unzip eigen-b2e267dc99d4.zip
+cd ..
 git clone https://github.com/clab/dynet.git
 cd dynet
 mkdir build

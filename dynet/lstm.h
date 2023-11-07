@@ -40,8 +40,8 @@ struct CoupledLSTMBuilder : public RNNBuilder {
    * \brief Constructor for the LSTMBuilder
    *
    * \param layers Number of layers
-   * \param input_dim Dimention of the input \f$x_t\f$
-   * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
+   * \param input_dim Dimension of the input \f$x_t\f$
+   * \param hidden_dim Dimension of the hidden states \f$h_t\f$ and \f$c_t\f$
    * \param model ParameterCollection holding the parameters
    */
   explicit CoupledLSTMBuilder(unsigned layers,
@@ -199,8 +199,8 @@ struct VanillaLSTMBuilder : public RNNBuilder {
    * \brief Constructor for the VanillaLSTMBuilder
    *
    * \param layers Number of layers
-   * \param input_dim Dimention of the input \f$x_t\f$
-   * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
+   * \param input_dim Dimension of the input \f$x_t\f$
+   * \param hidden_dim Dimension of the hidden states \f$h_t\f$ and \f$c_t\f$
    * \param model ParameterCollection holding the parameters
    * \param ln_lstm Whether to use layer normalization
    * \param forget_bias value(float) to use as bias for the forget gate(default = 1.0)
@@ -341,8 +341,8 @@ struct SparseLSTMBuilder : public RNNBuilder {
    * \brief Constructor for the SparseLSTMBuilder
    *
    * \param layers Number of layers
-   * \param input_dim Dimention of the input \f$x_t\f$
-   * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
+   * \param input_dim Dimension of the input \f$x_t\f$
+   * \param hidden_dim Dimension of the hidden states \f$h_t\f$ and \f$c_t\f$
    * \param model ParameterCollection holding the parameters
    * \param ln_lstm Whether to use layer normalization
    * \param forget_bias value(float) to use as bias for the forget gate(default = 1.0)
@@ -490,8 +490,8 @@ struct CompactVanillaLSTMBuilder : public RNNBuilder {
    * \brief Constructor for the CompactVanillaLSTMBuilder
    *
    * \param layers Number of layers
-   * \param input_dim Dimention of the input \f$x_t\f$
-   * \param hidden_dim Dimention of the hidden states \f$h_t\f$ and \f$c_t\f$
+   * \param input_dim Dimension of the input \f$x_t\f$
+   * \param hidden_dim Dimension of the hidden states \f$h_t\f$ and \f$c_t\f$
    * \param model ParameterCollection holding the parameters
    */
   explicit CompactVanillaLSTMBuilder(unsigned layers,

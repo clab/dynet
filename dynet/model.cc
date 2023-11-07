@@ -272,7 +272,7 @@ void ParameterCollectionStorage::project_weights(float radius) {
   auto scratch_size = all_params.size() * sizeof(float);
   if (project_scratch == nullptr || sizeof(project_scratch) < scratch_size) {
     if (project_scratch != nullptr) {
-      default_device->mem->free(gradient_norm_scratch);
+      default_device->mem->free(project_scratch);
     }
     project_scratch = (float *) default_device->mem->malloc(scratch_size);
   }
@@ -818,10 +818,10 @@ float ParameterCollectionStorage::gradient_l2_norm_dev(MyDevice &dev) const {
     Device *dev_k;
     DYNET_ASSERT(all_params.size() == (params.size() + lookup_params.size()),
                  "Unmatched parameter size");
-    if (params.size() && all_params[pi] == params[k1]) {
+    if (params.size() > k1 && all_params[pi] == params[k1]) {
       dev_k = params[k1]->device;
       ++k1;
-    } else if (lookup_params.size() && all_params[pi] == lookup_params[k2]) {
+    } else if (lookup_params.size() > k2 && all_params[pi] == lookup_params[k2]) {
       dev_k = lookup_params[k2]->device;
       ++k2;
     } else {

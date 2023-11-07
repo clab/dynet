@@ -1,5 +1,6 @@
 #if !_WINDOWS
 #include "mp.h"
+#include "unistd.h"
 #include "dynet/except.h"
 using namespace std;
 using namespace boost::interprocess;
@@ -15,7 +16,7 @@ namespace dynet {
 
     std::string generate_queue_name() {
       std::ostringstream ss;
-      ss << "dynet_mp_work_queue";
+      ss << "dynet_mp_work_queue_" << getpid() << "_";
       ss << rand();
       return ss.str();
     }
