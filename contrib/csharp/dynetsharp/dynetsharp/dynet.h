@@ -526,38 +526,6 @@ namespace dynetsharp {
 			)
 		}
 	};
-	// LeCunUniformInitializer
-	/// <summary>
-	/// <para>Initialize parameters with samples from a Le Cun's uniform distribution</para>
-	/// <para>Also known as "HeInitializer"</para>
-	/// <remarks>Reference: LeCun 98, Efficient Backprop [http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf] </remarks>
-	/// </summary>
-	public ref class LeCunUniformInitializer : ParamInitializer {
-	public:
-		/// <summary>
-		/// <para>Initialize parameters with samples from a Le Cun's uniform distribution</para>
-		/// <para>Also known as "HeInitializer"</para>
-		/// <remarks>Reference: LeCun 98, Efficient Backprop [http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf] </remarks>
-		/// <param name='fan_in'>Dimension of the parameter to generate the uniform distribution</param>
-		/// </summary>
-		LeCunUniformInitializer(float fan_in) {
-			ExceptionWrap(
-				__thisptr = new dynet::ParameterInitLeCunUniform(fan_in);
-			)
-		}
-		/// <summary>
-		/// <para>Initialize parameters with samples from a Le Cun's uniform distribution</para>
-		/// <para>Also known as "HeInitializer"</para>
-		/// <remarks>Reference: LeCun 98, Efficient Backprop [http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf] </remarks>
-		/// <param name='fan_in'>Dimension of the parameter to generate the uniform distribution</param>
-		/// <param name='scale'>scale to apply to the orthonormal matrix (default: 1.0)</param>
-		/// </summary>
-		LeCunUniformInitializer(float fan_in, float scale) {
-			ExceptionWrap(
-				__thisptr = new dynet::ParameterInitLeCunUniform(fan_in, scale);
-			)
-		}
-	};
 	// IdentityInitializer
 	/// <summary>
 	/// <para>Initialize the parameters as the identity</para>
@@ -1464,37 +1432,6 @@ namespace dynetsharp {
 		AdamTrainer(ParameterCollection ^pc, float alpha, float beta1, float beta2, float eps) {
 			ExceptionWrap(
 				__thisptr = new dynet::AdamTrainer(*pc->__thisptr, alpha, beta1, beta2, eps);
-			)
-		}
-	};
-	/// <summary>
-	/// <para>Noam optimizer</para>
-	/// <para>The Noam optimizer is similar to Adam but varies the learning rate over the course of training</para>
-	/// </summary>
-	public ref class NoamTrainer : Trainer {
-	public:
-		/// <summary>
-		/// <para>Noam optimizer</para>
-		/// <para>The Noam optimizer is similar to Adam but varies the learning rate over the course of training</para>
-		/// </summary>
-		/// <param name='pc'>ParameterCollection to be trained</param>
-		/// <param name='model_size'>main dimension of the model (used mainly by Transformers)</param>
-		NoamTrainer(ParameterCollection ^pc, int model_size) {
-			ExceptionWrap(
-				__thisptr = new dynet::NoamTrainer(*pc->__thisptr, model_size);
-			)
-		}
-		/// <summary>
-		/// <para>Noam optimizer</para>
-		/// <para>The Noam optimizer is similar to Adam but varies the learning rate over the course of training</para>
-		/// </summary>
-		/// <param name='pc'>ParameterCollection to be trained</param>
-		/// <param name='model_size'>main dimension of the model (used mainly by Transformers)</param>
-		/// <param name='factor'>todo (default: 2)</param>
-		/// <param name='warmup'>todo (default: 4000)</param>
-		NoamTrainer(ParameterCollection ^pc, int model_size, int factor, int warmup) {
-			ExceptionWrap(
-				__thisptr = new dynet::NoamTrainer(*pc->__thisptr, model_size, factor, warmup);
 			)
 		}
 	};
