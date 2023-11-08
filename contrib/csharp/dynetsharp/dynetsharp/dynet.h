@@ -61,33 +61,86 @@ namespace dynetsharp {
 	static size_t maxOverallMemory = 0;
 	static size_t initialMemorySize = 0;
 	// Extra functions
-	Dim ConvertArrToDim(array<long>^ arr);
+	dynet::Dim ConvertArrToDim(array<long>^ arr);
 	array<long> ^ConvertDimToArr(dynet::Dim d);
 	std::vector<unsigned int> VecToUInt(std::vector<int> vec);
 	template<typename T> std::vector<T> ConvertArrayToVector(array<T> ^arr);
 	template<typename T> array<T> ^ConvertVectorToArray(std::vector<T> vec);
 	void ResetDynetMemory(size_t newMemSize);
 	
+	public ref class Dim {
+	private:
+		dynet::Dim *_dim;
+	internal:
+		Dim(dynet::Dim dim) {
+			_dim = new dynet::Dim(dim);
+		}
+		Dim(std::vector<long> dims, int batch_size) {
+			_dim = new dynet::Dim(dims, batch_size);
+		}
+		dynet::Dim get_cdim() {
+			return *_dim;
+		}
+	public:
+		Dim(array<long> ^dims) {
+			_dim = new dynet::Dim(ConvertArrayToVector<long>(dims));
+		}
+		Dim(array<long> ^dims, int batchSize) {
+			_dim = new dynet::Dim(ConvertArrayToVector<long>(dims), batchSize);
+		}
+		~Dim() {
+			this->!Dim();
+		}
+		!Dim() {
+			if (_dim != NULL) 
+				delete _dim;
+			_dim = NULL;
+		}
+		property int NDims {
+			int get() {
+				return (int)_dim->ndims();
+			}
+		}
+		property int BatchSize {
+			int get() {
+				return _dim->batch_elems();
+			}
+		}
+		/// <summary>
+		/// <para>Returns the list of dimensions sizes, batch size is the last dimension</para>
+		/// </summary>
+		property array<long> ^Dims {
+			array<long> ^get() {
+				array<long> ^ret = gcnew array<long>(NDims + (_dim->batch_elems() > 1 ? 1 : 0));
+				for (int iDim = 0; iDim < NDims; iDim++)
+					ret[iDim] = (*_dim)[iDim];
+				if (_dim->batch_elems() > 1)
+					ret[NDims] = _dim->batch_elems();
+				return ret;
+			}
+		}
+		property long default[int] {
+			long get(int index) {
+				ExceptionWrap(
+					return (*_dim)[index];
+				)
+			}
+		};
+
+	};
+
 	public ref class Tensor {
 	private:
-		int ndims;
 		int GetActualPosFromArr(array<int> ^arr);
 		int GetActualPosFromArr(std::vector<int> arr);
 		int GetActualPosFromArr(std::vector<int> arr, bool fCheckBoundaries);
-		std::vector<float> _getFlattenedRowValue(array<int> ^pos);
-		std::vector<long> *_dim;
+		Dim ^_dim = nullptr;
 	internal:
 		dynet::Tensor *__thisptr;
 		std::vector<float> *_vec;
 		Tensor(dynet::Tensor _tensor) {
 			ExceptionWrap(
-				dynet::Dim d = _tensor.d;
-			// set the properties
-			ndims = d.ndims();
-			// Create the vec, add items
-			_dim = new std::vector<long>(ndims);
-			for (int iDim = 0; iDim < ndims; iDim++)
-				(*_dim)[iDim] = d[iDim];
+				_dim = gcnew Dim(_tensor.d);
 			// Copy in the vector
 			_vec = new std::vector<float>(as_vector(_tensor));
 			__thisptr = new dynet::Tensor(_tensor);
@@ -100,11 +153,14 @@ namespace dynetsharp {
 			if (__thisptr != NULL) {
 				delete __thisptr;
 				delete _vec;
-				delete _dim;
 			}
 			__thisptr = NULL;
 			_vec = NULL;
-			_dim = NULL;
+		}
+		property int ndims {
+			int get() {
+				return (int)_dim->NDims + (_dim->BatchSize > 1 ? 1 : 0);
+			}
 		}
 	public:
 		Tensor(array<float> ^arr, array<long> ^shape);
@@ -112,9 +168,10 @@ namespace dynetsharp {
 		Tensor(array<array<float> ^> ^arr);
 		Tensor(array<array<array<float> ^> ^> ^arr);
 		Tensor(array<array<array<array<float> ^> ^> ^> ^arr);
-		
+		void SetBatched(bool fBatched);
+
 		int NDims() { return ndims; }
-		array<long> ^Shape() { return ConvertVectorToArray<long>(*_dim); }
+		Dim ^Shape() { return _dim; }
 
 		array<float> ^GetFlatVector();
 		array<float> ^Get1DVector();
@@ -123,13 +180,16 @@ namespace dynetsharp {
 		array<array<array<array<float> ^>^>^> ^Get4DVector();
 		void SetValue(array<int> ^pos, float value);
 		void SetRowValue(array<int> ^pos, array<float> ^value);
+		void SetRowValue(array<int> ^pos, array<float> ^value, int batchDim);
 		float GetValue(array<int> ^pos);
 		array<float> ^GetRowValue(array<int> ^pos);
-		array<float> ^GetFlattenedRowValue(array<int> ^pos);
-
+		
 		// Equals method
 		// Check pointers. Since this object can be initialized in C#, compare hashcode at the end
 		static bool operator==(Tensor^ t1, Tensor ^t2) {
+			bool t1Null = Object::ReferenceEquals(t1, nullptr);
+			bool t2Null = Object::ReferenceEquals(t2, nullptr);
+			if (t1Null || t2Null) return t1Null == t2Null;
 			// Case and compare pointers
 			if (t1->__thisptr)
 				return t1->__thisptr->v == t2->__thisptr->v;
@@ -245,18 +305,26 @@ namespace dynetsharp {
 		Tensor ^TensorValue();
 		Tensor ^TensorValue(bool fRecalculate);
 		Tensor ^Gradient();
-		array<long> ^Shape();
+		Dim ^Shape();
 
 		// Add a brackets lookup
 		property Expression ^default[int] {
-			Expression ^get(int index) {
-				ExceptionWrap(
-					return gcnew Expression(dynet::pick(__thisptr, index));
-				)
-			}
+			Expression ^get(int index);
+		};
+		property Expression ^default[int,int]{
+			Expression ^get(int index, int dim);
+		};
+		property Expression ^default[array<int>^]{
+			Expression ^get(array<int> ^indexes);
+		};
+		property Expression ^default[array<int>^, int]{
+			Expression ^get(array<int> ^indexes, int dim);
 		};
 		// Equals method
 		static bool operator==(Expression^ t1, Expression ^t2) {
+			bool t1Null = Object::ReferenceEquals(t1, nullptr);
+			bool t2Null = Object::ReferenceEquals(t2, nullptr);
+			if (t1Null || t2Null) return t1Null == t2Null;
 			return t1->variableIndex == t2->variableIndex;
 		}
 	};
@@ -298,15 +366,24 @@ namespace dynetsharp {
 		void Scale(float s);
 		void ScaleGradient(float s);
 
-		property Expression ^default[int] {
-			Expression ^get(int index) {
-				ExceptionWrap(
-					return gcnew Expression(dynet::lookup(*cg, *__thisptr, index));
-				)
-			}
+		property Expression ^default[int]{
+			Expression ^get(int index);
 		};
+		property Expression ^default[int,bool]{
+			Expression ^get(int index, bool fUpdate);
+		};
+		property Expression ^default[array<int>^]{
+			Expression ^get(array<int>^ indexes);
+		};
+		property Expression ^default[array<int>^,bool]{
+			Expression ^get(array<int>^ indexes, bool fUpdate);
+		};
+		
 		// Equals method
 		static bool operator==(LookupParameter^ t1, LookupParameter ^t2) {
+			bool t1Null = Object::ReferenceEquals(t1, nullptr);
+			bool t2Null = Object::ReferenceEquals(t2, nullptr);
+			if (t1Null || t2Null) return t1Null == t2Null;
 			return t1->__thisptr->p == t2->__thisptr->p;
 		}
 	};
@@ -357,9 +434,17 @@ namespace dynetsharp {
 		Tensor ^Gradient();
 		Expression ^ToExpression();
 		Expression ^ToExpression(bool fUpdate);
+		property String ^Name {
+			String ^get() {
+				return gcnew String(__thisptr->get_fullname().c_str());
+			}
+		}
 
 		// Equals method
 		static bool operator==(Parameter^ t1, Parameter ^t2) {
+			bool t1Null = Object::ReferenceEquals(t1, nullptr);
+			bool t2Null = Object::ReferenceEquals(t2, nullptr);
+			if (t1Null || t2Null) return t1Null == t2Null;
 			return t1->__thisptr->p == t2->__thisptr->p;
 		}
 		static operator Expression ^(Parameter ^p) {
@@ -679,6 +764,9 @@ namespace dynetsharp {
 
 		// Equals method
 		static bool operator==(RNNState^ t1, RNNState ^t2) {
+			bool t1Null = Object::ReferenceEquals(t1, nullptr);
+			bool t2Null = Object::ReferenceEquals(t2, nullptr);
+			if (t1Null || t2Null) return t1Null == t2Null;
 			return t1->__builderptr == t2->__builderptr && *t1->__stateptr == *t2->__stateptr;
 		}
 	};
@@ -711,6 +799,9 @@ namespace dynetsharp {
 
 		// Equals method
 		static bool operator==(RNNBuilder^ t1, RNNBuilder ^t2) {
+			bool t1Null = Object::ReferenceEquals(t1, nullptr);
+			bool t2Null = Object::ReferenceEquals(t2, nullptr);
+			if (t1Null || t2Null) return t1Null == t2Null;
 			return t1->__thisptr == t2->__thisptr;
 		}
 	};
@@ -1094,6 +1185,7 @@ namespace dynetsharp {
 		}
 		/// <summary>
 		/// <para>Set clipping thershold</para>
+		/// <remarks>Gradients are clipped to 5 by default.</remarks>
 		/// <remarks>To deactivate clipping, set the threshold to be &lt;=0</remarks>
 		/// </summary>
 		/// <param name='thresh'>Clipping threshold</param>
@@ -1129,6 +1221,9 @@ namespace dynetsharp {
 
 		// Equals method
 		static bool operator==(Trainer^ t1, Trainer ^t2) {
+			bool t1Null = Object::ReferenceEquals(t1, nullptr);
+			bool t2Null = Object::ReferenceEquals(t2, nullptr);
+			if (t1Null || t2Null) return t1Null == t2Null;
 			return t1->__thisptr == t2->__thisptr;
 		}
 	};
@@ -1486,55 +1581,90 @@ namespace dynetsharp {
 		static void RevertCG();
 		static Expression ^lookup(LookupParameter ^lp, int index);
 		static Expression ^lookup(LookupParameter ^lp, int index, bool fUpdate);
+		static Expression ^lookup_batch(LookupParameter ^lp, array<int> ^indexes);
+		static Expression ^lookup_batch(LookupParameter ^lp, array<int> ^indexes, bool fUpdate);
 		static Expression ^parameter(Parameter ^p);
 		static Expression ^const_parameter(Parameter ^p);
 		static Expression ^pick(Expression ^exp, int index);
 		static Expression ^pick(Expression ^exp, int index, int dim);
+		static Expression ^pick_batch(Expression ^exp, array<int> ^indexes);
+		static Expression ^pick_batch(Expression ^exp, array<int> ^indexes, int dim);
 		static Expression ^input(float num);
 		static Expression ^input(float num, String ^device);
 		static Expression ^input(array<float>^ num);
+		static Expression ^input(array<float>^ num, int batchSize);
 		static Expression ^input(array<float>^ num, String ^device);
+		static Expression ^input(array<float>^ num, int batchSize, String ^device);
 		static Expression ^input(array<array<float>^>^ num);
+		static Expression ^input(array<array<float>^>^ num, int batchSize);
 		static Expression ^input(array<array<float>^>^ num, String ^device);
+		static Expression ^input(array<array<float>^>^ num, int batchSize, String ^device);
 		static Expression ^inputTensor(Tensor ^tensor);
 		static Expression ^inputTensor(Tensor ^tensor, String ^device);
 		static Expression ^inputVector(long dim);
+		static Expression ^inputVector(long dim, int batchSize);
 		static Expression ^inputTensor(array<long> ^dim);
+		static Expression ^inputTensor(array<long> ^dim, int batchSize);
 		static Expression ^inputVector(long dim, String ^device);
+		static Expression ^inputVector(long dim, int batchSize, String ^device);
 		static Expression ^inputTensor(array<long> ^dim, String ^device);
+		static Expression ^inputTensor(array<long> ^dim, int batchSize, String ^device);
 		static Expression ^average(List<Expression^> ^l);
 		static Expression ^average(... array<Expression^> ^arr);
 		static Expression ^esum(List<Expression^> ^l);
 		static Expression ^esum(... array<Expression^> ^arr);
 		static Expression ^sum(List<Expression^> ^l);
 		static Expression ^sum(... array<Expression^> ^arr);
-		static Expression ^zeroes(array<long> ^dim);
-		static Expression ^zeroes(array<long> ^dim, String ^device);
 		static Expression ^zeros(array<long> ^dim);
+		static Expression ^zeros(array<long> ^dim, int batchSize);
 		static Expression ^zeros(array<long> ^dim, String ^device);
+		static Expression ^zeros(array<long> ^dim, int batchSize, String ^device);
 		static Expression ^one_hot(int dim, int idx);
 		static Expression ^one_hot(int dim, int idx, String ^device);
+		static Expression ^one_hot(int dim, List<int> ^idx);
+		static Expression ^one_hot(int dim, array<int> ^idx);
+		static Expression ^one_hot(int dim, List<int> ^idx, String ^device);
+		static Expression ^one_hot(int dim, array<int> ^idx, String ^device);
 		static Expression ^ones(array<long> ^dim);
+		static Expression ^ones(array<long> ^dim, int batchSize);
 		static Expression ^ones(array<long> ^dim, String ^device);
+		static Expression ^ones(array<long> ^dim, int batchSize, String ^device);
 		static Expression ^constant(array<long> ^dim, float val);
+		static Expression ^constant(array<long> ^dim, float val, int batchSize);
 		static Expression ^constant(array<long> ^dim, float val, String ^device);
+		static Expression ^constant(array<long> ^dim, float val, int batchSize, String ^device);
 		static Expression ^random_normal(array<long> ^dim);
+		static Expression ^random_normal(array<long> ^dim, int batchSize);
 		static Expression ^random_normal(array<long> ^dim, String ^device);
+		static Expression ^random_normal(array<long> ^dim, int batchSize, String ^device);
 		static Expression ^random_normal(array<long> ^dim, float mean, float stddev);
+		static Expression ^random_normal(array<long> ^dim, float mean, float stddev, int batchSize);
 		static Expression ^random_normal(array<long> ^dim, float mean, float stddev, String ^device);
+		static Expression ^random_normal(array<long> ^dim, float mean, float stddev, int batchSize, String ^device);
 		static Expression ^random_bernoulli(array<long> ^dim, float p);
+		static Expression ^random_bernoulli(array<long> ^dim, float p, int batchSize);
 		static Expression ^random_bernoulli(array<long> ^dim, float p, String ^device);
+		static Expression ^random_bernoulli(array<long> ^dim, float p, int batchSize, String ^device);
 		static Expression ^random_bernoulli(array<long> ^dim, float p, float scale);
+		static Expression ^random_bernoulli(array<long> ^dim, float p, float scale, int batchSize);
 		static Expression ^random_bernoulli(array<long> ^dim, float p, float scale, String ^device);
+		static Expression ^random_bernoulli(array<long> ^dim, float p, float scale, int batchSize, String ^device);
 		static Expression ^random_uniform(array<long> ^dim, float left, float right);
+		static Expression ^random_uniform(array<long> ^dim, float left, float right, int batchSize);
 		static Expression ^random_uniform(array<long> ^dim, float left, float right, String ^device);
+		static Expression ^random_uniform(array<long> ^dim, float left, float right, int batchSize, String ^device);
 		static Expression ^random_gumbel(array<long> ^dim);
+		static Expression ^random_gumbel(array<long> ^dim, int batchSize);
 		static Expression ^random_gumbel(array<long> ^dim, String ^device);
+		static Expression ^random_gumbel(array<long> ^dim, int batchSize, String ^device);
 		static Expression ^random_gumbel(array<long> ^dim, float mu, float beta);
+		static Expression ^random_gumbel(array<long> ^dim, float mu, float beta, int batchSize);
 		static Expression ^random_gumbel(array<long> ^dim, float mu, float beta, String ^device);
+		static Expression ^random_gumbel(array<long> ^dim, float mu, float beta, int batchSize, String ^device);
 		static Expression ^flip_gradient(Expression ^x);
 		static Expression ^scale_gradient(Expression ^x);
 		static Expression ^scale_gradient(Expression ^x, float lambd);
+		static Expression ^argmax(Expression ^x, GradientMode gm);
 		static Expression ^cdiv(Expression ^x, Expression ^y);
 		static Expression ^cmult(Expression ^x, Expression ^y);
 		static Expression ^colwise_add(Expression ^x, Expression ^y);
@@ -1626,8 +1756,11 @@ namespace dynetsharp {
 		static Expression ^kmax_pooling(Expression ^x, int k);
 		static Expression ^kmax_pooling(Expression ^x, int k, int d);
 		static Expression ^pickneglogsoftmax(Expression ^x, int v);
+		static Expression ^pickneglogsoftmax_batch(Expression ^x, array<int> ^v);
 		static Expression ^hinge(Expression ^x, int v);
 		static Expression ^hinge(Expression ^x, int v, float m);
+		static Expression ^hinge_batch(Expression ^x, array<int> ^v);
+		static Expression ^hinge_batch(Expression ^x, array<int> ^v, float m);
 		static Expression ^hinge_dim(Expression ^x, array<int> ^v);
 		static Expression ^hinge_dim(Expression ^x, array<int> ^v, int d, float m);
 		static Expression ^kmh_ngram(Expression ^x, int v);
@@ -1641,6 +1774,7 @@ namespace dynetsharp {
 		static Expression ^dropout_dim(Expression ^x, int d, float p);
 		static Expression ^block_dropout(Expression ^x, float p);
 		static Expression ^reshape(Expression ^x, array<long> ^d);
+		static Expression ^reshape(Expression ^x, array<long> ^d, int batchSize);
 		static Expression ^max_dim(Expression ^x);
 		static Expression ^max_dim(Expression ^x, int d);
 		static Expression ^min_dim(Expression ^x);
@@ -1656,6 +1790,8 @@ namespace dynetsharp {
 		static Expression ^concatenate(List<Expression ^> ^arr, int d);
 		static Expression ^concatenate(... array<Expression ^> ^arr);
 		static Expression ^concatenate(array<Expression ^> ^arr, int d);
+		static Expression ^concatenate_to_batch(List<Expression ^> ^arr);
+		static Expression ^concatenate_to_batch(... array<Expression ^> ^arr);
 		static Expression ^affine_transform(List<Expression ^> ^arr);
 		static Expression ^affine_transform(... array<Expression ^> ^arr);
 		static Expression ^layer_norm(Expression ^x, Expression ^g, Expression ^b);
@@ -1684,9 +1820,9 @@ namespace dynetsharp {
 		return d;
 	}
 	// Private functions only for use here:
-	Dim ConvertArrToDim(array<long>^ arr) {
+	dynet::Dim ConvertArrToDim(array<long>^ arr) {
 		ExceptionWrap(
-			return Dim(ConvertArrayToVector<long>(arr));
+			return dynet::Dim(ConvertArrayToVector<long>(arr));
 		)
 	}
 	array<long> ^ConvertDimToArr(dynet::Dim d) {

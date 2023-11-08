@@ -23,6 +23,11 @@ namespace DynetSharpExamples {
                 argParams[parts[0]] = parts[1];
             }
 
+            
+            argParams.Add("train_file", @"D:\Temp\BigModern-raw\AllAgnonTexts-Combined-WithHeaders.txt");
+            argParams.Add("test_file", @"D:\Temp\BigModern-raw\AllAgnonTexts-Combined-WithHeaders.txt");
+            argParams.Add("dev_file", @"D:\Temp\BigModern-raw\AllAgnonTexts-Combined-WithHeaders.txt");
+
             int LAYERS = 2;
             int INPUT_DIM = 50;
             int HIDDEN_DIM = 100;
@@ -78,7 +83,7 @@ namespace DynetSharpExamples {
                 Console.WriteLine("Parameters will be written to: " + modelFname);
 
                 double best = double.MaxValue;
-                int reportEveryI = Math.Min(100, trainData.Count);
+                int reportEveryI = 1;// Math.Min(100, trainData.Count);
                 int devEveryIReports = 25;
 
                 Random r = new Random();
@@ -86,7 +91,7 @@ namespace DynetSharpExamples {
                 for (int iEpoch = 0; iEpoch < 100; iEpoch++) { 
                     Stopwatch sw = Stopwatch.StartNew();
                     // Shuffle the train data
-                    trainData.Sort((x, y) => r.Next(-1, 2));
+                    trainData = trainData.OrderBy(_ => r.Next()).ToList();
 
                     // New iteration
                     double loss = 0;

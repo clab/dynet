@@ -214,9 +214,9 @@ namespace dynetsharp {
 	/// <summary> 
 	/// <para>Returns an array of the dimensions</para>
 	/// </summary>
-	array<long> ^Expression::Shape() {
+	Dim ^Expression::Shape() {
 		ExceptionWrap(
-			return ConvertDimToArr(__thisptr.dim());
+			return gcnew Dim(__thisptr.dim());
 		)
 	}
 	/// <summary>
@@ -227,6 +227,52 @@ namespace dynetsharp {
 	Tensor ^Expression::Gradient() {
 		ExceptionWrap(
 			return gcnew Tensor(__thisptr.gradient());
+		)
+	}
+	/// <summary>
+	/// <para>Pick element.</para>
+	/// <para>Pick a single element/row/column/sub-tensor. This will result in the dimension of the tensor being reduced by 1.</para>
+	/// <remarks>Equivalent to: dy.pick(exp, index);</remarks>
+	/// </summary>
+	/// <param name='index'>Index to pick</param>
+	Expression ^Expression::default::get(int index) {
+		ExceptionWrap(
+			return DynetFunctions::pick(this, index);
+		)
+	}
+	/// <summary>
+	/// <para>Pick element.</para>
+	/// <para>Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.</para>
+	/// <remarks>Equivalent to: dy.pick(exp, index, dim);</remarks>
+	/// </summary>
+	/// <param name='index'>Index to pick</param>
+	/// <param name='dim'>Index of dimension to pick from, default 0</param>
+	Expression ^Expression::default::get(int index, int dim) {
+		ExceptionWrap(
+			return DynetFunctions::pick(this, index, dim);
+		)
+	}
+	/// <summary>
+	/// <para>Minibatch - Pick element.</para>
+	/// <para>Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.</para>
+	/// <remarks>Equivalent to: dy.pick(exp, indexes);</remarks>
+	/// </summary>
+	/// <param name='indexes'>Array of indexes to pick</param>
+	Expression ^Expression::default::get(array<int> ^indexes) {
+		ExceptionWrap(
+			return DynetFunctions::pick_batch(this, indexes);
+		)
+	}
+	/// <summary>
+	/// <para>Minibatch - Pick element.</para>
+	/// <para>Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.</para>
+	/// <remarks>Equivalent to: dy.pick(exp, indexes, dim);</remarks>
+	/// </summary>
+	/// <param name='indexes'>Array of indexes to pick</param>
+	/// <param name='dim'>Index of dimension to pick from, default 0</param>
+	Expression ^Expression::default::get(array<int> ^indexes, int dim) {
+		ExceptionWrap(
+			return DynetFunctions::pick_batch(this, indexes, dim);
 		)
 	}
 	///////////////////////////////////////////////////////////
@@ -244,8 +290,7 @@ namespace dynetsharp {
 	Tensor::Tensor(array<float> ^arr, array<long> ^shape) {
 		ExceptionWrap(
 			_vec = new std::vector<float>(ConvertArrayToVector<float>(arr));
-		ndims = shape->Length;
-		_dim = new std::vector<long>(ConvertArrayToVector<long>(shape));
+		_dim = gcnew Dim(shape);
 		__thisptr = NULL;
 		)
 	}
@@ -255,8 +300,7 @@ namespace dynetsharp {
 	/// <param name='arr'>Values of the 1-dim vector</param>
 	Tensor::Tensor(array<float> ^arr) {
 		ExceptionWrap(
-			ndims = 1;
-		_dim = new std::vector<long>({ arr->Length });
+		_dim = gcnew Dim(std::vector<long>({ arr->Length }));
 		_vec = new std::vector<float>(arr->Length);
 		// Populate
 		int pos = 0;
@@ -271,14 +315,15 @@ namespace dynetsharp {
 	/// <param name='arr'>Values of the 2-dim vector</param>
 	Tensor::Tensor(array<array<float> ^> ^arr) {
 		ExceptionWrap(
-			ndims = 2;
-		_dim = new std::vector<long>({ arr->Length, arr[0]->Length });
+		_dim = gcnew Dim(std::vector<long>({ arr->Length, arr[0]->Length }));
 		_vec = new std::vector<float>(arr->Length * arr[0]->Length);
 		// Populate
 		int pos = 0;
-		for (int i = 0; i < arr->Length; i++)
+		if (arr->Length > 0) {
 			for (int j = 0; j < arr[0]->Length; j++)
-				(*_vec)[pos++] = arr[i][j];
+				for (int i = 0; i < arr->Length; i++)
+					(*_vec)[pos++] = arr[i][j];
+		}
 		__thisptr = NULL;
 		)
 	}
@@ -288,15 +333,15 @@ namespace dynetsharp {
 	/// <param name='arr'>Values of the 3-dim vector</param>
 	Tensor::Tensor(array<array<array<float> ^> ^> ^arr) {
 		ExceptionWrap(
-			ndims = 3;
-			_dim = new std::vector<long>({ arr->Length, arr[0]->Length, arr[0][0]->Length });
+			_dim = gcnew Dim(std::vector<long>({ arr->Length, arr[0]->Length, arr[0][0]->Length }));
 			_vec = new std::vector<float>(arr->Length * arr[0]->Length * arr[0][0]->Length);
 			// Populate
 			int pos = 0;
-			for (int i = 0; i < arr->Length; i++)
+			for (int k = 0; k < arr[0][0]->Length; k++) {
 				for (int j = 0; j < arr[0]->Length; j++)
-					for (int k = 0; k < arr[0][0]->Length; k++)
+					for (int i = 0; i < arr->Length; i++)
 						(*_vec)[pos++] = arr[i][j][k];
+			}
 			__thisptr = NULL;
 		)
 	}
@@ -306,17 +351,48 @@ namespace dynetsharp {
 	/// <param name='arr'>Values of the 4-dim vector</param>
 	Tensor::Tensor(array<array<array<array<float> ^> ^> ^> ^arr) {
 		ExceptionWrap(
-			ndims = 4;
-		_dim = new std::vector<long>({ arr->Length, arr[0]->Length, arr[0][0]->Length, arr[0][0][0]->Length });
+			_dim = gcnew Dim(std::vector<long>({ arr->Length, arr[0]->Length, arr[0][0]->Length, arr[0][0][0]->Length }));
 		_vec = new std::vector<float>(arr->Length * arr[0]->Length * arr[0][0]->Length * arr[0][0][0]->Length);
 		// Populate
 		int pos = 0;
-		for (int i = 0; i < arr->Length; i++)
-			for (int j = 0; j < arr[0]->Length; j++)
-				for (int k = 0; k < arr[0][0]->Length; k++)
-					for (int l = 0; l < arr[0][0][0]->Length; l++)
+		for (int l = 0; l < arr[0][0][0]->Length; l++)
+			for (int k = 0; k < arr[0][0]->Length; k++)
+				for (int j = 0; j < arr[0]->Length; j++)
+					for (int i = 0; i < arr->Length; i++)
 						(*_vec)[pos++] = arr[i][j][k][l];
 		__thisptr = NULL;
+		)
+	}
+	/// <summary>
+	/// <para>Set whether this tensor is batched, if so it moves the last dim to the batch</para>
+	/// <para>Only works if generated from user code, and not from dynet tensor</para>
+	/// </summary>
+	void Tensor::SetBatched(bool fBatched) {
+		ExceptionWrap(
+			if (__thisptr != NULL)
+				throw gcnew Exception(gcnew String("Cannot call SetBatched function on a dynet::Tensor object."));
+		// Already batched?
+		if (fBatched && _dim->BatchSize != 1)
+			return;
+		// Already not batched?
+		if (!fBatched && _dim->BatchSize == 1)
+			return;
+		// Move it over
+		dynet::Dim d = _dim->get_cdim();
+		if (!fBatched) {
+			d.add_dim(d.batch_elems());
+			d.bd = 1;
+			_dim = gcnew Dim(d);
+		}
+		if (fBatched) {
+			if (d.ndims() == 1)
+				_dim = gcnew Dim({ 1 }, d[0]);
+			else {
+				d.bd = d[d.ndims() - 1];
+				d.delete_dim(d.ndims() - 1);
+				_dim = gcnew Dim(d);
+			}
+		}
 		)
 	}
 	/// <summary>
@@ -347,16 +423,19 @@ namespace dynetsharp {
 		ExceptionWrap(
 			if (ndims != 2)
 				throw gcnew Exception(gcnew String((std::string("Dimension mismatch. Cannot return 2-Dimensional vector for shape with ") + std::to_string(ndims) + " dims").c_str()));
+		
+		array<long> ^dims = _dim->Dims;
 		// Return a 2-dimensional vector
-		array<array<float> ^> ^ret = gcnew array<array<float> ^>((*_dim)[0]);
+		array<array<float> ^> ^ret = gcnew array<array<float> ^>(dims[0]);
+
 		// Create the output
 		int curInd = 0;
-		for (int i = 0; i < (*_dim)[0]; i++) {
-			std::vector<float> curVec(_vec->begin() + curInd, _vec->begin() + curInd + (*_dim)[1]);
-			ret[i] = ConvertVectorToArray<float>(curVec);
-			// Move over X
-			curInd += (*_dim)[1];
-		}//n ext i
+		for (int j = 0; j < dims[1]; j++) {
+			for (int i = 0; i < dims[0]; i++) {
+				if (j == 0) ret[i] = gcnew array<float>(dims[1]);
+				ret[i][j] = (*_vec)[curInd++];
+			}
+		}//next j
 
 		return ret;
 		)
@@ -369,20 +448,21 @@ namespace dynetsharp {
 		ExceptionWrap(
 			if (ndims != 3)
 				throw gcnew Exception(gcnew String((std::string("Dimension mismatch. Cannot return 3-Dimensional vector for shape with ") + std::to_string(ndims) + " dims").c_str()));
+		
+		array<long> ^dims = _dim->Dims;
 		// Return a 3-dimensional vector
-		array<array<array<float> ^> ^> ^ret = gcnew array<array<array<float> ^> ^>((*_dim)[0]);
+		array<array<array<float> ^> ^> ^ret = gcnew array<array<array<float> ^> ^>(dims[0]);
 		// Create the output
 		int curInd = 0;
-		for (int i = 0; i < (*_dim)[0]; i++) {
-			ret[i] = gcnew array<array<float> ^>((*_dim)[1]);
-			for (int j = 0; j < (*_dim)[1]; j++) {
-				std::vector<float> curVec(_vec->begin() + curInd, _vec->begin() + curInd + (*_dim)[2]);
-				ret[i][j] = ConvertVectorToArray<float>(curVec);
-				// Move over X
-				curInd += (*_dim)[2];
-			}// next j
-			curInd += (*_dim)[1];
-		}// next i
+		for (int k = 0; k < dims[2]; k++) {
+			for (int j = 0; j < dims[1]; j++) {
+				for (int i = 0; i < dims[0]; i++) {
+					if (j == 0 && k == 0) ret[i] = gcnew array<array<float> ^>(dims[1]);
+					if (k == 0) ret[i][j] = gcnew array<float>(dims[2]);
+					ret[i][j][k] = (*_vec)[curInd++];
+				}
+			}//next j
+		}//next k
 
 		return ret;
 		)
@@ -396,24 +476,23 @@ namespace dynetsharp {
 			if (ndims != 4)
 				throw gcnew Exception(gcnew String((std::string("Dimension mismatch. Cannot return 4-Dimensional vector for shape with ") + std::to_string(ndims) + " dims").c_str()));
 
+		array<long> ^dims = _dim->Dims;
 		// Return a 4-dimensional vector
-		array<array<array<array<float> ^> ^> ^> ^ret = gcnew array<array<array<array<float> ^> ^> ^>((*_dim)[0]);
+		array<array<array<array<float> ^> ^> ^> ^ret = gcnew array<array<array<array<float> ^> ^> ^>(dims[0]);
 		// Create the output
 		int curInd = 0;
-		for (int i = 0; i < (*_dim)[0]; i++) {
-			ret[i] = gcnew array<array<array<float> ^> ^>((*_dim)[1]);
-			for (int j = 0; j < (*_dim)[1]; j++) {
-				ret[i][j] = gcnew array<array<float> ^>((*_dim)[1]);
-				for (int k = 0; k < (*_dim)[2]; k++) {
-					std::vector<float> curVec(_vec->begin() + curInd, _vec->begin() + curInd + (*_dim)[3]);
-					ret[i][j][k] = ConvertVectorToArray<float>(curVec);
-					// Move over X
-					curInd += (*_dim)[3];
-				}// next k
-				curInd += (*_dim)[2];
-			}// next j
-			curInd += (*_dim)[1];
-		}// next i
+		for (int l = 0; l < dims[3]; l++) {
+			for (int k = 0; k < dims[2]; k++) {
+				for (int j = 0; j < dims[1]; j++) {
+					for (int i = 0; i < dims[0]; i++) {
+						if (j == 0 && k == 0 && l == 0) ret[i] = gcnew array<array<array<float> ^> ^>(dims[1]);
+						if (k == 0 && l == 0) ret[i][j] = gcnew array<array<float> ^>(dims[2]);
+						if (l == 0) ret[i][j][k] = gcnew array<float>(dims[3]);
+						ret[i][j][k][l] = (*_vec)[curInd++];
+					}
+				}//next j
+			}//next k
+		}//next l
 
 		return ret;
 		)
@@ -431,17 +510,18 @@ namespace dynetsharp {
 	}
 	int Tensor::GetActualPosFromArr(std::vector<int> vec, bool fCheckBoundaries) {
 		ExceptionWrap(
+			dynet::Dim dim = _dim->get_cdim();
 			// Find the position - go through each dimension, and multiply by the index
-			int actualPos = 0;
-		for (int iDim = 0; iDim < vec.size(); iDim++) {
+			int actualPos = vec[0];
+		for (int iDim = 1; iDim < vec.size(); iDim++) {
 			int curPos = vec[iDim];
 			// Check if we are past the end
-			if (fCheckBoundaries && curPos >= (*_dim)[iDim])
+			if (fCheckBoundaries && curPos >= dim[iDim])
 				throw gcnew IndexOutOfRangeException();
 
 			// Multiply by all following dimensions
-			for (int jDim = iDim + 1; jDim < ndims; jDim++)
-				curPos *= (*_dim)[jDim];
+			for (int jDim = iDim - 1; jDim < iDim; jDim++)
+				curPos *= dim[jDim];
 			// Add it in
 			actualPos += curPos;
 		}
@@ -480,12 +560,34 @@ namespace dynetsharp {
 	/// <param name='value'>New value of the row</param>
 	void Tensor::SetRowValue(array<int> ^pos, array<float> ^value) {
 		ExceptionWrap(
-			if (pos->Length != ndims - 1)
-				throw gcnew Exception(gcnew String((std::string("Dimensions mismatch. Assumed to have ") + std::to_string(pos->Length + 1) + " dims, when in fact has " + std::to_string(ndims) + ".").c_str()));
-		int actualPos = GetActualPosFromArr(pos);
-		std::vector<float> vecToCopy = ConvertArrayToVector<float>(value);
-		// Copy it in
-		std::copy(vecToCopy.begin(), vecToCopy.end(), _vec->begin() + actualPos);
+			SetRowValue(pos, value, 0);
+		)
+	}
+	/// <summary>
+	/// <para>Set the vector(array) value of a single row (last dimension)</para>
+	/// </summary>
+	/// <param name='pos'>Array pointing to the exact row, each position in the array referring to a dimension</param>
+	/// <param name='value'>New value of the row</param>
+	/// <param name='batchDim'>Batch size (default: 0)</param>
+	void Tensor::SetRowValue(array<int> ^pos, array<float> ^value, int batchDim) {
+		ExceptionWrap(
+			if (batchDim > _dim->BatchSize)
+				throw gcnew Exception(gcnew String("Batch size out of range"));
+			if (pos->Length != _dim->NDims)// use actual function, to avoid addition for batch
+				throw gcnew Exception(gcnew String((std::string("Dimensions mismatch. Assumed to have ") + std::to_string(pos->Length + 1) + " dims, when in fact has " + std::to_string(_dim->NDims) + ".").c_str()));
+
+		dynet::Dim dim = _dim->get_cdim();
+
+		int actualPos = GetActualPosFromArr(pos) + batchDim;
+		int jump = 1;
+		for (int jdim = 0; jdim < pos->Length; jdim++)
+			jump *= dim[jdim];
+
+		// Copy in each value
+		for (int iVal = 0; iVal < value->Length; iVal++) {
+			(*_vec)[actualPos] = value[iVal];
+			actualPos += jump;
+		}
 		)
 	}
 	/// <summary>
@@ -496,36 +598,20 @@ namespace dynetsharp {
 		ExceptionWrap(
 			if (pos->Length != ndims - 1)
 				throw gcnew Exception(gcnew System::String((std::string("Dimensions mismatch. Assumed to have ") + std::to_string(pos->Length + 1) + " dims, when in fact has " + std::to_string(ndims) + ".").c_str()));
-		int actualPos = GetActualPosFromArr(pos);
-		// Get the subset
-		std::vector<float> curVec(_vec->begin() + actualPos, _vec->begin() + actualPos + (*_dim)[ndims - 1]);
-		return ConvertVectorToArray<float>(curVec);
-		)
-	}
-	/// <summary>
-	/// <para>Get the flattened vector(array) value of a position, using the last input dimension for the column major ordering</para>
-	/// </summary>
-	/// <param name='pos'>Array pointing to the exact row, each position in the array referring to a dimension</param>
-	array<float> ^Tensor::GetFlattenedRowValue(array<int> ^pos) {
-		ExceptionWrap(
-			return ConvertVectorToArray<float>(_getFlattenedRowValue(pos));
-		)
-	}
-	// Private function which implements the function above
-	std::vector<float> Tensor::_getFlattenedRowValue(array<int> ^pos) {
-		ExceptionWrap(
-			if (pos->Length == 0)
-				throw gcnew Exception(gcnew System::String("Position cannot be empty"));
-		std::vector<int> vecPos = ConvertArrayToVector<int>(pos);
-		// Get the position
-		int actualPos = GetActualPosFromArr(vecPos);
-		// Get the end (add 1 to the last pos - ignore boundaries, we want the theoretical end)
-		vecPos[vecPos.size() - 1]++;
-		int endPos = GetActualPosFromArr(vecPos, false);
+		dynet::Dim dim = _dim->get_cdim();
 
-		// Return that
-		std::vector<float> ret(_vec->begin() + actualPos, _vec->begin() + endPos);
-		return ret;
+		int actualPos = GetActualPosFromArr(pos);
+		int jump = 1;
+		for (int jdim = 0; jdim < pos->Length; jdim++)
+			jump *= dim[jdim];
+
+		std::vector<float> curVec;
+		// Copy in each value
+		for (int iVal = 0; iVal < dim[ndims - 1]; iVal++) {
+			curVec.push_back((*_vec)[actualPos]);
+			actualPos += jump;
+		}
+		return ConvertVectorToArray<float>(curVec);
 		)
 	}
 
@@ -664,7 +750,7 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Parameter ^ParameterCollection::AddParametersFromTensor(Tensor ^t, String ^device) {
 		ExceptionWrap(
-			dynet::Dim dim = ConvertArrToDim(t->Shape());
+			dynet::Dim dim = t->Shape()->get_cdim();;
 			return gcnew Parameter(__thisptr->add_parameters(dim, dynet::ParameterInitFromVector(*t->_vec), "", str2dev(device)));
 		)
 	}
@@ -684,9 +770,10 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	LookupParameter ^ParameterCollection::AddLookupParametersFromTensor(Tensor ^t, String ^device) {
 		ExceptionWrap(
-			std::vector<long> dimVec = ConvertArrayToVector<long>(t->Shape());
-		dynet::Dim dim(std::vector<long>(dimVec.begin() + 1, dimVec.end()));
-		return gcnew LookupParameter(__thisptr->add_lookup_parameters(dimVec[0], dim, dynet::ParameterInitFromVector(*t->_vec), "", str2dev(device)));
+			dynet::Dim dim = t->Shape()->get_cdim();
+			int lp1 = dim[0];
+			dim.delete_dim(0);
+			return gcnew LookupParameter(__thisptr->add_lookup_parameters(lp1, dim, dynet::ParameterInitFromVector(*t->_vec), "", str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -929,8 +1016,8 @@ namespace dynetsharp {
 			throw gcnew Exception(gcnew String((std::string("Shape of values and parameter don't match in Parameters.SetValue. Input: ") + std::to_string(val->NDims()) + ", Actual: " + std::to_string(dim.ndims())).c_str()));
 		// Check the numbers
 		for (int iDim = 0; iDim < val->NDims(); iDim++)
-			if (val->Shape()[iDim] != dim[iDim])
-				throw gcnew Exception(gcnew String((std::string("Shape of values and parameter don't match in Parameters.SetValue, Dimension #") + std::to_string(iDim) + ", Input: " + std::to_string(val->Shape()[iDim]) + ", Actual: " + std::to_string(dim[iDim])).c_str()));
+			if (val->Shape()->get_cdim()[iDim] != dim[iDim])
+				throw gcnew Exception(gcnew String((std::string("Shape of values and parameter don't match in Parameters.SetValue, Dimension #") + std::to_string(iDim) + ", Input: " + std::to_string(val->Shape()->get_cdim()[iDim]) + ", Actual: " + std::to_string(dim[iDim])).c_str()));
 		// Put it in
 		__thisptr->set_value(*val->_vec);
 		)
@@ -942,6 +1029,48 @@ namespace dynetsharp {
 	///////////////////////////////////////////////////////////
 	/////////////  LookupParameter Functions //////////////////
 	///////////////////////////////////////////////////////////
+	/// <summary>
+	/// <para>Lookup an embedding from a lookup parameter and returns it as a expression</para>
+	/// <para>Equivalent to doing dy.lookup(lp, index);</para>
+	/// </summary>
+	/// <param name='index'>Index of row to lookup</param>
+	Expression ^LookupParameter::default::get(int index) {
+		ExceptionWrap(
+			return DynetFunctions::lookup(this, index);
+		)
+	}
+	/// <summary>
+	/// <para>Lookup an embedding from a lookup parameter and returns it as a expression</para>
+	/// <para>Equivalent to doing dy.lookup(lp, index, fUpdate);</para>
+	/// </summary>
+	/// <param name='index'>Index of row to lookup</param>
+	/// <param name='fUpdate'>Default true, if this is set to False, the returned expression won't be updated during the backward pass</param>
+	Expression ^LookupParameter::default::get(int index, bool fUpdate) {
+		ExceptionWrap(
+			return DynetFunctions::lookup(this, index, fUpdate);
+		)
+	}
+	/// <summary>
+	/// <para>Minibatch - Lookup an embedding from a lookup parameter and returns it as a expression</para>
+	/// <para>Equivalent to doing dy.lookup_batch(lp, indexes);</para>
+	/// </summary>
+	/// <param name='indexes'>Array of indexes of rows to lookup</param>
+	Expression ^LookupParameter::default::get(array<int> ^indexes) {
+		ExceptionWrap(
+			return DynetFunctions::lookup_batch(this, indexes);
+		)
+	}
+	/// <summary>
+	/// <para>Lookup an embedding from a lookup parameter and returns it as a expression</para>
+	/// <para>Equivalent to doing dy.lookup_batch(lp, indexes, fUpdate);</para>
+	/// </summary>
+	/// <param name='indexes'>List of indexes of rows to lookup</param>
+	/// <param name='fUpdate'>Default true, if this is set to False, the returned expression won't be updated during the backward pass</param>
+	Expression ^LookupParameter::default::get(array<int> ^indexes, bool fUpdate) {
+		ExceptionWrap(
+			return DynetFunctions::lookup_batch(this, indexes, fUpdate);
+		)
+	}
 	/// <summary>
 	/// <para>Returns shape of the LookupParameter</para>
 	/// </summary>
@@ -981,7 +1110,7 @@ namespace dynetsharp {
 		ExceptionWrap(
 			size_t actualRowCount = __thisptr->get_storage().values.size();
 		// Check the row count
-		array<long> ^shape = t->Shape();
+		dynet::Dim shape = t->Shape()->get_cdim();
 		if (shape[0] != actualRowCount)
 			throw gcnew Exception(gcnew String(("Row count mismatch when initializing lookup table from array")));
 		// Check the dimensions
@@ -990,7 +1119,7 @@ namespace dynetsharp {
 
 		// Put in each row
 		for (int iRow = 0; iRow < actualRowCount; iRow++)
-			InitRow(iRow, t->GetFlattenedRowValue(gcnew array<int>{ iRow }));
+			InitRow(iRow, t->GetRowValue(gcnew array<int>{ iRow }));
 		)
 	}
 	/// <summary>
@@ -1798,7 +1927,7 @@ namespace dynetsharp {
 	/// <param name='index'>Index of row to lookup</param>
 	Expression ^DynetFunctions::lookup(LookupParameter ^lp, int index) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::lookup(*cg, *lp->__thisptr, index));
+			return lookup(lp, index, true);
 		)
 	}
 	/// <summary>
@@ -1809,7 +1938,32 @@ namespace dynetsharp {
 	/// <param name='fUpdate'>Default true, if this is set to False, the returned expression won't be updated during the backward pass</param>
 	Expression ^DynetFunctions::lookup(LookupParameter ^lp, int index, bool fUpdate) {
 		ExceptionWrap(
+			if (fUpdate)
+				return gcnew Expression(dynet::lookup(*cg, *lp->__thisptr, index));
 			return gcnew Expression(dynet::const_lookup(*cg, *lp->__thisptr, index));
+		)
+	}
+	/// <summary>
+	/// <para>Minibatch - Lookup an embedding from a lookup parameter and returns it as a expression</para>
+	/// </summary>
+	/// <param name='lp'>LookupParameter to retrieve record from</param>
+	/// <param name='indexes'>Array of indexes of rows to lookup</param>
+	Expression ^DynetFunctions::lookup_batch(LookupParameter ^lp, array<int> ^indexes) {
+		ExceptionWrap(
+			return lookup_batch(lp, indexes, true);
+		)
+	}
+	/// <summary>
+	/// <para>Lookup an embedding from a lookup parameter and returns it as a expression</para>
+	/// </summary>
+	/// <param name='lp'>LookupParameter to retrieve record from</param>
+	/// <param name='indexes'>Array of indexes of rows to lookup</param>
+	/// <param name='fUpdate'>Default true, if this is set to False, the returned expression won't be updated during the backward pass</param>
+	Expression ^DynetFunctions::lookup_batch(LookupParameter ^lp, array<int> ^indexes, bool fUpdate) {
+		ExceptionWrap(
+			if (fUpdate)
+				return gcnew Expression(dynet::lookup(*cg, *lp->__thisptr, VecToUInt(ConvertArrayToVector<int>(indexes))));
+			return gcnew Expression(dynet::const_lookup(*cg, *lp->__thisptr, VecToUInt(ConvertArrayToVector<int>(indexes))));
 		)
 	}
 	/// <summary>
@@ -1843,7 +1997,7 @@ namespace dynetsharp {
 	/// <param name='index'>Index to pick</param>
 	Expression ^DynetFunctions::pick(Expression ^exp, int index) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::pick(exp->__thisptr, index));
+			return pick(exp, index, 0);
 		)
 	}
 	/// <summary>
@@ -1856,6 +2010,29 @@ namespace dynetsharp {
 	Expression ^DynetFunctions::pick(Expression ^exp, int index, int dim) {
 		ExceptionWrap(
 			return gcnew Expression(dynet::pick(exp->__thisptr, index, dim));
+		)
+	}
+	/// <summary>
+	/// <para>Minibatch - Pick element.</para> 
+	/// <para>Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.</para>
+	/// </summary>
+	/// <param name='exp'>Expression to pick from</param>
+	/// <param name='indexes'>Array of indexes to pick</param>
+	Expression ^DynetFunctions::pick_batch(Expression ^exp, array<int> ^indexes) {
+		ExceptionWrap(
+			return pick_batch(exp, indexes, 0);
+		)
+	}
+	/// <summary>
+	/// <para>Minibatch - Pick element.</para>
+	/// <para>Pick a single element/row/column/sub-tensor from an expression. This will result in the dimension of the tensor being reduced by 1.</para>
+	/// </summary>
+	/// <param name='exp'>Expression to pick from</param>
+	/// <param name='indexes'>Array of indexes to pick</param>
+	/// <param name='dim'>Index of dimension to pick from, default 0</param>
+	Expression ^DynetFunctions::pick_batch(Expression ^exp, array<int> ^indexes, int dim) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::pick(exp->__thisptr, VecToUInt(ConvertArrayToVector<int>(indexes)), dim));
 		)
 	}
 	/// <summary>
@@ -1886,7 +2063,18 @@ namespace dynetsharp {
 	/// <param name='num'>Value of Expression</param>
 	Expression ^DynetFunctions::input(array<float>^ num) {
 		ExceptionWrap(
-			return input(num, "");
+			return input(num, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an Expression object on the computation graph with a 1-dim vector value</para>
+	/// <remarks>Better to use inputTensor for initializing vector expressions</remarks>
+	/// </summary>
+	/// <param name='num'>Value of Expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::input(array<float>^ num, int batchSize) {
+		ExceptionWrap(
+			return input(num, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -1897,9 +2085,22 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::input(array<float>^ num, String ^device) {
 		ExceptionWrap(
+			return input(num, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create an Expression object on the computation graph with a 1-dim vector value</para>
+	/// <remarks>Better to use inputTensor for initializing vector expressions</remarks>
+	/// </summary>
+	/// <param name='num'>Value of Expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::input(array<float>^ num, int batchSize, String ^device) {
+		ExceptionWrap(
 			std::vector<float> *val = new std::vector<float>(ConvertArrayToVector<float>(num));
 			_vecInputs.push_back(val);
-			return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length }, val, str2dev(device)), val);
+			dynet::Dim d({ (unsigned)num->Length }, batchSize);
+			return gcnew Expression(dynet::input(*cg, d, val, str2dev(device)), val);
 		) 
 	}
 	/// <summary>
@@ -1909,7 +2110,18 @@ namespace dynetsharp {
 	/// <param name='num'>Value of Expression</param>
 	Expression ^DynetFunctions::input(array<array<float>^>^ num) {
 		ExceptionWrap(
-			return input(num, "");
+			return input(num, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an Expression object on the computation graph with a 2-dim vector value</para>
+	/// <remarks>Better to use inputTensor for initializing vector expressions</remarks>
+	/// </summary>
+	/// <param name='num'>Value of Expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::input(array<array<float>^>^ num, int batchSize) {
+		ExceptionWrap(
+			return input(num, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -1920,14 +2132,29 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::input(array<array<float>^>^ num, String ^device) {
 		ExceptionWrap(
+			return input(num, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create an Expression object on the computation graph with a 2-dim vector value</para>
+	/// <remarks>Better to use inputTensor for initializing vector expressions</remarks>
+	/// </summary>
+	/// <param name='num'>Value of Expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::input(array<array<float>^>^ num, int batchSize, String ^device) {
+		ExceptionWrap(
 			std::vector<float> vec;
-		for (int iVec = 0; iVec < num->Length; iVec++)
-			for (int iItem = 0; iItem < num[iVec]->Length; iItem++)
-				vec.push_back((real)num[iVec][iItem]);
+			if (num->Length > 0) {
+				for (int iItem = 0; iItem < num[0]->Length; iItem++)
+					for (int iVec = 0; iVec < num->Length; iVec++)
+						vec.push_back((real)num[iVec][iItem]);
+			}
 		// Convert to pointer, and send that
 		std::vector<float> *val = new std::vector<float>(vec);
 		_vecInputs.push_back(val);
-		return gcnew Expression(dynet::input(*cg, { (unsigned)num->Length, (unsigned)num[0]->Length }, val, str2dev(device)), val);
+		dynet::Dim d({ (unsigned)num->Length, (unsigned)num[0]->Length }, batchSize);
+		return gcnew Expression(dynet::input(*cg, d, val, str2dev(device)), val);
 		)
 	}
 	/// <summary>
@@ -1948,7 +2175,7 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::inputTensor(Tensor ^tensor, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::input(*cg, ConvertArrToDim(tensor->Shape()), *tensor->_vec, str2dev(device)));
+			return gcnew Expression(dynet::input(*cg, tensor->Shape()->get_cdim(), *tensor->_vec, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -1958,7 +2185,18 @@ namespace dynetsharp {
 	/// <param name='dim'>Dimensions of the Expression</param>
 	Expression ^DynetFunctions::inputTensor(array<long> ^dim) {
 		ExceptionWrap(
-			return inputTensor(dim, "");
+			return inputTensor(dim, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a modifiable Expression object with certain dimensions</para>
+	/// <remarks>You must call "SetValue" on the Expression before doing a forward pass</remarks>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the Expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::inputTensor(array<long> ^dim, int batchSize) {
+		ExceptionWrap(
+			return inputTensor(dim, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -1969,9 +2207,22 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::inputTensor(array<long> ^dim, String ^device) {
 		ExceptionWrap(
+			return inputTensor(dim, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create a modifiable Expression object with certain dimensions</para>
+	/// <remarks>You must call "SetValue" on the Expression before doing a forward pass</remarks>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the Expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::inputTensor(array<long> ^dim, int batchSize, String ^device) {
+		ExceptionWrap(
 			std::vector<real> *val = new std::vector<real>();
 			_vecInputs.push_back(val);
-			return gcnew Expression(dynet::input(*cg, ConvertArrToDim(dim), val, str2dev(device)), val);
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::input(*cg, d, val, str2dev(device)), val);
 		)
 	}
 	/// <summary>
@@ -1981,7 +2232,18 @@ namespace dynetsharp {
 	/// <param name='dim'>Dimensions of the Expression</param>
 	Expression ^DynetFunctions::inputVector(long dim) {
 		ExceptionWrap(
-			return inputVector(dim, "");
+			return inputVector(dim, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a modifiable Expression vector of a certain dimension</para>
+	/// <remarks>You must call "SetValue" on the Expression before doing a forward pass</remarks>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the Expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::inputVector(long dim, int batchSize) {
+		ExceptionWrap(
+			return inputVector(dim, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -1992,9 +2254,22 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::inputVector(long dim, String ^device) {
 		ExceptionWrap(
+			return inputVector(dim, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create a modifiable Expression vector of a certain dimension</para>
+	/// <remarks>You must call "SetValue" on the Expression before doing a forward pass</remarks>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the Expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::inputVector(long dim, int batchSize, String ^device) {
+		ExceptionWrap(
 			std::vector<real> *val = new std::vector<real>();
 			_vecInputs.push_back(val);
-			return gcnew Expression(dynet::input(*cg, { (unsigned int)dim }, val, str2dev(device)), val);
+			dynet::Dim d({ (unsigned int)dim }, batchSize);
+			return gcnew Expression(dynet::input(*cg, d, val, str2dev(device)), val);
 		)
 	}
 	Expression ^DynetFunctions::average(List<Expression^> ^l) {
@@ -2032,30 +2307,20 @@ namespace dynetsharp {
 	/// <para>Create an input full of zeros, sized according to dimensions `dim`</para>
 	/// </summary>
 	/// <param name='dim'>Dimensions of the expression</param>
-	Expression ^DynetFunctions::zeroes(array<long> ^dim) {
-		ExceptionWrap(
-			return zeros(dim);
-		)
-	}
-	/// <summary>
-	/// <para>Create an input full of zeros</para>
-	/// <para>Create an input full of zeros, sized according to dimensions `dim`</para>
-	/// </summary>
-	/// <param name='dim'>Dimensions of the expression</param>
-	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
-	Expression ^DynetFunctions::zeroes(array<long> ^dim, String ^device) {
-		ExceptionWrap(
-			return zeros(dim, device);
-		)
-	}
-	/// <summary>
-	/// <para>Create an input full of zeros</para>
-	/// <para>Create an input full of zeros, sized according to dimensions `dim`</para>
-	/// </summary>
-	/// <param name='dim'>Dimensions of the expression</param>
 	Expression ^DynetFunctions::zeros(array<long> ^dim) {
 		ExceptionWrap(
-			return zeros(dim, "");
+			return zeros(dim, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of zeros</para>
+	/// <para>Create an input full of zeros, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::zeros(array<long> ^dim, int batchSize) {
+		ExceptionWrap(
+			return zeros(dim, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2066,7 +2331,20 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::zeros(array<long> ^dim, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::zeros(*cg, ConvertArrToDim(dim), str2dev(device)));
+			return zeros(dim, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of zeros</para>
+	/// <para>Create an input full of zeros, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::zeros(array<long> ^dim, int batchSize, String ^device) {
+		ExceptionWrap(
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::zeros(*cg, d, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2093,13 +2371,70 @@ namespace dynetsharp {
 		)
 	}
 	/// <summary>
+	/// <para>Inputs a one hot vector into the graph.</para>
+	/// <para>A one hot vector is a vector where every idx coordinate is 1 and everything else is 0</para>
+	/// </summary>
+	/// <param name='dim'>Dimension of the vector</param>
+	/// <param name='idx'>Array of indexes where the coordinate will be 1</param>
+	Expression ^DynetFunctions::one_hot(int dim, array<int> ^idx) {
+		ExceptionWrap(
+			return one_hot(dim, idx, "");
+		)
+	}
+	/// <summary>
+	/// <para>Inputs a one hot vector into the graph.</para>
+	/// <para>A one hot vector is a vector where every idx coordinate is 1 and everything else is 0</para>
+	/// </summary>
+	/// <param name='dim'>Dimension of the vector</param>
+	/// <param name='idx'>List of indexes where the coordinate will be 1</param>
+	Expression ^DynetFunctions::one_hot(int dim, List<int> ^idx) {
+		ExceptionWrap(
+			return one_hot(dim, idx, "");
+		)
+	}
+	/// <summary>
+	/// <para>Inputs a one hot vector into the graph.</para>
+	/// <para>A one hot vector is a vector where every idx coordinate is 1 and everything else is 0</para>
+	/// </summary>
+	/// <param name='dim'>Dimension of the vector</param>
+	/// <param name='idx'>List of indexes where the coordinate will be 1</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::one_hot(int dim, List<int> ^idx, String ^device) {
+		ExceptionWrap(
+			return one_hot(dim, idx->ToArray(), device);
+		)
+	}
+	/// <summary>
+	/// <para>Inputs a one hot vector into the graph.</para>
+	/// <para>A one hot vector is a vector where every idx coordinate is 1 and everything else is 0</para>
+	/// </summary>
+	/// <param name='dim'>Dimension of the vector</param>
+	/// <param name='idx'>Array of indexes where the coordinate will be 1</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::one_hot(int dim, array<int> ^idx, String ^device) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::one_hot(*cg, dim, VecToUInt(ConvertArrayToVector<int>(idx)), str2dev(device)));
+		)
+	}
+	/// <summary>
 	/// <para>Create an input full of ones</para>
 	/// <para>Create an input full of ones, sized according to dimensions `dim`</para>
 	/// </summary>
 	/// <param name='dim'>Dimensions of the expression</param>
 	Expression ^DynetFunctions::ones(array<long> ^dim) {
 		ExceptionWrap(
-			return ones(dim, "");
+			return ones(dim, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of ones</para>
+	/// <para>Create an input full of ones, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::ones(array<long> ^dim, int batchSize) {
+		ExceptionWrap(
+			return ones(dim, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2110,7 +2445,20 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::ones(array<long> ^dim, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::ones(*cg, ConvertArrToDim(dim), str2dev(device)));
+			return ones(dim, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of ones</para>
+	/// <para>Create an input full of ones, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::ones(array<long> ^dim, int batchSize, String ^device) {
+		ExceptionWrap(
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::ones(*cg, d, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2121,7 +2469,19 @@ namespace dynetsharp {
 	/// <param name='val'>Constant value</param>
 	Expression ^DynetFunctions::constant(array<long> ^dim, float val) {
 		ExceptionWrap(
-			return constant(dim, val, "");
+			return constant(dim, val, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of a constant value</para>
+	/// <para>Create an input full of a constant value, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='val'>Constant value</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::constant(array<long> ^dim, float val, int batchSize) {
+		ExceptionWrap(
+			return constant(dim, val, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2133,7 +2493,21 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::constant(array<long> ^dim, float val, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::constant(*cg, ConvertArrToDim(dim), val, str2dev(device)));
+			return constant(dim, val, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create an input full of a constant value</para>
+	/// <para>Create an input full of a constant value, sized according to dimensions `dim`</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='val'>Constant value</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::constant(array<long> ^dim, float val, int batchSize, String ^device) {
+		ExceptionWrap(
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::constant(*cg, d, val, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2143,7 +2517,18 @@ namespace dynetsharp {
 	/// <param name='dim'>Dimensions of the expression</param>
 	Expression ^DynetFunctions::random_normal(array<long> ^dim) {
 		ExceptionWrap(
-			return random_normal(dim, "");
+			return random_normal(dim, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random normal vector</para>
+	/// <para>Create a vector distributed according to normal distribution with mean (default: 0), variance (default: 1).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::random_normal(array<long> ^dim, int batchSize) {
+		ExceptionWrap(
+			return random_normal(dim, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2154,7 +2539,20 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::random_normal(array<long> ^dim, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_normal(*cg, ConvertArrToDim(dim), 0.0f, 1.0f, str2dev(device)));
+			return random_normal(dim, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create a random normal vector</para>
+	/// <para>Create a vector distributed according to normal distribution with mean (default: 0), variance (default: 1).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_normal(array<long> ^dim, int batchSize, String ^device) {
+		ExceptionWrap(
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::random_normal(*cg, d, 0.0f, 1.0f, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2166,7 +2564,20 @@ namespace dynetsharp {
 	/// <param name='stddev'>Variance value for distribution (default: 1)</param>
 	Expression ^DynetFunctions::random_normal(array<long> ^dim, float mean, float stddev) {
 		ExceptionWrap(
-			return random_normal(dim, mean, stddev, "");
+			return random_normal(dim, mean, stddev, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random normal vector</para>
+	/// <para>Create a vector distributed according to normal distribution with mean (default: 0), variance (default: 1).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='mean'>Mean value for distribution (default: 0)</param>
+	/// <param name='stddev'>Variance value for distribution (default: 1)</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::random_normal(array<long> ^dim, float mean, float stddev, int batchSize) {
+		ExceptionWrap(
+			return random_normal(dim, mean, stddev, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2179,7 +2590,22 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::random_normal(array<long> ^dim, float mean, float stddev, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_normal(*cg, ConvertArrToDim(dim), mean, stddev, str2dev(device)));
+			return random_normal(dim, mean, stddev, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create a random normal vector</para>
+	/// <para>Create a vector distributed according to normal distribution with mean (default: 0), variance (default: 1).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='mean'>Mean value for distribution (default: 0)</param>
+	/// <param name='stddev'>Variance value for distribution (default: 1)</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_normal(array<long> ^dim, float mean, float stddev, int batchSize, String ^device) {
+		ExceptionWrap(
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::random_normal(*cg, d, mean, stddev, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2190,7 +2616,19 @@ namespace dynetsharp {
 	/// <param name='p'>Parameter of the bernoulli distribution</param>
 	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p) {
 		ExceptionWrap(
-			return random_bernoulli(dim, p, "");
+			return random_bernoulli(dim, p, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random bernoulli tensor</para>
+	/// <para>Create a tensor distributed according to bernoulli distribution with parameter P</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='p'>Parameter of the bernoulli distribution</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, int batchSize) {
+		ExceptionWrap(
+			return random_bernoulli(dim, p, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2202,7 +2640,21 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_bernoulli(*cg, ConvertArrToDim(dim), p, 1.0f, str2dev(device)));
+			return random_bernoulli(dim, p, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create a random bernoulli tensor</para>
+	/// <para>Create a tensor distributed according to bernoulli distribution with parameter P</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='p'>Parameter of the bernoulli distribution</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, int batchSize, String ^device) {
+		ExceptionWrap(
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::random_bernoulli(*cg, d, p, 1.0f, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2214,7 +2666,20 @@ namespace dynetsharp {
 	/// <param name='scale'>Scaling factor to apply to the sampled tensor (default: (1.0))</param>
 	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, float scale) {
 		ExceptionWrap(
-			return random_bernoulli(dim, p, scale, "");
+			return random_bernoulli(dim, p, scale, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random bernoulli tensor</para>
+	/// <para>Create a tensor distributed according to bernoulli distribution with parameter P</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='p'>Parameter of the bernoulli distribution</param>
+	/// <param name='scale'>Scaling factor to apply to the sampled tensor (default: (1.0))</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, float scale, int batchSize) {
+		ExceptionWrap(
+			return random_bernoulli(dim, p, scale, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2227,7 +2692,22 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, float scale, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_bernoulli(*cg, ConvertArrToDim(dim), p, scale, str2dev(device)));
+			return random_bernoulli(dim, p, scale, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create a random bernoulli tensor</para>
+	/// <para>Create a tensor distributed according to bernoulli distribution with parameter P</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='p'>Parameter of the bernoulli distribution</param>
+	/// <param name='scale'>Scaling factor to apply to the sampled tensor (default: (1.0))</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_bernoulli(array<long> ^dim, float p, float scale, int batchSize, String ^device) {
+		ExceptionWrap(
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::random_bernoulli(*cg, d, p, scale, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2239,7 +2719,20 @@ namespace dynetsharp {
 	/// <param name='right'>Upper bound of the uniform distribution</param>
 	Expression ^DynetFunctions::random_uniform(array<long> ^dim, float left, float right) {
 		ExceptionWrap(
-			return random_uniform(dim, left, right, "");
+			return random_uniform(dim, left, right, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random uniform tensor</para>
+	/// <para>Create a tensor distributed according to uniform distribution with boundaries left and right.</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='left'>Lower bound of the uniform distribution</param>
+	/// <param name='right'>Upper bound of the uniform distribution</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::random_uniform(array<long> ^dim, float left, float right, int batchSize) {
+		ExceptionWrap(
+			return random_uniform(dim, left, right, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2252,7 +2745,22 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::random_uniform(array<long> ^dim, float left, float right, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_uniform(*cg, ConvertArrToDim(dim), left, right, str2dev(device)));
+			return random_uniform(dim, left, right, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create a random uniform tensor</para>
+	/// <para>Create a tensor distributed according to uniform distribution with boundaries left and right.</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='left'>Lower bound of the uniform distribution</param>
+	/// <param name='right'>Upper bound of the uniform distribution</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_uniform(array<long> ^dim, float left, float right, int batchSize, String ^device) {
+		ExceptionWrap(
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::random_uniform(*cg, d, left, right, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2262,7 +2770,18 @@ namespace dynetsharp {
 	/// <param name='dim'>Dimensions of the expression</param>
 	Expression ^DynetFunctions::random_gumbel(array<long> ^dim) {
 		ExceptionWrap(
-			return random_gumbel(dim, "");
+			return random_gumbel(dim, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random Gumbel sampled vector</para>
+	/// <para>Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, int batchSize) {
+		ExceptionWrap(
+			return random_gumbel(dim, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2273,7 +2792,20 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, String ^device) {
 		ExceptionWrap(
-			return gcnew Expression(dynet::random_gumbel(*cg, ConvertArrToDim(dim), 0.0f, 1.0f, str2dev(device)));
+			return random_gumbel(dim, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create a random Gumbel sampled vector</para>
+	/// <para>Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, int batchSize, String ^device) {
+		ExceptionWrap(
+			dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+			return gcnew Expression(dynet::random_gumbel(*cg, d, 0.0f, 1.0f, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2285,7 +2817,20 @@ namespace dynetsharp {
 	/// <param name='beta'>Parameter beta of the gumbel distribution (default: 1.0, non-default not supported)</param>
 	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, float mu, float beta) {
 		ExceptionWrap(
-			return random_gumbel(dim, mu, beta, "");
+			return random_gumbel(dim, mu, beta, 1, "");
+		)
+	}
+	/// <summary>
+	/// <para>Create a random Gumbel sampled vector</para>
+	/// <para>Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='mu'>Parameter mu of the gumbel distribution (default: 0.0, non-default not supported)</param>
+	/// <param name='beta'>Parameter beta of the gumbel distribution (default: 1.0, non-default not supported)</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, float mu, float beta, int batchSize) {
+		ExceptionWrap(
+			return random_gumbel(dim, mu, beta, batchSize, "");
 		)
 	}
 	/// <summary>
@@ -2298,9 +2843,24 @@ namespace dynetsharp {
 	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
 	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, float mu, float beta, String ^device) {
 		ExceptionWrap(
+			return random_gumbel(dim, mu, beta, 1, device);
+		)
+	}
+	/// <summary>
+	/// <para>Create a random Gumbel sampled vector</para>
+	/// <para>Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported).</para>
+	/// </summary>
+	/// <param name='dim'>Dimensions of the expression</param>
+	/// <param name='mu'>Parameter mu of the gumbel distribution (default: 0.0, non-default not supported)</param>
+	/// <param name='beta'>Parameter beta of the gumbel distribution (default: 1.0, non-default not supported)</param>
+	/// <param name='batchSize'>Batch size (default: 1)</param>
+	/// <param name='device'> Optional device name for this parameter (default: "", default device)</param>
+	Expression ^DynetFunctions::random_gumbel(array<long> ^dim, float mu, float beta, int batchSize, String ^device) {
+		ExceptionWrap(
 			if (mu != 0.0 || beta != 1.0)
 				throw gcnew Exception(gcnew String("Currently only paramters of mu=0.0 and beta=1.0 are supported."));
-		return gcnew Expression(dynet::random_gumbel(*cg, ConvertArrToDim(dim), mu, beta, str2dev(device)));
+		dynet::Dim d(ConvertArrayToVector<long>(dim), batchSize);
+		return gcnew Expression(dynet::random_gumbel(*cg, d, mu, beta, str2dev(device)));
 		)
 	}
 	/// <summary>
@@ -2332,6 +2892,20 @@ namespace dynetsharp {
 	Expression ^DynetFunctions::scale_gradient(Expression ^x, float lambd) {
 		ExceptionWrap(
 			return gcnew Expression(dynet::scale_gradient(x->__thisptr, lambd));
+		)
+	}
+	/// <summary>
+	/// <para>Argmax</para>
+	/// <para>This node takes an input vector `x` and returns a one hot vector `y` such that `y_argmax{x}=1`. There are two gradient modes for this operation:</para>
+	/// <para>1] "zero_gradient": This is the standard argmax operation. Note that this almost everywhere differentiable and its gradient is 0. **It will stop your gradient**</para>
+	/// <para>2] "straight_through_gradient": This gradient mode implements the straight-through estimator (Bengio et al., 2013) (https://arxiv.org/abs/1308.3432). Its forward pass is the same as the argmax operation, but its gradient is the same as the identity function.</para>
+	/// <remarks>Note that this does not technically correspond to a differentiable function (hence the name "estimator"). Tensors of order `1` are not supported yet. If you really need to use this operation on matrices, tensors, etc... feel free to open an issue on github.</remarks>
+	/// </summary>
+	/// <param name='x'>The input vector (can be batched)</param>
+	/// <param name='gm'>Gradient mode for the backward pass (one of "zero_gradient" or "straight_through_gradient")</param>
+	Expression ^DynetFunctions::argmax(Expression ^x, GradientMode gm) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::argmax(x->__thisptr, (dynet::GradientMode)gm));
 		)
 	}
 	/// <summary>
@@ -2885,6 +3459,11 @@ namespace dynetsharp {
 			return gcnew Expression(dynet::pickneglogsoftmax(x->__thisptr, v));
 		)
 	}
+	Expression ^DynetFunctions::pickneglogsoftmax_batch(Expression ^x, array<int> ^v) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::pickneglogsoftmax(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(v))));
+		)
+	}
 	Expression ^DynetFunctions::hinge(Expression ^x, int v) {
 		ExceptionWrap(
 			return gcnew Expression(dynet::hinge(x->__thisptr, v));
@@ -2893,6 +3472,16 @@ namespace dynetsharp {
 	Expression ^DynetFunctions::hinge(Expression ^x, int v, float m) {
 		ExceptionWrap(
 			return gcnew Expression(dynet::hinge(x->__thisptr, v, m));
+		)
+	}
+	Expression ^DynetFunctions::hinge_batch(Expression ^x, array<int> ^v) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::hinge(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(v))));
+		)
+	}
+	Expression ^DynetFunctions::hinge_batch(Expression ^x, array<int> ^v, float m) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::hinge(x->__thisptr, VecToUInt(ConvertArrayToVector<int>(v)), m));
 		)
 	}
 	Expression ^DynetFunctions::hinge_dim(Expression ^x, array<int> ^v) {
@@ -2959,6 +3548,12 @@ namespace dynetsharp {
 	Expression ^DynetFunctions::reshape(Expression ^x, array<long> ^d) {
 		ExceptionWrap(
 			return gcnew Expression(dynet::reshape(x->__thisptr, ConvertArrToDim(d)));
+		)
+	}
+	Expression ^DynetFunctions::reshape(Expression ^x, array<long> ^d, int batchSize) {
+		ExceptionWrap(
+			dynet::Dim _d(ConvertArrayToVector<long>(d), batchSize);
+			return gcnew Expression(dynet::reshape(x->__thisptr, _d));
 		)
 	}
 	Expression ^DynetFunctions::max_dim(Expression ^x) {
@@ -3034,6 +3629,16 @@ namespace dynetsharp {
 	Expression ^DynetFunctions::concatenate(array<Expression ^> ^arr, int d) {
 		ExceptionWrap(
 			return gcnew Expression(dynet::concatenate(GetDyExpVector(arr), d));
+		)
+	}
+	Expression ^DynetFunctions::concatenate_to_batch(List<Expression ^> ^arr) {
+		ExceptionWrap(
+			return concatenate_to_batch(arr->ToArray());
+		)
+	}
+	Expression ^DynetFunctions::concatenate_to_batch(... array<Expression ^> ^arr) {
+		ExceptionWrap(
+			return gcnew Expression(dynet::concatenate_to_batch(GetDyExpVector(arr)));
 		)
 	}
 	Expression ^DynetFunctions::affine_transform(List<Expression ^> ^arr) {
