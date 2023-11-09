@@ -51,6 +51,7 @@ template<class MyDevice>
 void MatrixMultiply::forward_dev_impl(const MyDevice & dev, const vector<const Tensor*>& xs, Tensor& fx) const {
   DYNET_ASSERT(xs.size() == 2, "Failed dimension check in MatrixMultiply::forward");
   DYNET_ARG_CHECK(fx.d.bd == max(xs[0]->d.bd, xs[1]->d.bd), "Failed dimension check in MatrixMultiply::forward");
+  DYNET_ARG_CHECK(fx.d.batch_size() == dim_forward({xs[0]->d, xs[1]->d}).batch_size(), "Failed result dimension check in MatrixMultiply::forward");
   // fx = mat(fx0) + xs[0] * xs[1]
   dynet::MatrixMultiply(dev, *xs[0], *xs[1], fx, dev.kSCALAR_ZERO);
 }

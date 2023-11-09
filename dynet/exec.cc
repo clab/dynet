@@ -566,8 +566,11 @@ const Tensor& BatchedExecutionEngine::incremental_forward_no_update(
           *(active_un_end++) = j;
         }
       }
-      for (size_t j = 0; j < (size_t)sigmap.size(); ++j)
-        prof2avg[j] /= prof2cnt[j];
+      for (size_t j = 0; j < (size_t)sigmap.size(); ++j) // -prh sigmap.size() == 40
+      {
+        if(std::abs(prof2cnt[j]) > 1e-8)
+          prof2avg[j] /= prof2cnt[j];
+      }
 
       // 2) Travel through and do active nodes
       while (node_id != (VariableIndex)uptop1) {
@@ -1060,7 +1063,7 @@ void BatchedExecutionEngine::backward(VariableIndex from_where, bool full) {
         // No concatenation whatsoever
         if (my_batch.concat[ai] == 0) {
           if (needs_derivative[node2batch[arg]]) {
-            node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, batched_ndEdfs[node2batch[arg]]);
+            node->backward(xs, my_batch.nfx, batched_ndEdfs[i], ai, ndEdfs[arg]);
             // cerr << "batched backward[" << i << "](" << ai << ")->" << node2batch[arg] << " == " << print_vec(as_vector(batched_ndEdfs[node2batch[arg]])) << endl;
           }
         // Needs concatenation

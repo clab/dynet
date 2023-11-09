@@ -162,6 +162,11 @@ inline void MatrixTranspMultiplyAcc(const dynet::Device_CPU & dev, const dynet::
 inline void MatrixMultiplyTranspAcc(const dynet::Device_GPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y) {
   int max_b = std::max(l.d.bd, r.d.bd);
   if(y.d.bd == 1 && (l.d.bd == r.d.bd)) {
+    DYNET_ARG_CHECK(l.d.rows() == y.d.rows(), "MatrixMultiplyTranspAcc: l.d.rows() != y.d.rows()");
+    DYNET_ARG_CHECK(r.d.rows() == y.d.cols(), "MatrixMultiplyTranspAcc: r.d.rows() != y.d.cols()");
+    DYNET_ARG_CHECK(l.d.cols() == r.d.cols(), "MatrixMultiplyTranspAcc: l.d.cols() != r.d.cols()");
+    DYNET_ARG_CHECK(l.d.batch_elems() == r.d.batch_elems(), "MatrixMultiplyTranspAcc: l.d.batch_elems() != r.d.batch_elems()");
+
     CUBLAS_CHECK(cublasSgemm(dev.cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
           y.d.rows(), y.d.cols(), l.d.cols() * l.d.batch_elems(),
           dev.kSCALAR_ONE,
@@ -183,6 +188,10 @@ inline void MatrixMultiplyTranspAcc(const dynet::Device_GPU & dev, const dynet::
 inline void MatrixMultiplyTranspAcc(const dynet::Device_CPU & dev, const dynet::Tensor& l, const dynet::Tensor& r, dynet::Tensor& y) {
   int max_b = std::max(l.d.bd, r.d.bd);
   if(y.d.bd == 1 && (l.d.bd == r.d.bd)) {
+    DYNET_ARG_CHECK(l.d.rows() == y.d.rows(), "MatrixMultiplyTranspAcc [CPU]: l.d.rows() != y.d.rows()");
+    DYNET_ARG_CHECK(r.d.rows() == y.d.cols(), "MatrixMultiplyTranspAcc [CPU]: r.d.rows() != y.d.cols()");
+    DYNET_ARG_CHECK(l.d.cols() == r.d.cols(), "MatrixMultiplyTranspAcc [CPU]: l.d.cols() != r.d.cols()");
+    DYNET_ARG_CHECK(l.d.batch_elems() == r.d.batch_elems(), "MatrixMultiplyTranspAcc [CPU]: l.d.batch_elems() != r.d.batch_elems()");
     mat(y).noalias() += colbatch_matrix(l) * colbatch_matrix(r).transpose();
   } else {
     #ifdef __INTEL_MKL__
