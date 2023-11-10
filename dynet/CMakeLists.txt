@@ -69,6 +69,7 @@ set(dynet_library_SRCS
 )
 if(ENABLE_BOOST)
   list(APPEND dynet_library_SRCS mp.cc)
+  
 endif()
 
 # Headers:
@@ -163,7 +164,7 @@ weight-decay.h
 if(ENABLE_BOOST)
   list(APPEND dynet_library_HDRS mp.h)
 endif()
-  
+
 set(dynet_gpu_mergeable_SRCS
     nodes-activations
     nodes-affinetransform
