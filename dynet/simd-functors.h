@@ -70,6 +70,11 @@ struct functor_traits<dynet::const_minus_op<Scalar> > {
 };
 } }
 
+#define EIGEN_EMPTY_STRUCT_CTOR(X)		 \
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE X() {}			\
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE X(const X& ) {}
+
+ 
 namespace dynet {
 template<typename Scalar> struct scalar_logistic_sigmoid_op {
   EIGEN_EMPTY_STRUCT_CTOR(scalar_logistic_sigmoid_op)
