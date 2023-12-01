@@ -108,10 +108,12 @@ INSTALL_PREFIX = os.path.join(get_python_lib(), os.pardir, os.pardir, os.pardir)
 PYTHON = sys.executable
 
 # Try to find Eigen
-EIGEN3_INCLUDE_DIR = ENV.get("EIGEN3_INCLUDE_DIR")  # directory where eigen is saved
+EIGEN3_INCLUDE_DIR = "/usr/local/include/eigen3/"
+#ENV.get("EIGEN3_INCLUDE_DIR")  # directory where eigen is saved
 # The cmake directory and Python directory are different in manual install, so
 # will break if relative path is specified. Try moving up if path is specified
 # but not found
+
 if (EIGEN3_INCLUDE_DIR is not None and
     not os.path.isdir(EIGEN3_INCLUDE_DIR) and
     os.path.isdir(os.path.join(os.pardir, EIGEN3_INCLUDE_DIR))):
@@ -154,7 +156,7 @@ if ENV.get("MSVC") == "1":
     append_cmake_list(LIBRARY_DIRS, ENV.get("CUDA_RT_DIRS"))
     DATA_FILES += [DYNET_LIB_DIR + lib + ".lib" for lib in LIBRARIES]
 else:
-    COMPILER_ARGS[:] = ["-std=c++11", "-Wno-unused-function"]
+    COMPILER_ARGS[:] = ["-std=c++20", "-Wno-unused-function"]
     RUNTIME_LIB_DIRS.extend([DYNET_LIB_DIR, LIBS_INSTALL_DIR])
     # in some OSX systems, the following extra flags are needed:
     if platform.system() == "Darwin":

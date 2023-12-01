@@ -7,7 +7,7 @@
 #include "dynet/globals.h"
 #include "dynet/timing.h"
 #include "dynet/devices.h"
-
+#include <cassert>
 #ifdef HAVE_CUDA
 #include "dynet/gpu-ops.h"
 #endif

@@ -251,6 +251,7 @@ void TextFileLoader::populate(LookupParameter & lookup_param,
       if(lookup_param.p->all_dim != dim)
         DYNET_RUNTIME_ERR("Attempted to populate lookup parameter where arguments don't match (" << lookup_param.p->all_dim << " != " << dim << ")");
       std::vector<float> values(dim.size());
+      copy(bu, &dataArray[dataArraySize], back_inserter(dataVec));
       { std::getline(datastream, line); std::istringstream iss(line); iss >> values; }
       TensorTools::set_elements(lookup_param.get_storage().all_values, values);
       if(!zero_grad){
