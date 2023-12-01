@@ -2,6 +2,7 @@ project(dynet)
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+set(PYTHON)
 
 # DYNET uses Eigen which exploits modern CPU architectures. To get the
 # best possible performance, the following are recommended:
